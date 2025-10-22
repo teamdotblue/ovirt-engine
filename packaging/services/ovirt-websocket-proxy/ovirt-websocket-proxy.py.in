@@ -18,7 +18,7 @@ from urllib import parse
 import websocket
 import websockify
 
-import config
+from . import config
 
 
 from ovirt_engine import configfile
