@@ -1,0 +1,20 @@
+[MASTER]
+init-hook=
+  import sys, pathlib;
+  root = pathlib.Path().resolve();
+  paths = [
+    root / "packaging" / "pythonlib",
+    root / "packaging" / "services" / "ovirt_engine",
+    root / "packaging" / "services" / "ovirt_fence_kdump_listener",
+    root / "packaging" / "services" / "ovirt_websocket_proxy",
+    root / "packaging" / "services" / "ovirt-engine-notifier",
+    root / "packaging" / "libexec" / "ovirt-vmconsole-proxy-helper"
+  ];
+  [sys.path.insert(0, str(p)) for p in paths if str(p) not in sys.path]
+
+# Optionally silence remaining false positives:
+# disable=import-error
+
+[MESSAGES CONTROL]
+# Uncomment if you need to suppress import-error after path fixes:
+# disable=import-error
