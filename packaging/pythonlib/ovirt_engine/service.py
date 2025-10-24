@@ -556,7 +556,7 @@ class Daemon(base.Base):
 
     def daemonStdHandles(self):
         """Return handles for daemon context"""
-        null = open(os.devnull, 'w')
+        null = open(os.devnull, 'w', encoding="utf-8")
         return (null, null)
 
     def daemonContext(self):

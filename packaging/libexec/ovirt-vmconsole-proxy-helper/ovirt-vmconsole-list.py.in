@@ -16,7 +16,7 @@ import socket
 import ssl
 import sys
 
-import ovirt_vmconsole_conf as config
+from . import ovirt_vmconsole_conf as config
 
 from ovirt_engine import configfile
 from ovirt_engine import service
