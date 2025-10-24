@@ -30,7 +30,7 @@ jobs:
 
     steps:
     - name: Install required PyPI packages
-      run: ${{ matrix.pip-command }} install "ansible-lint>=6.0.0,<7.0.0" pylint mock paramiko psycopg2-binary daemon websockify websocket-client looseversion
+      run: ${{ matrix.pip-command }} install "ansible-lint>=6.0.0,<7.0.0" pylint mock paramiko psycopg2-binary websockify websocket-client looseversion
 
     - name: Checkout sources
       uses: ovirt/checkout-action@main
@@ -40,10 +40,10 @@ jobs:
         .automation/build-rpm.sh $ARTIFACTS_DIR
 
     - name: Ensure required packages are available for linting
-      run: dnf -y install otopi python3-ovirt-setup-lib
+      run: dnf -y install otopi python3-ovirt-setup-lib python3-daemon
 
     - name: Run linting on python files
-      run: pylint --errors-only packaging/pythonlib/ packaging/setup/ packaging/services/ packaging/libexec/
+      run: python3 -m pylint --errors-only packaging/pythonlib/ packaging/setup/ packaging/services/ packaging/libexec/
 
     - name: Create DNF repository
       run: |

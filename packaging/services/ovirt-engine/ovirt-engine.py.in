@@ -15,7 +15,7 @@ import sys
 
 from jinja2 import Template
 
-from . import config
+import config
 
 from ovirt_engine import configfile
 from ovirt_engine import java

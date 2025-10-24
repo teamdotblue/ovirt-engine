@@ -9,7 +9,7 @@ import gettext
 import socket
 import time
 
-from . import db
+import db
 
 
 from ovirt_engine import base

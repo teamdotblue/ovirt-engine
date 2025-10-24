@@ -4,9 +4,9 @@ init-hook=
   root = pathlib.Path().resolve();
   paths = [
     root / "packaging" / "pythonlib",
-    root / "packaging" / "services" / "ovirt_engine",
-    root / "packaging" / "services" / "ovirt_fence_kdump_listener",
-    root / "packaging" / "services" / "ovirt_websocket_proxy",
+    root / "packaging" / "services" / "ovirt-engine",
+    root / "packaging" / "services" / "ovirt-fence-kdump-listener",
+    root / "packaging" / "services" / "ovirt-websocket-proxy",
     root / "packaging" / "services" / "ovirt-engine-notifier",
     root / "packaging" / "libexec" / "ovirt-vmconsole-proxy-helper"
   ];
