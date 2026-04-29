@@ -19,6 +19,7 @@ for exe in "${PYFLAKES}" "${PEP8}"; do
 	if ! which "${exe}" > /dev/null 2>&1; then
 		echo "WARNING: tool '${exe}' is missing" >&2
 	else
+		echo "files: ${FILES}"
 		if "${exe}" ${FILES}; then
 			echo Passed check: "${exe}"
 		else
