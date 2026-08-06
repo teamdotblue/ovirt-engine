@@ -1,8 +1,11 @@
 package org.ovirt.engine.core.vdsbroker.monitoring;
 
+import javax.enterprise.inject.Instance;
+
 import org.ovirt.engine.core.common.businessentities.VmDynamic;
 import org.ovirt.engine.core.common.utils.Pair;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogDirector;
+import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogableBase;
 import org.ovirt.engine.core.dao.VdsDynamicDao;
 import org.ovirt.engine.core.dao.VmDynamicDao;
 import org.ovirt.engine.core.dao.network.VmNetworkInterfaceDao;
@@ -20,6 +23,7 @@ public class VmAnalyzerFactory {
     private VmDynamicDao vmDynamicDao;
     private VmNetworkInterfaceDao vmNetworkInterfaceDao;
     private VdsDynamicDao vdsDynamicDao;
+    private Instance<AuditLogableBase> auditLogableBaseInstance;
 
     public VmAnalyzerFactory(
             VdsManager vdsManager,
@@ -28,7 +32,8 @@ public class VmAnalyzerFactory {
             ResourceManager resourceManager,
             VmDynamicDao vmDynamicDao,
             VmNetworkInterfaceDao vmNetworkInterfaceDao,
-            VdsDynamicDao vdsDynamicDao) {
+            VdsDynamicDao vdsDynamicDao,
+            Instance<AuditLogableBase> auditLogableBaseInstance) {
         this.vdsManager = vdsManager;
         this.updateStatistics = updateStatistics;
         this.auditLogDirector = auditLogDirector;
@@ -36,6 +41,7 @@ public class VmAnalyzerFactory {
         this.vmDynamicDao = vmDynamicDao;
         this.vmNetworkInterfaceDao = vmNetworkInterfaceDao;
         this.vdsDynamicDao = vdsDynamicDao;
+        this.auditLogableBaseInstance = auditLogableBaseInstance;
     }
 
     protected VmAnalyzer getVmAnalyzer(Pair<VmDynamic, VdsmVm> monitoredVm) {
@@ -54,7 +60,8 @@ public class VmAnalyzerFactory {
                 auditLogDirector,
                 resourceManager,
                 vdsDynamicDao,
-                vmNetworkInterfaceDao);
+                vmNetworkInterfaceDao,
+                auditLogableBaseInstance);
     }
 
 }

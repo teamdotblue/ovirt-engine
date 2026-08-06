@@ -151,6 +151,8 @@ public class VdsBrokerObjectsBuilder {
     private InterfaceDao interfaceDao;
     @Inject
     private DnsResolverConfigurationDao dnsResolverConfigurationDao;
+    @Inject
+    private ManagementNetworkUtil managementNetworkUtil;
 
     public VM buildVmsDataFromExternalProvider(Map<String, Object> struct) {
         VmStatic vmStatic = buildVmStaticDataFromExternalProvider(struct);
@@ -2494,11 +2496,6 @@ public class VdsBrokerObjectsBuilder {
         }
     }
 
-    private static ManagementNetworkUtil getManagementNetworkUtil() {
-        final ManagementNetworkUtil managementNetworkUtil = Injector.get(ManagementNetworkUtil.class);
-        return managementNetworkUtil;
-    }
-
     /**
      * Creates a list of {@link VmGuestAgentInterface} from the {@link VdsProperties.GuestNetworkInterfaces}
      *
@@ -2823,5 +2820,9 @@ public class VdsBrokerObjectsBuilder {
         }
 
         return leaseStatus;
+    }
+
+    private ManagementNetworkUtil getManagementNetworkUtil() {
+        return managementNetworkUtil;
     }
 }

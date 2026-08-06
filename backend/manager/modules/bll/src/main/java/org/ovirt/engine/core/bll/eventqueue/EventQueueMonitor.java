@@ -10,7 +10,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.locks.ReentrantLock;
 
-import javax.inject.Singleton;
+import javax.enterprise.context.ApplicationScoped;
 
 import org.ovirt.engine.core.common.eventqueue.Event;
 import org.ovirt.engine.core.common.eventqueue.EventQueue;
@@ -22,7 +22,7 @@ import org.ovirt.engine.core.utils.threadpool.ThreadPoolUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Singleton
+@ApplicationScoped
 public class EventQueueMonitor implements EventQueue {
 
     private static final Logger log = LoggerFactory.getLogger(EventQueueMonitor.class);

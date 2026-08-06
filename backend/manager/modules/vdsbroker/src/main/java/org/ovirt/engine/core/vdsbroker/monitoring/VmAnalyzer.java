@@ -20,6 +20,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.enterprise.inject.Instance;
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.common.AuditLogType;
 import org.ovirt.engine.core.common.action.SaveVmExternalDataParameters;
 import org.ovirt.engine.core.common.businessentities.CpuPinningPolicy;
@@ -53,7 +56,6 @@ import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogDirector;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogableBase;
 import org.ovirt.engine.core.dao.VdsDynamicDao;
 import org.ovirt.engine.core.dao.network.VmNetworkInterfaceDao;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.utils.NetworkUtils;
 import org.ovirt.engine.core.vdsbroker.NetworkStatisticsBuilder;
 import org.ovirt.engine.core.vdsbroker.ResourceManager;
@@ -68,8 +70,16 @@ import org.slf4j.LoggerFactory;
  */
 public class VmAnalyzer {
 
-    private final VmDynamic dbVm;
-    private final VdsmVm vdsmVm;
+    private Instance<AuditLogableBase> auditLogableBaseInstance;
+    @Inject
+    private VdsDynamicDao vdsDynamicDao;
+    @Inject
+    private VmNetworkInterfaceDao vmNetworkInterfaceDao;
+    @Inject
+    private AuditLogDirector auditLogDirector;
+
+    private VmDynamic dbVm;
+    private VdsmVm vdsmVm;
 
     private VmDynamic vmDynamicToSave;
     private boolean movedToDown;
@@ -104,14 +114,10 @@ public class VmAnalyzer {
         CHANGEABLE_FIELDS_BY_VDSM = Collections.unmodifiableSet(tmpList);
     }
 
-    private AuditLogDirector auditLogDirector;
     private VdsManager vdsManager;
     private ResourceManager resourceManager;
 
-    private final boolean updateStatistics;
-
-    private VdsDynamicDao vdsDynamicDao;
-    private VmNetworkInterfaceDao vmNetworkInterfaceDao;
+    private boolean updateStatistics;
 
     public VmAnalyzer(
             VmDynamic dbVm,
@@ -121,7 +127,8 @@ public class VmAnalyzer {
             AuditLogDirector auditLogDirector,
             ResourceManager resourceManager,
             VdsDynamicDao vdsDynamicDao,
-            VmNetworkInterfaceDao vmNetworkInterfaceDao) {
+            VmNetworkInterfaceDao vmNetworkInterfaceDao,
+            Instance<AuditLogableBase> auditLogableBaseInstance) {
         this.dbVm = dbVm;
         this.vdsmVm = vdsmVm;
         this.updateStatistics = updateStatistics;
@@ -130,6 +137,7 @@ public class VmAnalyzer {
         this.resourceManager = resourceManager;
         this.vdsDynamicDao = vdsDynamicDao;
         this.vmNetworkInterfaceDao = vmNetworkInterfaceDao;
+        this.auditLogableBaseInstance = auditLogableBaseInstance;
     }
 
     /**
@@ -399,7 +407,9 @@ public class VmAnalyzer {
     }
 
     private void auditVmOnDownNormal(boolean powerOff) {
-        AuditLogableBase logable = Injector.injectMembers(new AuditLogableBase(vdsManager.getVdsId(), getVmId()));
+        AuditLogableBase logable = getAuditLogableBase();
+        logable.setVmId(getVmId());
+        logable.setVdsId(vdsManager.getVdsId());
         logable.addCustomValue("ExitMessage",
                 !powerOff && vdsmVm.getVmDynamic().getExitMessage() != null ?
                         "Exit message: " + vdsmVm.getVmDynamic().getExitMessage()
@@ -408,7 +418,9 @@ public class VmAnalyzer {
     }
 
     private void auditVmOnDownError() {
-        AuditLogableBase logable = Injector.injectMembers(new AuditLogableBase(vdsManager.getVdsId(), getVmId()));
+        AuditLogableBase logable = getAuditLogableBase();
+        logable.setVmId(getVmId());
+        logable.setVdsId(vdsManager.getVdsId());
         logable.addCustomValue("ExitMessage",
                 vdsmVm.getVmDynamic().getExitMessage() != null ?
                         "Exit message: " + vdsmVm.getVmDynamic().getExitMessage()
@@ -417,7 +429,9 @@ public class VmAnalyzer {
     }
 
     private void auditVmOnRebooting() {
-        AuditLogableBase logable = Injector.injectMembers(new AuditLogableBase(vdsManager.getVdsId(), getVmId()));
+        AuditLogableBase logable = getAuditLogableBase();
+        logable.setVmId(getVmId());
+        logable.setVdsId(vdsManager.getVdsId());
         logable.addCustomValue("UserName", "Guest OS");
         auditLog(logable, AuditLogType.USER_REBOOT_VM);
     }
@@ -427,7 +441,9 @@ public class VmAnalyzer {
         AuditLogType type = vm.getExitStatus() == VmExitStatus.Normal ? AuditLogType.USER_SUSPEND_VM_OK
                 : AuditLogType.USER_FAILED_SUSPEND_VM;
 
-        AuditLogableBase logable = Injector.injectMembers(new AuditLogableBase(vdsManager.getVdsId(), vm.getId()));
+        AuditLogableBase logable = getAuditLogableBase();
+        logable.setVmId(vm.getId());
+        logable.setVdsId(vdsManager.getVdsId());
         auditLog(logable, type);
     }
 
@@ -495,7 +511,9 @@ public class VmAnalyzer {
     }
 
     private void auditVmMigrationAbort(String exitMessage) {
-        AuditLogableBase logable = Injector.injectMembers(new AuditLogableBase(vdsManager.getVdsId(), dbVm.getId()));
+        AuditLogableBase logable = getAuditLogableBase();
+        logable.setVmId(dbVm.getId());
+        logable.setVdsId(vdsManager.getVdsId());
         logable.addCustomValue("MigrationError", exitMessage);
         auditLog(logable, AuditLogType.VM_MIGRATION_ABORT);
     }
@@ -521,13 +539,17 @@ public class VmAnalyzer {
         }
         if (dbVm.getLastWatchdogEvent() == null || dbVm.getLastWatchdogEvent() < lastWatchdogEvent) {
             VmDynamic vmDynamic = vdsmVm.getVmDynamic();
-            AuditLogableBase auditLogable = Injector.injectMembers(new AuditLogableBase());
+            AuditLogableBase auditLogable = getAuditLogableBase();
             auditLogable.setVmId(vmDynamic.getId());
             auditLogable.addCustomValue("wdaction", vmDynamic.getLastWatchdogAction());
             // for the interpretation of vdsm's response see http://docs.python.org/2/library/time.html
             auditLogable.addCustomValue("wdevent", new Date(vmDynamic.getLastWatchdogEvent() * 1000).toString());
             auditLog(auditLogable, AuditLogType.WATCHDOG_EVENT);
         }
+    }
+
+    public AuditLogableBase getAuditLogableBase() {
+        return auditLogableBaseInstance.get();
     }
 
     private void proceedBalloonCheck() {
@@ -582,7 +604,7 @@ public class VmAnalyzer {
                 vmBalloonInfo.getCurrentMemory() != null &&
                 vmBalloonInfo.getCurrentMemory() > 0 &&
                 getVmManager().getMinAllocatedMem() > vmBalloonInfo.getCurrentMemory() / TO_MEGA_BYTES) {
-            AuditLogableBase auditLogable = Injector.injectMembers(new AuditLogableBase());
+            AuditLogableBase auditLogable = getAuditLogableBase();
             auditLogable.addCustomValue("VmName", getVmManager().getName());
             auditLogable.addCustomValue("VdsName", vdsManager.getVdsName());
             auditLogable.addCustomValue("MemGuaranteed", String.valueOf(getVmManager().getMinAllocatedMem()));
@@ -698,37 +720,47 @@ public class VmAnalyzer {
     }
 
     public void auditClientIpChange() {
-        final AuditLogableBase event = Injector.injectMembers(new AuditLogableBase());
+        final AuditLogableBase event = getAuditLogableBase();
         event.setVmId(dbVm.getId());
         event.setUserName(dbVm.getConsoleCurrentUserName());
         String clientIp = vdsmVm.getVmDynamic().getClientIp();
-        auditLogDirector.log(event, clientIp == null || clientIp.isEmpty() ?
+        getAuditLogDirector().log(event, clientIp == null || clientIp.isEmpty() ?
                 AuditLogType.VM_CONSOLE_DISCONNECTED : AuditLogType.VM_CONSOLE_CONNECTED);
     }
 
     private void auditVmPausedError(VmDynamic vdsmVmDynamic) {
         AuditLogType logType = vmPauseStatusToAuditLogType(vdsmVmDynamic.getPauseStatus());
-        AuditLogableBase logable = Injector.injectMembers(new AuditLogableBase(vdsManager.getVdsId(), dbVm.getId()));
+        AuditLogableBase logable = getAuditLogableBase();
+        logable.setVmId(dbVm.getId());
+        logable.setVdsId(vdsManager.getVdsId());
         auditLog(logable, logType);
     }
 
     private void auditVmPaused() {
-        AuditLogableBase logable = Injector.injectMembers(new AuditLogableBase(vdsManager.getVdsId(), dbVm.getId()));
+        AuditLogableBase logable = getAuditLogableBase();
+        logable.setVmId(dbVm.getId());
+        logable.setVdsId(vdsManager.getVdsId());
         auditLog(logable, AuditLogType.VM_PAUSED);
     }
 
     private void auditVmRecoveredFromError() {
-        AuditLogableBase logable = Injector.injectMembers(new AuditLogableBase(vdsManager.getVdsId(), dbVm.getId()));
+        AuditLogableBase logable = getAuditLogableBase();
+        logable.setVmId(dbVm.getId());
+        logable.setVdsId(vdsManager.getVdsId());
         auditLog(logable, AuditLogType.VM_RECOVERED_FROM_PAUSE_ERROR);
     }
 
     private void auditVmNotResponding() {
-        AuditLogableBase logable = Injector.injectMembers(new AuditLogableBase(vdsManager.getVdsId(), dbVm.getId()));
+        AuditLogableBase logable = getAuditLogableBase();
+        logable.setVmId(dbVm.getId());
+        logable.setVdsId(vdsManager.getVdsId());
         auditLog(logable, AuditLogType.VM_NOT_RESPONDING);
     }
 
     private void auditVmPowerDownFailed() {
-        AuditLogableBase logable = Injector.injectMembers(new AuditLogableBase(vdsManager.getVdsId(), dbVm.getId()));
+        AuditLogableBase logable = getAuditLogableBase();
+        logable.setVmId(dbVm.getId());
+        logable.setVdsId(vdsManager.getVdsId());
         auditLog(logable, AuditLogType.VM_POWER_DOWN_FAILED);
     }
 
@@ -934,11 +966,11 @@ public class VmAnalyzer {
     }
 
     private boolean isVdsNonResponsive(Guid vdsId) {
-        return vdsId != null && vdsDynamicDao.get(vdsId).getStatus() == VDSStatus.NonResponsive;
+        return vdsId != null && getVdsDynamicDao().get(vdsId).getStatus() == VDSStatus.NonResponsive;
     }
 
     private void auditVmRestoredFromUnknown() {
-        final AuditLogableBase auditLogable = Injector.injectMembers(new AuditLogableBase());
+        final AuditLogableBase auditLogable = getAuditLogableBase();
         auditLogable.setVmId(dbVm.getId());
         auditLogable.addCustomValue("VmStatus", vdsmVm.getVmDynamic().getStatus().toString());
         auditLog(auditLogable, AuditLogType.VM_STATUS_RESTORED);
@@ -1101,7 +1133,7 @@ public class VmAnalyzer {
     }
 
     protected void auditLog(AuditLogableBase auditLogable, AuditLogType logType) {
-        auditLogDirector.log(auditLogable, logType);
+        getAuditLogDirector().log(auditLogable, logType);
     }
 
     private void setAutoRunFlag() {
@@ -1162,7 +1194,7 @@ public class VmAnalyzer {
 
     protected void loadVmNetworkInterfaces() {
         if (ifaces == null) {
-            ifaces = vmNetworkInterfaceDao.getAllForMonitoredVm(getVmId());
+            ifaces = getVmNetworkInterfaceDao().getAllForMonitoredVm(getVmId());
         }
     }
 
@@ -1212,5 +1244,17 @@ public class VmAnalyzer {
 
     public Map<String, LUNs> getVmLunsMap() {
         return vdsmVm.getLunsMap();
+    }
+
+    public VmNetworkInterfaceDao getVmNetworkInterfaceDao() {
+        return vmNetworkInterfaceDao;
+    }
+
+    public VdsDynamicDao getVdsDynamicDao() {
+        return vdsDynamicDao;
+    }
+
+    public AuditLogDirector getAuditLogDirector() {
+        return auditLogDirector;
     }
 }

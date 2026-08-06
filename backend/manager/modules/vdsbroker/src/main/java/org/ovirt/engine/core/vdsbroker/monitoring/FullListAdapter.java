@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -25,8 +26,7 @@ public class FullListAdapter {
     private static final Logger log = LoggerFactory.getLogger(FullListAdapter.class);
 
     @Inject
-    private ResourceManager resourceManager;
-
+    private Instance<ResourceManager> resourceManagerInstance;
     @Inject
     private VmDevicesConverter vmDevicesConverter;
     @Inject
@@ -54,21 +54,21 @@ public class FullListAdapter {
     }
 
     private <P extends VDSParametersBase> VDSReturnValue runVdsCommand(VDSCommandType commandType, P parameters) {
-        return resourceManager.runVdsCommand(commandType, parameters);
+        return resourceManagerInstance.get().runVdsCommand(commandType, parameters);
     }
 
     private Map<String, Object> extractDevices(Guid vmId, Guid vdsId, String domxml) {
         try {
             return vmDevicesConverter.convert(vmId, vdsId, domxml);
         } catch (Exception ex) {
-            log.error("Failed during parsing devices of VM {} ({}) error is: {}", resourceManager.getVmManager(vmId).getName(), vmId, ex);
+            log.error("Failed during parsing devices of VM {} ({}) error is: {}", resourceManagerInstance.get().getVmManager(vmId).getName(), vmId, ex);
             log.error("Exception:", ex);
             return null;
         }
     }
 
     VdsManager getVdsManager(Guid vdsId) {
-        return resourceManager.getVdsManager(vdsId);
+        return resourceManagerInstance.get().getVdsManager(vdsId);
     }
 
     private Map<String, Object> extractCoreInfo(Guid vmId, String domxml) {

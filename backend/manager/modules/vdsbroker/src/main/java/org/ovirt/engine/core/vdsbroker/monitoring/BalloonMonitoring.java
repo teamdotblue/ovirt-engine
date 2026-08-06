@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -13,7 +14,6 @@ import org.ovirt.engine.core.common.config.ConfigValues;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogDirector;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogableBase;
-import org.ovirt.engine.core.di.Injector;
 
 @Singleton
 public class BalloonMonitoring {
@@ -23,6 +23,8 @@ public class BalloonMonitoring {
 
     @Inject
     private AuditLogDirector auditLogDirector;
+    @Inject
+    private Instance<AuditLogableBase> auditLogableBaseInstance;
 
     private BalloonMonitoring() {
         vmsWithBalloonDriverProblem = new HashMap<>();
@@ -54,7 +56,7 @@ public class BalloonMonitoring {
         } else {
             vmsWithUncontrolledBalloon.put(vmId, currentVal + 1);
             if (currentVal >= Config.<Integer> getValue(ConfigValues.IterationsWithBalloonProblem)) {
-                AuditLogableBase auditLogable = Injector.injectMembers(new AuditLogableBase());
+                AuditLogableBase auditLogable = auditLogableBaseInstance.get();
                 auditLogable.setVmId(vmId);
                 auditLog(auditLogable, AuditLogType.VM_BALLOON_DRIVER_UNCONTROLLED);
                 vmsWithUncontrolledBalloon.put(vmId, 0);
@@ -76,7 +78,7 @@ public class BalloonMonitoring {
         } else {
             vmsWithBalloonDriverProblem.put(vmId, currentVal + 1);
             if (currentVal >= Config.<Integer> getValue(ConfigValues.IterationsWithBalloonProblem)) {
-                AuditLogableBase auditLogable = Injector.injectMembers(new AuditLogableBase());
+                AuditLogableBase auditLogable = auditLogableBaseInstance.get();
                 auditLogable.setVmId(vmId);
                 auditLog(auditLogable, AuditLogType.VM_BALLOON_DRIVER_ERROR);
                 vmsWithBalloonDriverProblem.put(vmId, 0);

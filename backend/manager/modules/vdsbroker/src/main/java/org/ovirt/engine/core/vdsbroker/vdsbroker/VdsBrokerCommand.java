@@ -28,10 +28,8 @@ public abstract class VdsBrokerCommand<P extends VdsIdVDSCommandParametersBase> 
 
     @Inject
     private AuditLogDirector auditLogDirector;
-
     @Inject
     Event<VDSNetworkException> networkError;
-
     @Inject
     private VdsStaticDao vdsStaticDao;
 

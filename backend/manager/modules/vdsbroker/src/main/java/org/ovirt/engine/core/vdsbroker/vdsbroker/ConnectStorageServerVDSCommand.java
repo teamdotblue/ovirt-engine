@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.common.AuditLogType;
@@ -16,7 +17,6 @@ import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogDirector;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogableBase;
 import org.ovirt.engine.core.dao.StorageDomainDao;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.vdsbroker.storage.StorageConnectionHelper;
 
 public class ConnectStorageServerVDSCommand<P extends StorageServerConnectionManagementVDSParameters>
@@ -31,6 +31,9 @@ public class ConnectStorageServerVDSCommand<P extends StorageServerConnectionMan
 
     @Inject
     private StorageDomainDao storageDomainDao;
+
+    @Inject
+    private Instance<AuditLogableBase> auditLogableBaseInstance;
 
     public ConnectStorageServerVDSCommand(P parameters) {
         super(parameters);
@@ -97,7 +100,7 @@ public class ConnectStorageServerVDSCommand<P extends StorageServerConnectionMan
         }
 
         if (failedDomainNames.length() > 0) {
-            AuditLogableBase logable = Injector.injectMembers(new AuditLogableBase(getParameters().getVdsId()));
+            AuditLogableBase logable = auditLogableBaseInstance.get().createWithvdsId(getParameters().getVdsId());
             logable.addCustomValue("failedStorageDomains", failedDomainNames.toString());
             auditLogDirector.log(logable, AuditLogType.VDS_STORAGES_CONNECTION_FAILED);
         }

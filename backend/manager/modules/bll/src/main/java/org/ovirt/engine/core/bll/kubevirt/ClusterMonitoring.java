@@ -42,7 +42,7 @@ import openshift.io.V1RouteList;
 public class ClusterMonitoring {
     private static final Logger log = LoggerFactory.getLogger(ClusterMonitoring.class);
 
-    private final Provider<KubevirtProviderProperties> provider;
+    private Provider<KubevirtProviderProperties> provider;
     private Guid clusterId;
 
     private VMsMonitoring vmsMonitoring;
@@ -54,30 +54,22 @@ public class ClusterMonitoring {
 
     @Inject
     private SharedInformerFactoryProducer sharedInformerFactoryProducer;
-
     @Inject
     private VdsStaticDao vdsStaticDao;
-
     @Inject
     private HostUpdater hostUpdater;
-
     @Inject
     private ClusterSyncer clusterSyncer;
-
     @Inject
     private VmUpdater vmUpdater;
-
-    @Inject DiskUpdater diskUpdater;
-
+    @Inject
+    private DiskUpdater diskUpdater;
     @Inject
     private KubevirtMigrationMonitoring kubevirtMigrationMonitoring;
-
     @Inject
     private AuditLogDirector auditLogDirector;
-
     @Inject
     private TemplateUpdater templateUpdater;
-
     @Inject
     private NetworkUpdater networkUpdater;
 
@@ -162,6 +154,12 @@ public class ClusterMonitoring {
     public ClusterMonitoring(Provider<KubevirtProviderProperties> provider) {
         this.provider = provider;
         this.clusterId = provider.getId();
+    }
+
+    public ClusterMonitoring createInstance(Provider<KubevirtProviderProperties> provider) {
+        this.provider = provider;
+        this.clusterId = provider.getId();
+        return this;
     }
 
     @PostConstruct

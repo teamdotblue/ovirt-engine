@@ -22,6 +22,8 @@ import static org.mockito.Mockito.when;
 
 import java.util.Objects;
 
+import javax.enterprise.inject.Instance;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -50,7 +52,7 @@ import org.ovirt.engine.core.common.vdscommands.VDSReturnValue;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogDirector;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogableBase;
 import org.ovirt.engine.core.dao.VdsDynamicDao;
-import org.ovirt.engine.core.dao.VmDeviceDao;
+import org.ovirt.engine.core.dao.network.VmNetworkInterfaceDao;
 import org.ovirt.engine.core.utils.InjectorExtension;
 import org.ovirt.engine.core.vdsbroker.ResourceManager;
 import org.ovirt.engine.core.vdsbroker.VdsManager;
@@ -74,7 +76,7 @@ public class VmAnalyzerTest {
     @Mock
     private VdsDynamicDao vdsDynamicDao;
     @Mock
-    private VmDeviceDao vmDeviceDao;
+    private VmNetworkInterfaceDao vmNetworkInterfaceDao;
     @Mock
     private VdsDynamic srcHost;
     @Mock
@@ -87,6 +89,10 @@ public class VmAnalyzerTest {
     private VDS vdsManagerVds;
     @Mock
     private ResourceManager resourceManager;
+    @Mock
+    private Instance<AuditLogableBase> auditLogableBaseInstance;
+    @Mock
+    private AuditLogableBase auditLogableBase;
 
     @ParameterizedTest
     @EnumSource(VmTestPairs.class)
@@ -374,7 +380,6 @@ public class VmAnalyzerTest {
     }
 
     public void initMocks(VmTestPairs vmData, boolean run) {
-        stubDaos();
         when(vdsManager.getVdsId()).thenReturn(VmTestPairs.SRC_HOST_ID);
         when(vdsManager.getClusterId()).thenReturn(VmTestPairs.CLUSTER_ID);
         when(vdsManager.getCopyVds()).thenReturn(vdsManagerVds);
@@ -395,13 +400,19 @@ public class VmAnalyzerTest {
                 auditLogDirector,
                 resourceManager,
                 vdsDynamicDao,
-                null));
+                vmNetworkInterfaceDao,
+                auditLogableBaseInstance));
         doNothing().when(vmAnalyzer).resetVmInterfaceStatistics();
         doReturn(vmManager).when(vmAnalyzer).getVmManager();
         VDSReturnValue vdsReturnValue = new VDSReturnValue();
         vdsReturnValue.setSucceeded(true);
         doReturn(vdsReturnValue).when(vmAnalyzer).runVdsCommand(any(), any());
         doReturn(true).when(vmAnalyzer).saveVmExternalData();
+        doReturn(auditLogableBase).when(vmAnalyzer).getAuditLogableBase();
+        doReturn(null).when(vmAnalyzer).getVmNetworkInterfaceDao();
+        doReturn(vdsDynamicDao).when(vmAnalyzer).getVdsDynamicDao();
+        doReturn(auditLogDirector).when(vmAnalyzer).getAuditLogDirector();
+        stubDaos();
 
         if (run) {
             vmAnalyzer.analyze();

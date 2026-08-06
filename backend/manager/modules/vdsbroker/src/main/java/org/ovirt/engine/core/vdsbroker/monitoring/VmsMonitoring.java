@@ -8,8 +8,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
-import javax.inject.Singleton;
 
 import org.ovirt.engine.core.common.businessentities.IVdsEventListener;
 import org.ovirt.engine.core.common.businessentities.VmDynamic;
@@ -18,6 +19,7 @@ import org.ovirt.engine.core.common.utils.Pair;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.compat.TransactionScopeOption;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogDirector;
+import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogableBase;
 import org.ovirt.engine.core.dao.DiskImageDynamicDao;
 import org.ovirt.engine.core.dao.VdsDynamicDao;
 import org.ovirt.engine.core.dao.VmDynamicDao;
@@ -38,11 +40,9 @@ import org.slf4j.LoggerFactory;
  * and take actions - fire VDSM commands (destroy,run/rerun,migrate), report complete actions,
  * hand-over migration and save-to-db
  */
-@Singleton
+@ApplicationScoped
 public class VmsMonitoring {
 
-    @Inject
-    private AuditLogDirector auditLogDirector;
     @Inject
     private ResourceManager resourceManager;
     @Inject
@@ -51,7 +51,6 @@ public class VmsMonitoring {
     private LunDisksMonitoring lunDisksMonitoring;
     @Inject
     private VmJobsMonitoring vmJobsMonitoring;
-
     @Inject
     private DiskImageDynamicDao diskImageDynamicDao;
     @Inject
@@ -63,11 +62,15 @@ public class VmsMonitoring {
     @Inject
     private VmGuestAgentInterfaceDao vmGuestAgentInterfaceDao;
     @Inject
+    private VmNumaNodeDao vmNumaNodeDao;
+    @Inject
+    private AuditLogDirector auditLogDirector;
+    @Inject
     private VmNetworkInterfaceDao vmNetworkInterfaceDao;
     @Inject
     private VdsDynamicDao vdsDynamicDao;
     @Inject
-    private VmNumaNodeDao vmNumaNodeDao;
+    private Instance<AuditLogableBase> auditLogableBaseInstance;
 
     private static final Logger log = LoggerFactory.getLogger(VmsMonitoring.class);
 
@@ -162,7 +165,8 @@ public class VmsMonitoring {
                 resourceManager,
                 vmDynamicDao,
                 vmNetworkInterfaceDao,
-                vdsDynamicDao);
+                vdsDynamicDao,
+                auditLogableBaseInstance);
     }
 
     private boolean shouldAnalyzeVm(Pair<VmDynamic, VdsmVm> pair, long fetchTime, Guid vdsId) {

@@ -4,13 +4,14 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import javax.enterprise.inject.Instance;
+import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import org.ovirt.engine.core.common.businessentities.KubevirtProviderProperties;
 import org.ovirt.engine.core.common.businessentities.Provider;
 import org.ovirt.engine.core.common.businessentities.VM;
 import org.ovirt.engine.core.compat.Guid;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.vdsbroker.kubevirt.KubevirtUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,6 +30,9 @@ public class KubevirtMonitoring {
 
     private Map<Guid, ClusterMonitoring> clusterToJob;
 
+    @Inject
+    private Instance<ClusterMonitoring> clusterMonitoringInstance;
+
     public KubevirtMonitoring() {
         clusterToJob = new ConcurrentHashMap<>();
     }
@@ -44,7 +48,7 @@ public class KubevirtMonitoring {
 
     public void register(Provider<KubevirtProviderProperties> provider) {
         clusterToJob.computeIfAbsent(provider.getId(),
-               id -> Injector.injectMembers(new ClusterMonitoring(provider)).start());
+               id -> clusterMonitoringInstance.get().createInstance(provider).start());
     }
 
     public void unregister(Guid clusterId) {
