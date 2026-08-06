@@ -8,10 +8,11 @@ import static org.ovirt.engine.core.bll.validator.ValidationResultMatchers.isVal
 import java.util.HashSet;
 import java.util.Set;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
@@ -23,7 +24,6 @@ import org.ovirt.engine.core.common.errors.EngineMessage;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dao.network.InterfaceDao;
 import org.ovirt.engine.core.dao.network.NetworkDao;
-import org.ovirt.engine.core.utils.InjectedMock;
 import org.ovirt.engine.core.utils.InjectorExtension;
 
 @ExtendWith({MockitoExtension.class, InjectorExtension.class })
@@ -52,22 +52,17 @@ public class VfsConfigValidatorTest {
     private HostNicVfsConfig oldVfsConfig;
 
     @Mock
-    @InjectedMock
     public InterfaceDao interfaceDao;
 
     @Mock
     private NetworkDeviceHelper networkDeviceHelper;
 
     @Mock
-    @InjectedMock
     public NetworkDao networkDao;
 
-    private VfsConfigValidator validator;
-
-    @BeforeEach
-    public void createValidator() {
-        validator = new VfsConfigValidator(NIC_ID, oldVfsConfig);
-    }
+    @Spy
+    @InjectMocks
+    private VfsConfigValidator validator = new VfsConfigValidator(NIC_ID, oldVfsConfig);;
 
     @Test
     public void nicSriovEnabled() {

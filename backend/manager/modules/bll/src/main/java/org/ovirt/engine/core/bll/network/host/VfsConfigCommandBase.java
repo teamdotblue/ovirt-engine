@@ -1,5 +1,6 @@
 package org.ovirt.engine.core.bll.network.host;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.VdsCommand;
@@ -21,6 +22,8 @@ public abstract class VfsConfigCommandBase<T extends VfsConfigBaseParameters> ex
     private HostNicVfsConfigDao hostNicVfsConfigDao;
     @Inject
     private InterfaceDao interfaceDao;
+    @Inject
+    private Instance<VfsConfigValidator> vfsConfigValidatorInstance;
 
     public VfsConfigCommandBase(T parameters, CommandContext commandContext) {
         super(parameters, commandContext);
@@ -42,7 +45,7 @@ public abstract class VfsConfigCommandBase<T extends VfsConfigBaseParameters> ex
 
     public VfsConfigValidator getVfsConfigValidator() {
         if (vfsConfigValidator == null) {
-            vfsConfigValidator = new VfsConfigValidator(getParameters().getNicId(), getVfsConfig());
+            vfsConfigValidator = vfsConfigValidatorInstance.get().init(getParameters().getNicId(), getVfsConfig());
         }
         return vfsConfigValidator;
     }

@@ -1,5 +1,7 @@
 package org.ovirt.engine.core.bll.validator;
 
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.bll.ValidationResult;
 import org.ovirt.engine.core.bll.network.host.NetworkDeviceHelper;
 import org.ovirt.engine.core.common.businessentities.network.HostNicVfsConfig;
@@ -9,9 +11,13 @@ import org.ovirt.engine.core.common.errors.EngineMessage;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dao.network.InterfaceDao;
 import org.ovirt.engine.core.dao.network.NetworkDao;
-import org.ovirt.engine.core.di.Injector;
 
 public class VfsConfigValidator {
+
+    @Inject
+    private NetworkDao networkDao;
+    @Inject
+    private InterfaceDao interfaceDao;
 
     private Guid nicId;
     private VdsNetworkInterface nic;
@@ -27,6 +33,15 @@ public class VfsConfigValidator {
     public VfsConfigValidator(Guid nicId, HostNicVfsConfig oldVfsConfig) {
         this.nicId = nicId;
         this.oldVfsConfig = oldVfsConfig;
+    }
+
+    public VfsConfigValidator() {
+    }
+
+    public VfsConfigValidator init(Guid nicId, HostNicVfsConfig oldVfsConfig) {
+        this.nicId = nicId;
+        this.oldVfsConfig = oldVfsConfig;
+        return this;
     }
 
     /**
@@ -123,12 +138,12 @@ public class VfsConfigValidator {
     }
 
     Network getNetwork(Guid networkId) {
-        return Injector.get(NetworkDao.class).get(networkId);
+        return networkDao.get(networkId);
     }
 
     VdsNetworkInterface getNic() {
         if (nic == null) {
-            nic = Injector.get(InterfaceDao.class).get(nicId);
+            nic = interfaceDao.get(nicId);
         }
         return nic;
     }
