@@ -2,22 +2,27 @@ package org.ovirt.engine.core.bll.storage.pool;
 
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.compat.Guid;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.utils.ISingleAsyncOperation;
 
 public class AfterDeactivateSingleAsyncOperationFactory extends ActivateDeactivateSingleAsyncOperationFactory {
+
+    @Inject
+    private Instance<AfterDeactivateSingleAsyncOperation> afterDeactivateSingleAsyncOperation;
+
     private boolean isLastMaster;
     private Guid newMasterStorageDomainId = Guid.Empty;
 
     @Override
     public ISingleAsyncOperation createSingleAsyncOperation() {
-        return Injector.injectMembers(
-                new AfterDeactivateSingleAsyncOperation(getVdss(),
+        return afterDeactivateSingleAsyncOperation.get().createInstance(getVdss(),
                         getStorageDomain(),
                         getStoragePool(),
                         isLastMaster,
-                        newMasterStorageDomainId));
+                        newMasterStorageDomainId);
     }
 
     @Override

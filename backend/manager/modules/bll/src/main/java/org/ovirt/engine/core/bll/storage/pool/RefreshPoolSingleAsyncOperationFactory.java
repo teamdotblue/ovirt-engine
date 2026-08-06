@@ -3,11 +3,17 @@ package org.ovirt.engine.core.bll.storage.pool;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.compat.Guid;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.utils.ISingleAsyncOperation;
 
 public class RefreshPoolSingleAsyncOperationFactory extends ActivateDeactivateSingleAsyncOperationFactory {
+
+    @Inject
+    private Instance<RefreshPoolSingleAsyncOperation> refreshPoolSingleAsyncOperationProvider;
+
     private List<Guid> vdsIdsToSetNonOperational;
 
     @Override
@@ -25,7 +31,6 @@ public class RefreshPoolSingleAsyncOperationFactory extends ActivateDeactivateSi
 
     @Override
     public ISingleAsyncOperation createSingleAsyncOperation() {
-        return Injector.injectMembers(
-                new RefreshPoolSingleAsyncOperation(getVdss(), getStorageDomain(), getStoragePool(), vdsIdsToSetNonOperational));
+        return refreshPoolSingleAsyncOperationProvider.get().createInstance(getVdss(), getStorageDomain(), getStoragePool(), vdsIdsToSetNonOperational);
     }
 }

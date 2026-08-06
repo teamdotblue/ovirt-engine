@@ -2,7 +2,6 @@ package org.ovirt.engine.core.bll.storage.pool;
 
 import java.util.List;
 
-import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.storage.connection.StorageHelperDirector;
@@ -28,13 +27,10 @@ public class RefreshStoragePoolAndDisconnectAsyncOperation extends ActivateDeact
 
     @Inject
     private VDSBrokerFrontend resourceManager;
-
     @Inject
     private StorageDomainDao storageDomainDao;
-
     @Inject
     private StoragePoolIsoMapDao storagePoolIsoMapDao;
-
     @Inject
     private StorageHelperDirector storageHelperDirector;
 
@@ -43,8 +39,17 @@ public class RefreshStoragePoolAndDisconnectAsyncOperation extends ActivateDeact
         super(vdss, domain, storagePool);
     }
 
-    @PostConstruct
-    private void init() {
+    public RefreshStoragePoolAndDisconnectAsyncOperation() {
+    }
+
+    public RefreshStoragePoolAndDisconnectAsyncOperation createInstance(List<VDS> vdss, StorageDomain domain,
+            StoragePool storagePool) {
+        init(vdss, domain, storagePool);
+        initStoragePoolData();
+        return this;
+    }
+
+    private void initStoragePoolData() {
         masterStorageDomainId = storageDomainDao.getMasterStorageDomainIdForPool(getStoragePool().getId());
         storagePoolIsoMap = storagePoolIsoMapDao.getAllForStoragePool(getStoragePool().getId());
     }

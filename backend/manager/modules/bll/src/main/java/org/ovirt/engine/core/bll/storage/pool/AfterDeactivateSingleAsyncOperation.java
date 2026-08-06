@@ -2,7 +2,6 @@ package org.ovirt.engine.core.bll.storage.pool;
 
 import java.util.List;
 
-import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.storage.connection.StorageHelperDirector;
@@ -24,19 +23,16 @@ import org.slf4j.LoggerFactory;
 public class AfterDeactivateSingleAsyncOperation extends ActivateDeactivateSingleAsyncOperation {
     private static final Logger log = LoggerFactory.getLogger(AfterDeactivateSingleAsyncOperation.class);
 
-    private final boolean isLastMaster;
+    private boolean isLastMaster;
     private Guid masterStorageDomainId = Guid.Empty;
     private List<StoragePoolIsoMap> storagePoolIsoMap;
 
     @Inject
     private VDSBrokerFrontend resourceManager;
-
     @Inject
     private StorageDomainDao storageDomainDao;
-
     @Inject
     private StoragePoolIsoMapDao storagePoolIsoMapDao;
-
     @Inject
     private StorageHelperDirector storageHelperDirector;
 
@@ -48,8 +44,19 @@ public class AfterDeactivateSingleAsyncOperation extends ActivateDeactivateSingl
         this.masterStorageDomainId = newMasterStorageDomain;
     }
 
-    @PostConstruct
-    private void init() {
+    public AfterDeactivateSingleAsyncOperation() {
+    }
+
+    public AfterDeactivateSingleAsyncOperation createInstance(List<VDS> vdss, StorageDomain domain,
+            StoragePool storagePool, boolean isLastMaster, Guid newMasterStorageDomain) {
+        init(vdss, domain, storagePool);
+        this.isLastMaster = isLastMaster;
+        this.masterStorageDomainId = newMasterStorageDomain;
+        initStoragePoolData();
+        return this;
+    }
+
+    private void initStoragePoolData() {
         if (masterStorageDomainId == null || masterStorageDomainId.equals(Guid.Empty)) {
             this.masterStorageDomainId = storageDomainDao.getMasterStorageDomainIdForPool(getStoragePool().getId());
         }

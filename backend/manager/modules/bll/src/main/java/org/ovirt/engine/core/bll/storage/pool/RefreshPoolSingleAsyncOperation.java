@@ -2,7 +2,6 @@ package org.ovirt.engine.core.bll.storage.pool;
 
 import java.util.List;
 
-import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.common.businessentities.StorageDomain;
@@ -22,29 +21,29 @@ import org.slf4j.LoggerFactory;
 public class RefreshPoolSingleAsyncOperation extends ActivateDeactivateSingleAsyncOperation {
     private static final Logger log = LoggerFactory.getLogger(RefreshPoolSingleAsyncOperation.class);
 
-    private final List<Guid> vdsIdsToSetNonOperational;
-
+    private List<Guid> vdsIdsToSetNonOperational;
     private Guid masterStorageDomainId;
-
     private List<StoragePoolIsoMap> storagePoolIsoMap;
 
     @Inject
     private ResourceManager resourceManager;
-
     @Inject
     private StorageDomainDao storageDomainDao;
-
     @Inject
     private StoragePoolIsoMapDao storagePoolIsoMapDao;
 
-    public RefreshPoolSingleAsyncOperation(List<VDS> vdss, StorageDomain domain,
-            StoragePool storagePool, List<Guid> vdssIdsToSetNonoperational) {
-        super(vdss, domain, storagePool);
-        vdsIdsToSetNonOperational = vdssIdsToSetNonoperational;
+    public RefreshPoolSingleAsyncOperation() {
     }
 
-    @PostConstruct
-    private void init() {
+    public RefreshPoolSingleAsyncOperation createInstance(List<VDS> vdss, StorageDomain domain,
+            StoragePool storagePool, List<Guid> vdssIdsToSetNonoperational) {
+        init(vdss, domain, storagePool);
+        this.vdsIdsToSetNonOperational = vdssIdsToSetNonoperational;
+        initRefreshPoolSingleAsyncOperation();
+        return this;
+    }
+
+    private void initRefreshPoolSingleAsyncOperation() {
         masterStorageDomainId = storageDomainDao.getMasterStorageDomainIdForPool(getStoragePool().getId());
         storagePoolIsoMap = storagePoolIsoMapDao.getAllForStoragePool(getStoragePool().getId());
     }

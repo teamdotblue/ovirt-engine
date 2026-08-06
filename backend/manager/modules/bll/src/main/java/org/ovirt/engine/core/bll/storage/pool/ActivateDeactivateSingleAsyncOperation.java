@@ -19,6 +19,17 @@ public abstract class ActivateDeactivateSingleAsyncOperation implements ISingleA
         pool = storagePool;
     }
 
+    public ActivateDeactivateSingleAsyncOperation() {
+    }
+
+    public ActivateDeactivateSingleAsyncOperation init(List<VDS> vdss, StorageDomain domain,
+            StoragePool storagePool) {
+        this.vdss = vdss;
+        this.domain = domain;
+        pool = storagePool;
+        return this;
+    }
+
     @Override
     public abstract void execute(int iterationId);
 
