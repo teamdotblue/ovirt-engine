@@ -31,6 +31,14 @@ public abstract class VmStatsRefresher {
         this.vdsManager = vdsManager;
     }
 
+    public VmStatsRefresher() {
+    }
+
+    public VmStatsRefresher init(VdsManager vdsManager) {
+        this.vdsManager = vdsManager;
+        return this;
+    }
+
     /**
      * Performs operations required to start monitoring vms.
      */

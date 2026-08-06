@@ -8,6 +8,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.PostConstruct;
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -17,7 +18,6 @@ import org.ovirt.engine.core.common.businessentities.VDS;
 import org.ovirt.engine.core.common.businessentities.VDSDomainsData;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dao.StoragePoolDao;
-import org.ovirt.engine.core.di.Injector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,6 +28,8 @@ public class IrsProxyManager implements BackendService {
 
     @Inject
     private StoragePoolDao storagePoolDao;
+    @Inject
+    private Instance<IrsProxyImpl> irsProxyInstance;
 
     private Map<Guid, IrsProxy> irsProxyData = new ConcurrentHashMap<>();
 
@@ -38,9 +40,9 @@ public class IrsProxyManager implements BackendService {
         log.info("Finished initializing {}", getClass().getSimpleName());
     }
 
-    private static IrsProxy createProxy(StoragePool dc) {
+    private IrsProxy createProxy(StoragePool dc) {
         if (dc.isManaged()) {
-            return Injector.injectMembers(new IrsProxyImpl(dc.getId()));
+            return irsProxyInstance.get().createInstance(dc.getId());
         }
         return new NullableIrsProxy();
     }

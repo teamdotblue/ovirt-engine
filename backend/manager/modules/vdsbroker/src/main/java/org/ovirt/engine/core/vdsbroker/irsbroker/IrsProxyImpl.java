@@ -125,49 +125,34 @@ public class IrsProxyImpl implements IrsProxy {
 
     @Inject
     private Instance<IrsProxyManager> irsProxyManager;
-
     @Inject
-    private ResourceManager resourceManager;
-
+    private Instance<ResourceManager> resourceManagerInstance;
     @Inject
     private LockManager lockManager;
-
     @Inject
     private StoragePoolDomainHelper storagePoolDomainHelper;
-
     @Inject
     private StoragePoolDao storagePoolDao;
-
     @Inject
     private VdsDao vdsDao;
-
     @Inject
     private VdsStaticDao vdsStaticDao;
-
     @Inject
     private StorageDomainDao storageDomainDao;
-
     @Inject
     private StorageDomainStaticDao storageDomainStaticDao;
-
     @Inject
     private StorageDomainDynamicDao storageDomainDynamicDao;
-
     @Inject
     private StoragePoolIsoMapDao storagePoolIsoMapDao;
-
     @Inject
     private VdsDynamicDao vdsDynamicDao;
-
     @Inject
     private VdsSpmIdMapDao vdsSpmIdMapDao;
-
     @Inject
     private EventQueue eventQueue;
-
     @Inject
     private AuditLogDirector auditLogDirector;
-
     @Inject
     @ThreadPools(ThreadPools.ThreadPoolType.EngineScheduledThreadPool)
     private ManagedScheduledExecutorService schedulerService;
@@ -215,6 +200,14 @@ public class IrsProxyImpl implements IrsProxy {
 
     public IrsProxyImpl(Guid storagePoolId) {
         this.storagePoolId = storagePoolId;
+    }
+
+    public IrsProxyImpl() {
+    }
+
+    public IrsProxyImpl createInstance(Guid storagePoolId) {
+        this.storagePoolId = storagePoolId;
+        return this;
     }
 
     @PostConstruct
@@ -295,7 +288,7 @@ public class IrsProxyImpl implements IrsProxy {
         VDSReturnValue result = null;
         Guid curVdsId = currentVdsId;
         if (curVdsId != null) {
-            result = resourceManager.runVdsCommand(VDSCommandType.SpmStatus,
+            result = resourceManagerInstance.get().runVdsCommand(VDSCommandType.SpmStatus,
                     new SpmStatusVDSCommandParameters(curVdsId, storagePoolId));
         }
 
@@ -321,7 +314,7 @@ public class IrsProxyImpl implements IrsProxy {
             // then cause failover with attempts
             if (result != null && !(result.getExceptionObject() instanceof VDSNetworkException)) {
                 Map<Guid, AsyncTaskStatus> tasksList =
-                        (Map<Guid, AsyncTaskStatus>) resourceManager
+                        (Map<Guid, AsyncTaskStatus>) resourceManagerInstance.get()
                                 .runVdsCommand(VDSCommandType.HSMGetAllTasksStatuses,
                                         new VdsIdVDSCommandParametersBase(curVdsId)).getReturnValue();
                 boolean allTasksFinished = true;
@@ -358,7 +351,7 @@ public class IrsProxyImpl implements IrsProxy {
         GetStoragePoolInfoVDSCommandParameters tempVar = new GetStoragePoolInfoVDSCommandParameters(
                 storagePoolId);
         tempVar.setIgnoreFailoverLimit(true);
-        VDSReturnValue storagePoolInfoResult = resourceManager.runVdsCommand(
+        VDSReturnValue storagePoolInfoResult = resourceManagerInstance.get().runVdsCommand(
                 VDSCommandType.GetStoragePoolInfo, tempVar);
         if (storagePoolInfoResult.getSucceeded()) {
             if (storagePoolInfoResult.getVdsError() != null &&
@@ -465,7 +458,7 @@ public class IrsProxyImpl implements IrsProxy {
     }
 
     private IVdsEventListener getEventListener() {
-        return resourceManager.getEventListener();
+        return resourceManagerInstance.get().getEventListener();
     }
 
     @Override
@@ -655,13 +648,13 @@ public class IrsProxyImpl implements IrsProxy {
         boolean performFailover = false;
         if (vdsId != null) {
             try {
-                VDSReturnValue statusResult = resourceManager.runVdsCommand(VDSCommandType.SpmStatus,
+                VDSReturnValue statusResult = resourceManagerInstance.get().runVdsCommand(VDSCommandType.SpmStatus,
                         new SpmStatusVDSCommandParameters(vdsId, storagePoolId));
                 if (statusResult != null
                         && statusResult.getSucceeded()
                         && (((SpmStatusResult) statusResult.getReturnValue()).getSpmStatus() == SpmStatus.SPM || ((SpmStatusResult) statusResult
                                 .getReturnValue()).getSpmStatus() == SpmStatus.Contend)) {
-                    performFailover = resourceManager.runVdsCommand(VDSCommandType.SpmStop,
+                    performFailover = resourceManagerInstance.get().runVdsCommand(VDSCommandType.SpmStop,
                                     new SpmStopVDSCommandParameters(vdsId, storagePoolId)).getSucceeded();
                 } else {
                     performFailover = true;
@@ -709,7 +702,7 @@ public class IrsProxyImpl implements IrsProxy {
                                     connectionTimeOut,
                                     clientRetries,
                                     heartbeat,
-                                    resourceManager.getExecutor());
+                                    resourceManagerInstance.get().getExecutor());
                     runStoragePoolUpEvent(storagePool);
                 }
             }
@@ -751,7 +744,7 @@ public class IrsProxyImpl implements IrsProxy {
         Guid masterDomainId = storageDomainDao
                 .getMasterStorageDomainIdForPool(storagePoolId);
         List<StoragePoolIsoMap> storagePoolIsoMap = storagePoolIsoMapDao.getAllForStoragePool(storagePoolId);
-        VDSReturnValue connectResult = resourceManager.runVdsCommand(
+        VDSReturnValue connectResult = resourceManagerInstance.get().runVdsCommand(
                 VDSCommandType.ConnectStoragePool,
                 new ConnectStoragePoolVDSCommandParameters(vds, storagePool,
                         masterDomainId, storagePoolIsoMap));
@@ -813,7 +806,7 @@ public class IrsProxyImpl implements IrsProxy {
             currentVdsId = selectedVds.getId();
             connectStoragePool(selectedVds, storagePool);
 
-            VDSReturnValue returnValueFromVds = resourceManager.runVdsCommand(
+            VDSReturnValue returnValueFromVds = resourceManagerInstance.get().runVdsCommand(
                     VDSCommandType.SpmStatus,
                     new SpmStatusVDSCommandParameters(selectedVds.getId(), storagePoolId));
             spmStatus = (SpmStatusResult) returnValueFromVds.getReturnValue();
@@ -834,7 +827,7 @@ public class IrsProxyImpl implements IrsProxy {
                         connectStoragePool(selectedVds, storagePool);
                         performedPoolConnect = true;
                         // refresh spmStatus result
-                        spmStatus = (SpmStatusResult) resourceManager
+                        spmStatus = (SpmStatusResult) resourceManagerInstance.get()
                                 .runVdsCommand(VDSCommandType.SpmStatus,
                                         new SpmStatusVDSCommandParameters(selectedVds.getId(), storagePoolId))
                                 .getReturnValue();
@@ -868,7 +861,7 @@ public class IrsProxyImpl implements IrsProxy {
                     // if could not start spm on this host and connected to
                     // pool here
                     // then disconnect
-                    resourceManager.runVdsCommand(
+                    resourceManagerInstance.get().runVdsCommand(
                             VDSCommandType.DisconnectStoragePool,
                             new DisconnectStoragePoolVDSCommandParameters(selectedVdsId, storagePoolId,
                                     selectedVdsSpmId));
@@ -1040,7 +1033,7 @@ public class IrsProxyImpl implements IrsProxy {
 
                 try {
                     if (!spmVdsId.equals(Guid.Empty)) {
-                        SpmStatusResult destSpmStatus = (SpmStatusResult) resourceManager
+                        SpmStatusResult destSpmStatus = (SpmStatusResult) resourceManagerInstance.get()
                                 .runVdsCommand(VDSCommandType.SpmStatus,
                                         new SpmStatusVDSCommandParameters(spmVdsId, storagePoolId))
                                 .getReturnValue();
@@ -1091,7 +1084,7 @@ public class IrsProxyImpl implements IrsProxy {
                             return spmStatus;
                         } else {
                             // try to stop spm
-                            VDSReturnValue spmStopReturnValue = resourceManager.runVdsCommand(
+                            VDSReturnValue spmStopReturnValue = resourceManagerInstance.get().runVdsCommand(
                                     VDSCommandType.SpmStop,
                                     new SpmStopVDSCommandParameters(vdsToFenceObject.getId(), storagePoolId));
                             // if spm stop succeeded no need to fence,
@@ -1127,7 +1120,7 @@ public class IrsProxyImpl implements IrsProxy {
         log.info("starting spm on vds '{}', storage pool '{}', prevId '{}', LVER '{}'",
                 selectedVds.getName(), storagePool.getName(), prevId,
                 lver);
-        SpmStatusResult spmStatus = (SpmStatusResult) resourceManager.runVdsCommand(
+        SpmStatusResult spmStatus = (SpmStatusResult) resourceManagerInstance.get().runVdsCommand(
                         VDSCommandType.SpmStart,
                         new SpmStartVDSCommandParameters(selectedVds.getId(),
                                 storagePoolId,
@@ -1623,7 +1616,7 @@ public class IrsProxyImpl implements IrsProxy {
                 Guid currentReportId = entry.getValue();
 
                 vdsHandeledReportsOnUnseenDomains.put(vdsId, currentReportId);
-                Map<String, Pair<String, String>> lockMap = resourceManager.getVdsPoolAndStorageConnectionsLock(vdsId);
+                Map<String, Pair<String, String>> lockMap = resourceManagerInstance.get().getVdsPoolAndStorageConnectionsLock(vdsId);
                 EngineLock engineLock = new EngineLock(lockMap, null);
                 if (!lockManager.acquireLock(engineLock).isAcquired()) {
                     log.info("Failed to acquire lock to refresh storage connection and pool metadata for host '{}', skipping it",
@@ -1740,7 +1733,7 @@ public class IrsProxyImpl implements IrsProxy {
                                 domainIdTuple);
 
                         final Map<String, String> customLogValues = Collections.singletonMap("StorageDomainNames", storageDomain.getName());
-                        ThreadPoolUtil.execute(() -> resourceManager
+                        ThreadPoolUtil.execute(() -> resourceManagerInstance.get()
                                 .getEventListener()
                                 .vdsNonOperational(vdsId, NonOperationalReason.STORAGE_DOMAIN_UNREACHABLE,
                                         true, domainId, customLogValues));
