@@ -106,7 +106,6 @@ import org.ovirt.engine.core.dao.VmDynamicDao;
 import org.ovirt.engine.core.dao.VmNumaNodeDao;
 import org.ovirt.engine.core.dao.VmPoolDao;
 import org.ovirt.engine.core.dao.VmStaticDao;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.utils.RngUtils;
 import org.ovirt.engine.core.utils.archstrategy.ArchStrategyFactory;
 import org.slf4j.Logger;
@@ -172,6 +171,14 @@ public class RunVmCommand<T extends RunVmParams> extends RunVmCommandBase<T>
     private ManagedBlockStorageCommandUtil managedBlockStorageCommandUtil;
     @Inject
     private HaAutoStartVmsRunner haAutoStartVmsRunner;
+    @Inject
+    private Instance<RunVmValidator> runVmValidatorInstance;
+    @Inject
+    private Instance<MultipleStorageDomainsValidator> multipleStorageDomainsValidator;
+    @Inject
+    private Instance<StorageDomainValidator> storageDomainValidatorProvider;
+    @Inject
+    private Instance<HasMaximumNumberOfDisks> hasMaximumNumberOfDisksInstance;
 
     protected RunVmCommand(Guid commandId) {
         super(commandId);
@@ -313,7 +320,7 @@ public class RunVmCommand<T extends RunVmParams> extends RunVmCommandBase<T>
                         reportCompleted();
                         throw e;
                     case VDS_NETWORK_ERROR:
-                        resourceManager.setVmUnknown(getVm());
+                        resourceManagerInstance.get().setVmUnknown(getVm());
                         getVm().setRunOnVds(getVdsId());
                         cleanupPassthroughVnics();
                         reportCompleted();
@@ -1189,7 +1196,7 @@ public class RunVmCommand<T extends RunVmParams> extends RunVmCommandBase<T>
             // a power management to go down which will eventually set the DC to 'down' state.
             StorageDomain leaseStorageDomain =
                     storageDomainDao.getForStoragePool(getVm().getLeaseStorageDomainId(), getVm().getStoragePoolId());
-            StorageDomainValidator storageDomainValidator = new StorageDomainValidator(leaseStorageDomain);
+            StorageDomainValidator storageDomainValidator = storageDomainValidatorProvider.get().createInstance(leaseStorageDomain);
             ValidationResult validationResult = storageDomainValidator.isDomainExistAndActive();
             if (!validate(validationResult)) {
                 log.warn("The VM lease storage domain '{}' status is not active, "
@@ -1215,7 +1222,7 @@ public class RunVmCommand<T extends RunVmParams> extends RunVmCommandBase<T>
     }
 
     protected boolean hasMaximumNumberOfDisks() {
-        return ArchStrategyFactory.getStrategy(getVm().getClusterArch()).run(new HasMaximumNumberOfDisks(getVm().getId())).returnValue();
+        return ArchStrategyFactory.getStrategy(getVm().getClusterArch()).run(hasMaximumNumberOfDisksInstance.get().init(getVm().getId())).returnValue();
     }
 
     /**
@@ -1253,7 +1260,7 @@ public class RunVmCommand<T extends RunVmParams> extends RunVmCommandBase<T>
     }
 
     protected ValidationResult checkDisksInBackupStorage() {
-        return new MultipleStorageDomainsValidator(getVm().getStoragePoolId(),
+        return multipleStorageDomainsValidator.get().init(getVm().getStoragePoolId(),
                 Stream.concat(getVm().getDiskMap()
                         .values()
                         .stream()
@@ -1273,7 +1280,8 @@ public class RunVmCommand<T extends RunVmParams> extends RunVmCommandBase<T>
     }
 
     protected RunVmValidator getRunVmValidator() {
-        return Injector.injectMembers(new RunVmValidator(getVm(), getParameters(), isInternalExecution(), getActiveIsoDomainId()));
+        return runVmValidatorInstance.get()
+                .init(getVm(), getParameters(), isInternalExecution(), getActiveIsoDomainId());
     }
 
     protected Guid getActiveIsoDomainId() {

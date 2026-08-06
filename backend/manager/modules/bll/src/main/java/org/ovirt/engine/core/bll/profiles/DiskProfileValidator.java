@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.ValidationResult;
@@ -30,18 +31,16 @@ public class DiskProfileValidator extends ProfileValidator<DiskProfile> {
 
     @Inject
     private StorageDomainDao storageDomainDao;
-
     @Inject
     private DiskProfileDao diskProfileDao;
-
     @Inject
     private VmTemplateDao vmTemplateDao;
-
     @Inject
     private VmDao vmDao;
-
     @Inject
     private DiskImageDao diskImageDao;
+    @Inject
+    private Instance<StorageDomainValidator> storageDomainValidatorInstance;
 
     public DiskProfileValidator(DiskProfile profile) {
         super(profile);
@@ -51,9 +50,22 @@ public class DiskProfileValidator extends ProfileValidator<DiskProfile> {
         super(profileId);
     }
 
+    public DiskProfileValidator() {
+    }
+
+    public DiskProfileValidator createWithProfile(DiskProfile profile) {
+        initWithProfile(profile);
+        return this;
+    }
+
+    public DiskProfileValidator createWithProfileId(Guid profileId) {
+        initWithProfileId(profileId);
+        return this;
+    }
+
     @Override
     public ValidationResult parentEntityExists() {
-        return new StorageDomainValidator(getStorageDomain()).isDomainExist();
+        return storageDomainValidatorInstance.get().createInstance(getStorageDomain()).isDomainExist();
     }
 
     @Override

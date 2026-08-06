@@ -1,5 +1,7 @@
 package org.ovirt.engine.core.bll.provider;
 
+import javax.enterprise.inject.Instance;
+import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import org.ovirt.engine.core.bll.host.provider.foreman.ForemanHostProviderProxy;
@@ -20,13 +22,34 @@ import org.ovirt.engine.core.common.businessentities.Provider;
 import org.ovirt.engine.core.common.businessentities.VmwareVmProviderProperties;
 import org.ovirt.engine.core.common.businessentities.XENVmProviderProperties;
 import org.ovirt.engine.core.common.businessentities.storage.OpenStackVolumeProviderProperties;
-import org.ovirt.engine.core.di.Injector;
 
 /**
  * The provider proxy factory can create a provider proxy according to the provider definition.
  */
 @Singleton
 public class ProviderProxyFactory {
+
+    @Inject
+    private Instance<UnmanagedNetworkProviderProxy> unmanagedNetworkProviderProxy;
+    @Inject
+    private Instance<ExternalNetworkProviderProxy> externalNetworkProviderProxy;
+    @Inject
+    private Instance<VmwareVmProviderProxy> vmwareVmProviderProxy;
+    @Inject
+    private Instance<KVMVmProviderProxy> kvmVmProviderProxy;
+    @Inject
+    private Instance<XENVmProviderProxy> xenVmProviderProxy;
+    @Inject
+    private Instance<KubevirtProviderProxy> kubevirtProviderProxy;
+    @Inject
+    private Instance<OpenstackNetworkProviderProxy> openstackNetworkProviderProxy;
+    @Inject
+    private Instance<OpenStackVolumeProviderProxy> openStackVolumeProviderProxy;
+    @Inject
+    private Instance<OpenStackImageProviderProxy> openStackImageProviderProxy;
+    @Inject
+    private Instance<ForemanHostProviderProxy> foremanHostProviderProxy;
+
     /**
      * Create the proxy used to communicate with the given provider.
      *
@@ -39,33 +62,33 @@ public class ProviderProxyFactory {
         switch (provider.getType()) {
             case EXTERNAL_NETWORK:
                 if (provider.getIsUnmanaged()) {
-                    return (P) new UnmanagedNetworkProviderProxy((Provider<OpenstackNetworkProviderProperties>) provider);
+                    return (P) unmanagedNetworkProviderProxy.get().init((Provider<OpenstackNetworkProviderProperties>) provider);
                 }
-                return (P) new ExternalNetworkProviderProxy((Provider<OpenstackNetworkProviderProperties>) provider);
+                return (P) externalNetworkProviderProxy.get().init((Provider<OpenstackNetworkProviderProperties>) provider);
 
             case FOREMAN:
-                return (P) new ForemanHostProviderProxy(provider);
+                return (P) foremanHostProviderProxy.get().init(provider);
 
             case OPENSTACK_NETWORK:
-                return (P) new OpenstackNetworkProviderProxy((Provider<OpenstackNetworkProviderProperties>) provider);
+                return (P) openstackNetworkProviderProxy.get().init((Provider<OpenstackNetworkProviderProperties>) provider);
 
             case OPENSTACK_IMAGE:
-                return (P) new OpenStackImageProviderProxy((Provider<OpenStackImageProviderProperties>) provider);
+                return (P) openStackImageProviderProxy.get().init((Provider<OpenStackImageProviderProperties>) provider);
 
             case OPENSTACK_VOLUME:
-                return (P) new OpenStackVolumeProviderProxy((Provider<OpenStackVolumeProviderProperties>) provider);
+                return (P) openStackVolumeProviderProxy.get().init((Provider<OpenStackVolumeProviderProperties>) provider);
 
             case VMWARE:
-                return (P) Injector.injectMembers(new VmwareVmProviderProxy((Provider<VmwareVmProviderProperties>) provider));
+                return (P) vmwareVmProviderProxy.get().init((Provider<VmwareVmProviderProperties>) provider);
 
             case KVM:
-                return (P) Injector.injectMembers(new KVMVmProviderProxy((Provider<KVMVmProviderProperties>) provider));
+                return (P) kvmVmProviderProxy.get().init((Provider<KVMVmProviderProperties>) provider);
 
             case XEN:
-                return (P) Injector.injectMembers(new XENVmProviderProxy((Provider<XENVmProviderProperties>) provider));
+                return (P) xenVmProviderProxy.get().init((Provider<XENVmProviderProperties>) provider);
 
             case KUBEVIRT:
-                return (P) Injector.injectMembers(new KubevirtProviderProxy((Provider<KubevirtProviderProperties>) provider));
+                return (P) kubevirtProviderProxy.get().init((Provider<KubevirtProviderProperties>) provider);
 
             default:
                 return null;

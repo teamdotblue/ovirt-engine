@@ -3,6 +3,9 @@ package org.ovirt.engine.core.bll.storage.disk.cinder;
 import java.util.ArrayList;
 import java.util.Arrays;
 
+import javax.enterprise.inject.Instance;
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.bll.context.CommandContext;
 import org.ovirt.engine.core.bll.tasks.interfaces.CommandCallback;
 import org.ovirt.engine.core.bll.validator.storage.CinderDisksValidator;
@@ -17,6 +20,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class RegisterCinderDiskCommand<T extends RegisterCinderDiskParameters> extends AddCinderDiskCommand<T> {
+
+    @Inject
+    private Instance<CinderDisksValidator> cinderDisksValidatorInstance;
 
     private static final Logger log = LoggerFactory.getLogger(RegisterCinderDiskCommand.class);
 
@@ -71,6 +77,6 @@ public class RegisterCinderDiskCommand<T extends RegisterCinderDiskParameters> e
     }
 
     protected CinderDisksValidator getCinderDisksValidator(CinderDisk disk) {
-        return new CinderDisksValidator(disk);
+        return cinderDisksValidatorInstance.get().init(disk);
     }
 }

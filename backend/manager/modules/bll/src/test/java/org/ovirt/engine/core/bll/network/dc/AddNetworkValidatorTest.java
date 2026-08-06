@@ -2,7 +2,9 @@ package org.ovirt.engine.core.bll.network.dc;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 import static org.ovirt.engine.core.bll.validator.ValidationResultMatchers.failsWith;
 import static org.ovirt.engine.core.bll.validator.ValidationResultMatchers.isValid;
@@ -17,12 +19,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
-import org.ovirt.engine.core.bll.network.dc.AddNetworkCommand.AddNetworkValidator;
+import org.ovirt.engine.core.bll.validator.NetworkValidator;
 import org.ovirt.engine.core.common.businessentities.network.Network;
 import org.ovirt.engine.core.common.businessentities.network.ProviderNetwork;
 import org.ovirt.engine.core.common.errors.EngineMessage;
 import org.ovirt.engine.core.dao.network.NetworkDao;
-import org.ovirt.engine.core.utils.InjectedMock;
 import org.ovirt.engine.core.utils.InjectorExtension;
 
 @ExtendWith({MockitoExtension.class, InjectorExtension.class})
@@ -36,15 +37,15 @@ public class AddNetworkValidatorTest {
     private ProviderNetwork providerNetwork;
 
     @Mock
-    @InjectedMock
     public NetworkDao networkDao;
 
     private List<Network> networks = new ArrayList<>();
-    private AddNetworkValidator validator;
+    private NetworkValidator validator;
 
     @BeforeEach
     public void setup() {
-        validator = new AddNetworkValidator(network);
+        validator = spy(new NetworkValidator(network));
+        doReturn(networkDao).when(validator).getNetworkDao();
 
         when(network.getProvidedBy()).thenReturn(providerNetwork);
 

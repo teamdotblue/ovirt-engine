@@ -2,7 +2,9 @@ package org.ovirt.engine.core.bll.validator;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 import static org.ovirt.engine.core.bll.validator.ValidationResultMatchers.failsWith;
 import static org.ovirt.engine.core.bll.validator.ValidationResultMatchers.isValid;
@@ -11,10 +13,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
+
 import org.hamcrest.Matcher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -35,7 +40,6 @@ import org.ovirt.engine.core.dao.network.NetworkDao;
 import org.ovirt.engine.core.dao.network.NetworkFilterDao;
 import org.ovirt.engine.core.dao.network.NetworkQoSDao;
 import org.ovirt.engine.core.dao.network.VnicProfileDao;
-import org.ovirt.engine.core.utils.InjectedMock;
 import org.ovirt.engine.core.utils.InjectorExtension;
 import org.ovirt.engine.core.utils.ReplacementUtils;
 
@@ -52,23 +56,18 @@ public class VnicProfileValidatorTest {
     private static final Guid INVALID_NETWORK_FILTER_ID = Guid.newGuid();
 
     @Mock
-    @InjectedMock
     public VnicProfileDao vnicProfileDao;
 
     @Mock
-    @InjectedMock
     public NetworkDao networkDao;
 
     @Mock
-    @InjectedMock
     public NetworkQoSDao networkQosDao;
 
     @Mock
-    @InjectedMock
     public VmDao vmDao;
 
     @Mock
-    @InjectedMock
     public NetworkFilterDao networkFilterDao;
 
     @Mock
@@ -81,16 +80,28 @@ public class VnicProfileValidatorTest {
     private NetworkQoS networkQos;
 
     @Mock
-    @InjectedMock
+    private Instance<NetworkValidator> networkValidatorInstance;
+
+    @Mock
+    private NetworkValidator networkValidator;
+
+    @Mock
     public VmTemplateDao templateDao;
 
     private List<VnicProfile> vnicProfiles = new ArrayList<>();
 
+    @InjectMocks
     private VnicProfileValidator validator;
 
     @BeforeEach
     public void setup() {
-        validator = new VnicProfileValidator(vnicProfile);
+        validator = spy(new VnicProfileValidator(vnicProfile));
+        doReturn(templateDao).when(validator).getVmTemplateDao();
+        doReturn(vmDao).when(validator).getVmDao();
+        doReturn(networkDao).when(validator).getNetworkDao();
+        doReturn(networkQosDao).when(validator).getNetworkQoSDao();
+        doReturn(networkFilterDao).when(validator).getNetworkFilterDao();
+        doReturn(vnicProfileDao).when(validator).getVnicProfileDao();
 
         // mock some commonly used Daos
         initNetworkFilterDao();
@@ -130,12 +141,16 @@ public class VnicProfileValidatorTest {
 
     @Test
     public void networkExists() {
+        NetworkValidator networkValidator = spy(new NetworkValidator(network));
+        doReturn(networkValidator).when(validator).getNetworkValidator();
         when(networkDao.get(any())).thenReturn(network);
         assertThat(validator.networkExists(), isValid());
     }
 
     @Test
     public void networkDoesntExist() {
+        NetworkValidator networkValidator = spy(new NetworkValidator(null));
+        doReturn(networkValidator).when(validator).getNetworkValidator();
         when(networkDao.get(any())).thenReturn(null);
         assertThat(validator.networkExists(), failsWith(EngineMessage.NETWORK_HAVING_ID_NOT_EXISTS));
     }

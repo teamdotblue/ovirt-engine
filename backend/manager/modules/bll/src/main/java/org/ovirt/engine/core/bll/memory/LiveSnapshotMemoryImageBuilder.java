@@ -1,5 +1,7 @@
 package org.ovirt.engine.core.bll.memory;
 
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.bll.CommandBase;
 import org.ovirt.engine.core.bll.interfaces.BackendInternal;
 import org.ovirt.engine.core.common.action.ActionReturnValue;
@@ -13,12 +15,18 @@ import org.ovirt.engine.core.common.scheduling.VmOverheadCalculator;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dao.DiskDao;
 import org.ovirt.engine.core.dao.StorageDomainStaticDao;
-import org.ovirt.engine.core.di.Injector;
 
 /**
  * This builder creates the memory images for live snapshots with memory operation
  */
 public class LiveSnapshotMemoryImageBuilder implements MemoryImageBuilder {
+
+    @Inject
+    private DiskDao diskDao;
+    @Inject
+    private StorageDomainStaticDao storageDomainStaticDao;
+    @Inject
+    private BackendInternal backendInternal;
 
     private Guid storageDomainId;
     private DiskImage memoryDisk;
@@ -38,6 +46,20 @@ public class LiveSnapshotMemoryImageBuilder implements MemoryImageBuilder {
         this.vmOverheadCalculator = vmOverheadCalculator;
         this.snapshotDescription = snapshotDescription;
         this.wipeAfterDelete = wipeAfterDelete;
+    }
+
+    public LiveSnapshotMemoryImageBuilder() {
+    }
+
+    public LiveSnapshotMemoryImageBuilder init(VM vm, Guid storageDomainId, CommandBase<?> enclosingCommand,
+            VmOverheadCalculator vmOverheadCalculator, String snapshotDescription, boolean wipeAfterDelete) {
+        this.vm = vm;
+        this.enclosingCommand = enclosingCommand;
+        this.storageDomainId = storageDomainId;
+        this.vmOverheadCalculator = vmOverheadCalculator;
+        this.snapshotDescription = snapshotDescription;
+        this.wipeAfterDelete = wipeAfterDelete;
+        return this;
     }
 
     @Override
@@ -64,7 +86,7 @@ public class LiveSnapshotMemoryImageBuilder implements MemoryImageBuilder {
     }
 
     private Guid addDisk(DiskImage disk) {
-        ActionReturnValue returnValue = Injector.get(BackendInternal.class).runInternalAction(
+        ActionReturnValue returnValue = backendInternal.runInternalAction(
                 ActionType.AddDisk,
                 buildAddDiskParameters(disk),
                 enclosingCommand.getContext().clone());
@@ -78,11 +100,7 @@ public class LiveSnapshotMemoryImageBuilder implements MemoryImageBuilder {
     }
 
     private DiskImage getDisk(Guid diskId) {
-        return (DiskImage) getDiskDao().get(diskId);
-    }
-
-    protected DiskDao getDiskDao() {
-        return Injector.get(DiskDao.class);
+        return (DiskImage) diskDao.get(diskId);
     }
 
     private AddDiskParameters buildAddDiskParameters(DiskImage disk) {
@@ -95,11 +113,7 @@ public class LiveSnapshotMemoryImageBuilder implements MemoryImageBuilder {
     }
 
     private StorageType getStorageType() {
-        return getStorageDomainStaticDao().get(storageDomainId).getStorageType();
-    }
-
-    protected StorageDomainStaticDao getStorageDomainStaticDao() {
-        return Injector.get(StorageDomainStaticDao.class);
+        return storageDomainStaticDao.get(storageDomainId).getStorageType();
     }
 
     @Override

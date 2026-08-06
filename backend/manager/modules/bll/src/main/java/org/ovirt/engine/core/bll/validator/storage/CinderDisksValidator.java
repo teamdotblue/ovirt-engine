@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.bll.ValidationResult;
 import org.ovirt.engine.core.bll.provider.ProviderProxyFactory;
 import org.ovirt.engine.core.bll.provider.storage.OpenStackVolumeProviderProxy;
@@ -19,12 +21,24 @@ import org.ovirt.engine.core.common.errors.EngineMessage;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dao.DiskDao;
 import org.ovirt.engine.core.dao.StorageDomainDao;
-import org.ovirt.engine.core.di.Injector;
+import org.ovirt.engine.core.dao.StorageDomainStaticDao;
+import org.ovirt.engine.core.dao.provider.ProviderDao;
 
 import com.woorea.openstack.base.client.OpenStackResponseException;
 import com.woorea.openstack.cinder.model.Limits;
 
 public class CinderDisksValidator {
+
+    @Inject
+    private DiskDao diskDao;
+    @Inject
+    private StorageDomainDao storageDomainDao;
+    @Inject
+    private ProviderProxyFactory providerProxyFactory;
+    @Inject
+    private StorageDomainStaticDao storageDomainStaticDao;
+    @Inject
+    private ProviderDao providerDao;
 
     private Iterable<CinderDisk> cinderDisks;
 
@@ -38,6 +52,19 @@ public class CinderDisksValidator {
 
     public CinderDisksValidator(CinderDisk cinderDisk) {
         this(Collections.singleton(cinderDisk));
+    }
+
+    public CinderDisksValidator() {
+    }
+
+    public CinderDisksValidator init(Iterable<CinderDisk> cinderDisks) {
+        this.cinderDisks = cinderDisks;
+        this.diskProxyMap = initializeVolumeProviderProxyMap();
+        return this;
+    }
+
+    public CinderDisksValidator init(CinderDisk cinderDisk) {
+        return init(Collections.singleton(cinderDisk));
     }
 
     private ValidationResult validate(Callable<ValidationResult> callable) {
@@ -62,7 +89,7 @@ public class CinderDisksValidator {
                 int numOfDisks = relatedCinderDisksByStorage.getCinderDisks().size();
                 if (isLimitExceeded(limits, VolumeClassification.Volume, numOfDisks)) {
                     String storageName =
-                            getStorageDomainDao().get(relatedCinderDisksByStorage.getStorageDomainId())
+                            storageDomainDao.get(relatedCinderDisksByStorage.getStorageDomainId())
                                     .getStorageName();
                     return new ValidationResult(EngineMessage.CANNOT_ADD_CINDER_DISK_VOLUME_LIMIT_EXCEEDED,
                             String.format("$maxTotalVolumes %d", limits.getAbsolute().getMaxTotalVolumes()),
@@ -84,7 +111,7 @@ public class CinderDisksValidator {
                 int numOfDisks = relatedCinderDisksByStorage.getCinderDisks().size();
                 if (isLimitExceeded(limits, VolumeClassification.Snapshot, numOfDisks)) {
                     String storageName =
-                            getStorageDomainDao().get(relatedCinderDisksByStorage.getStorageDomainId())
+                            storageDomainDao.get(relatedCinderDisksByStorage.getStorageDomainId())
                                     .getStorageName();
                     return new ValidationResult(EngineMessage.CANNOT_ADD_CINDER_DISK_SNAPSHOT_LIMIT_EXCEEDED,
                             String.format("$maxTotalSnapshots %d", limits.getAbsolute().getMaxTotalSnapshots()),
@@ -168,7 +195,7 @@ public class CinderDisksValidator {
     public ValidationResult validateCinderDisksAlreadyRegistered() {
         return validate(() -> {
             for (CinderDisk disk : cinderDisks) {
-                Disk diskFromDB = getDiskDao().get(disk.getId());
+                Disk diskFromDB = diskDao.get(disk.getId());
                 if (diskFromDB != null) {
                     return new ValidationResult(EngineMessage.CINDER_DISK_ALREADY_REGISTERED,
                             String.format("$diskAlias %s", diskFromDB.getDiskAlias()));
@@ -216,14 +243,6 @@ public class CinderDisksValidator {
             return null;
         }
         return OpenStackVolumeProviderProxy.getFromStorageDomainId(cinderDisk.getStorageIds().get(0),
-                Injector.get(ProviderProxyFactory.class));
-    }
-
-    protected DiskDao getDiskDao() {
-        return Injector.get(DiskDao.class);
-    }
-
-    protected StorageDomainDao getStorageDomainDao() {
-        return Injector.get(StorageDomainDao.class);
+                providerProxyFactory, storageDomainStaticDao, providerDao);
     }
 }

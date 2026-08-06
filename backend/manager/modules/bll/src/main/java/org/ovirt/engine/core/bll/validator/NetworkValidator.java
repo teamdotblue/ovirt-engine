@@ -9,6 +9,10 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.Stream;
 
+import javax.enterprise.context.Dependent;
+import javax.enterprise.inject.Instance;
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.bll.ValidationResult;
 import org.ovirt.engine.core.bll.network.cluster.ManagementNetworkUtil;
 import org.ovirt.engine.core.common.businessentities.IscsiBond;
@@ -25,7 +29,6 @@ import org.ovirt.engine.core.dao.VmDao;
 import org.ovirt.engine.core.dao.VmTemplateDao;
 import org.ovirt.engine.core.dao.network.HostNetworkQosDao;
 import org.ovirt.engine.core.dao.network.NetworkDao;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.utils.NetworkUtils;
 import org.ovirt.engine.core.utils.ReplacementUtils;
 
@@ -34,11 +37,29 @@ import org.ovirt.engine.core.utils.ReplacementUtils;
  * <br>
  * Usage: instantiate on a per-network basis, passing the network to be validated as an argument to the constructor.
  */
+@Dependent
 public class NetworkValidator {
+
+    @Inject
+    private ManagementNetworkUtil managementNetworkUtil;
+    @Inject
+    private IscsiBondDao iscsiBondDao;
+    @Inject
+    private VmDao vmDao;
+    @Inject
+    private VmTemplateDao vmTemplateDao;
+    @Inject
+    private VdsDao vdsDao;
+    @Inject
+    private HostNetworkQosDao hostNetworkQosDao;
+    @Inject
+    private NetworkDao networkDao;
+    @Inject
+    private Instance<HostNetworkQosValidator> hostNetworkQosValidatorInstance;
 
     public static final String NETWORK_LIST_REPLACEMENT = "NETWORK_LIST";
 
-    protected final Network network;
+    protected Network network;
 
     private List<Network> networks;
     private List<VM> vms;
@@ -46,6 +67,14 @@ public class NetworkValidator {
 
     public NetworkValidator(Network network) {
         this.network = network;
+    }
+
+    public NetworkValidator() {
+    }
+
+    public NetworkValidator init(Network network) {
+        this.network = network;
+        return this;
     }
 
     /**
@@ -148,12 +177,24 @@ public class NetworkValidator {
                                   : ValidationResult.VALID;
     }
 
-    protected NetworkDao getNetworkDao() {
-        return Injector.get(NetworkDao.class);
+    public NetworkDao getNetworkDao() {
+        return networkDao;
     }
 
     protected ManagementNetworkUtil getManagementNetworkUtil() {
-        return Injector.get(ManagementNetworkUtil.class);
+        return managementNetworkUtil;
+    }
+
+    protected IscsiBondDao getIscsiBondDao() {
+        return iscsiBondDao;
+    }
+
+    protected VdsDao getVdsDao() {
+        return vdsDao;
+    }
+
+    protected HostNetworkQosDao getHostNetworkQosDao() {
+        return hostNetworkQosDao;
     }
 
     public ValidationResult notRemovingManagementNetwork() {
@@ -164,7 +205,7 @@ public class NetworkValidator {
     }
 
     public ValidationResult notIscsiBondNetwork() {
-        List<IscsiBond> iscsiBonds = Injector.get(IscsiBondDao.class).getIscsiBondsByNetworkId(network.getId());
+        List<IscsiBond> iscsiBonds = getIscsiBondDao().getIscsiBondsByNetworkId(network.getId());
         if (!iscsiBonds.isEmpty()) {
             Collection<String> replaceNameables = ReplacementUtils.replaceWithNameable("IscsiBonds", iscsiBonds);
             replaceNameables.add(getNetworkNameReplacement());
@@ -205,7 +246,7 @@ public class NetworkValidator {
      * @return An error iff the network is in use by any hosts.
      */
     public ValidationResult networkNotUsedByHosts() {
-        List<VDS> allForNetwork = Injector.get(VdsDao.class).getAllForNetwork(network.getId());
+        List<VDS> allForNetwork = getVdsDao().getAllForNetwork(network.getId());
         return new PluralMessages(EngineMessage.VAR__ENTITIES__HOST, EngineMessage.VAR__ENTITIES__HOSTS)
             .getNetworkInUse(getEntitiesNames(allForNetwork));
     }
@@ -224,7 +265,7 @@ public class NetworkValidator {
      */
     public ValidationResult qosExistsInDc() {
         HostNetworkQosValidator qosValidator =
-                new HostNetworkQosValidator(Injector.get(HostNetworkQosDao.class).get(network.getQosId()));
+                hostNetworkQosValidatorInstance.get().init(getHostNetworkQosDao().get(network.getQosId()));
         ValidationResult res = qosValidator.qosExists();
         return (res == ValidationResult.VALID) ? qosValidator.consistentDataCenter() : res;
     }
@@ -260,12 +301,16 @@ public class NetworkValidator {
     }
 
     protected VmDao getVmDao() {
-        return Injector.get(VmDao.class);
+        return vmDao;
+    }
+
+    protected VmTemplateDao getVmTemplateDao() {
+        return vmTemplateDao;
     }
 
     protected List<VmTemplate> getTemplates() {
         if (templates == null) {
-            templates = Injector.get(VmTemplateDao.class).getAllForNetwork(network.getId());
+            templates = getVmTemplateDao().getAllForNetwork(network.getId());
         }
 
         return templates;
@@ -274,6 +319,68 @@ public class NetworkValidator {
     public ValidationResult isVmNetwork() {
         return ValidationResult.failWith(EngineMessage.ACTION_TYPE_FAILED_NOT_A_VM_NETWORK)
                 .when(!network.isVmNetwork());
+    }
+
+    public ValidationResult externalNetworkVlanValid() {
+        return ValidationResult.failWith(EngineMessage.ACTION_TYPE_FAILED_EXTERNAL_NETWORK_WITH_VLAN_MUST_BE_CUSTOM)
+                .when(network.getProvidedBy().hasExternalVlanId() && !network.getProvidedBy()
+                        .hasCustomPhysicalNetworkName());
+    }
+
+    /**
+     * @return An error if the network represents an external network that already exists in the data center that
+     *         the network should be on.
+     */
+    public ValidationResult externalNetworkNewInDataCenter() {
+        for (Network otherNetwork : getNetworks()) {
+            if (network.getProvidedBy().equals(otherNetwork.getProvidedBy())) {
+                return new ValidationResult(EngineMessage.ACTION_TYPE_FAILED_EXTERNAL_NETWORK_ALREADY_EXISTS);
+            }
+        }
+
+        return ValidationResult.VALID;
+    }
+
+    /**
+     * @return An error if the network represents an external network is not a VM network, since we don't know how
+     *         to handle non-VM external networks.
+     */
+    public ValidationResult externalNetworkIsVmNetwork() {
+        return network.isVmNetwork() ? ValidationResult.VALID
+                : new ValidationResult(EngineMessage.ACTION_TYPE_FAILED_EXTERNAL_NETWORK_MUST_BE_VM_NETWORK);
+    }
+
+    /**
+     * @return An error if the network selected as provider physical network does not exist in the data center or
+     *         if label or vlan id is specified.
+     */
+    public ValidationResult providerPhysicalNetworkValid() {
+        if (!network.getProvidedBy().isSetPhysicalNetworkId()) {
+            return ValidationResult.VALID;
+        }
+
+        List<EngineMessage> errorMessages = new ArrayList<>();
+
+        if (isLabelOrVlanSet()) {
+            errorMessages.add(EngineMessage.ACTION_TYPE_FAILED_LABEL_AND_VLAN_CANNOT_BE_SET_WITH_PROVIDER_PHYSICAL_NETWORK);
+        }
+        if (!providerPhysicalNetworkInDataCenter()) {
+            errorMessages.add(EngineMessage.ACTION_TYPE_FAILED_PROVIDER_PHYSICAL_NETWORK_DOES_NOT_EXIST_ON_DC);
+        }
+
+        if (errorMessages.isEmpty()) {
+            return ValidationResult.VALID;
+        }
+        return new ValidationResult(errorMessages);
+    }
+
+    private boolean isLabelOrVlanSet() {
+        return network.getLabel() != null || network.getVlanId() != null;
+    }
+
+    private boolean providerPhysicalNetworkInDataCenter() {
+        return getNetworks().stream().anyMatch(
+                otherNetwork -> network.getProvidedBy().getPhysicalNetworkId().equals(otherNetwork.getId()));
     }
 
     protected static class PluralMessages {

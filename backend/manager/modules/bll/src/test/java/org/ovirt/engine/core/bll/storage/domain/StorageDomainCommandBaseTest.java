@@ -14,11 +14,15 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
+import javax.enterprise.inject.Instance;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Answers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.ovirt.engine.core.bll.BaseCommandTest;
+import org.ovirt.engine.core.bll.validator.storage.StoragePoolValidator;
 import org.ovirt.engine.core.common.action.StorageDomainParametersBase;
 import org.ovirt.engine.core.common.businessentities.StorageDomain;
 import org.ovirt.engine.core.common.businessentities.StorageDomainStatus;
@@ -48,10 +52,18 @@ public class StorageDomainCommandBaseTest extends BaseCommandTest {
     @Mock
     private StorageDomainDao storageDomainDao;
 
+    @Mock
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
+
     @InjectMocks
     public StorageDomainCommandBase<StorageDomainParametersBase> cmd =
             mock(StorageDomainCommandBase.class,
                     withSettings().defaultAnswer(Answers.CALLS_REAL_METHODS).useConstructor(new StorageDomainParametersBase(), null));
+
+    @BeforeEach
+    public void setUp() {
+        doReturn(new StoragePoolValidator()).when(storagePoolValidatorInstance).get();
+    }
 
     @Test
     public void statusMatches() {

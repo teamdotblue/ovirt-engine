@@ -4,6 +4,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.bll.ValidationResult;
 import org.ovirt.engine.core.common.businessentities.StorageBlockSize;
 import org.ovirt.engine.core.common.businessentities.StorageDomainStatic;
@@ -17,27 +19,38 @@ import org.ovirt.engine.core.common.utils.VersionStorageFormatUtil;
 import org.ovirt.engine.core.dao.StorageDomainDao;
 import org.ovirt.engine.core.dao.StoragePoolIsoMapDao;
 import org.ovirt.engine.core.dao.VdsDao;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.utils.ReplacementUtils;
 
 /**
  * Validate validation methods for attaching a storage domain to a DC (pool).
  */
 public class StorageDomainToPoolRelationValidator {
-    private final StorageDomainStatic storageDomainStatic;
-    private final StoragePool storagePool;
 
-    public StorageDomainToPoolRelationValidator(StorageDomainStatic domainStatic, StoragePool pool) {
-        storageDomainStatic = domainStatic;
-        storagePool = pool;
+    @Inject
+    private StorageDomainDao storageDomainDao;
+    @Inject
+    private VdsDao vdsDao;
+    @Inject
+    private StoragePoolIsoMapDao storagePoolIsoMapDao;
+
+    private StorageDomainStatic storageDomainStatic;
+    private StoragePool storagePool;
+
+    public StorageDomainToPoolRelationValidator() {
+    }
+
+    public StorageDomainToPoolRelationValidator createInstance(StorageDomainStatic domainStatic, StoragePool pool) {
+        this.storageDomainStatic = domainStatic;
+        this.storagePool = pool;
+        return this;
     }
 
     protected StorageDomainDao getStorageDomainDao() {
-        return Injector.get(StorageDomainDao.class);
+        return storageDomainDao;
     }
 
     protected VdsDao getVdsDao() {
-        return Injector.get(VdsDao.class);
+        return vdsDao;
     }
 
     private boolean isStorageDomainOfTypeIsoOrExport() {
@@ -111,7 +124,7 @@ public class StorageDomainToPoolRelationValidator {
     }
 
     protected StoragePoolIsoMapDao getStoragePoolIsoMapDao() {
-        return Injector.get(StoragePoolIsoMapDao.class);
+        return storagePoolIsoMapDao;
     }
 
     public ValidationResult validateDomainCanBeAttachedToPool() {

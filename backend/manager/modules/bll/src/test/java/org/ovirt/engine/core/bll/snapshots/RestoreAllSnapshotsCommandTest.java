@@ -9,6 +9,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,6 +23,7 @@ import org.ovirt.engine.core.bll.BaseCommandTest;
 import org.ovirt.engine.core.bll.ValidateTestUtils;
 import org.ovirt.engine.core.bll.validator.VmValidator;
 import org.ovirt.engine.core.bll.validator.storage.MultipleStorageDomainsValidator;
+import org.ovirt.engine.core.bll.validator.storage.StoragePoolValidator;
 import org.ovirt.engine.core.common.action.RestoreAllSnapshotsParameters;
 import org.ovirt.engine.core.common.businessentities.Snapshot;
 import org.ovirt.engine.core.common.businessentities.Snapshot.SnapshotStatus;
@@ -43,7 +46,6 @@ import org.ovirt.engine.core.dao.StoragePoolDao;
 import org.ovirt.engine.core.dao.VmDao;
 import org.ovirt.engine.core.dao.VmDynamicDao;
 import org.ovirt.engine.core.utils.MockConfigExtension;
-
 @ExtendWith(MockConfigExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 public class RestoreAllSnapshotsCommandTest extends BaseCommandTest {
@@ -71,6 +73,9 @@ public class RestoreAllSnapshotsCommandTest extends BaseCommandTest {
 
     @Mock
     private VmValidator vmValidator;
+
+    @Mock
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
 
     private Guid vmId = Guid.newGuid();
     private Guid diskImageId = Guid.newGuid();
@@ -135,6 +140,7 @@ public class RestoreAllSnapshotsCommandTest extends BaseCommandTest {
     }
 
     private void initSpyCommand() {
+        doReturn(new StoragePoolValidator()).when(storagePoolValidatorInstance).get();
         doReturn(true).when(spyCommand).performImagesChecks();
         doReturn(storageValidator).when(spyCommand).createStorageDomainValidator();
         doReturn(vmValidator).when(spyCommand).createVmValidator(any());

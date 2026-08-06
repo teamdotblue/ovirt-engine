@@ -75,6 +75,8 @@ public class CloneVmCommand<T extends CloneVmParameters> extends AddVmAndCloneIm
         implements SerialChildExecutingCommand {
 
     @Inject
+    private Instance<DiskImagesValidator> diskImagesValidatorInstance;
+    @Inject
     private VmDeviceDao vmDeviceDao;
     @Inject
     protected VmDeviceUtils vmDeviceUtils;
@@ -644,7 +646,7 @@ public class CloneVmCommand<T extends CloneVmParameters> extends AddVmAndCloneIm
             return failValidation(EngineMessage.ACTION_TYPE_FAILED_VM_RUNNING_STATELESS);
         }
 
-        DiskImagesValidator diskImagesValidator = new DiskImagesValidator(diskImagesFromConfiguration);
+        DiskImagesValidator diskImagesValidator = diskImagesValidatorInstance.get().init(diskImagesFromConfiguration);
         if (!validate(diskImagesValidator.diskImagesNotIllegal())) {
             return false;
         }

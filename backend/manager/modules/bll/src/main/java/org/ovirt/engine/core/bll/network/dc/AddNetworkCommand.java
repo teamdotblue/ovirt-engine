@@ -6,7 +6,6 @@ import static org.ovirt.engine.core.common.AuditLogType.NETWORK_ADD_NETWORK_STAR
 import static org.ovirt.engine.core.common.AuditLogType.NETWORK_ADD_NETWORK_START_ERROR;
 import static org.ovirt.engine.core.common.AuditLogType.NETWORK_ADD_NOTHING_TO_DO;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -21,10 +20,10 @@ import org.ovirt.engine.core.bll.ConcurrentChildCommandsExecutionCallback;
 import org.ovirt.engine.core.bll.LockMessagesMatchUtil;
 import org.ovirt.engine.core.bll.NetworkLocking;
 import org.ovirt.engine.core.bll.NonTransactiveCommandAttribute;
-import org.ovirt.engine.core.bll.ValidationResult;
 import org.ovirt.engine.core.bll.context.CommandContext;
 import org.ovirt.engine.core.bll.job.ExecutionHandler;
 import org.ovirt.engine.core.bll.provider.ProviderValidator;
+import org.ovirt.engine.core.bll.provider.ProviderValidatorFactory;
 import org.ovirt.engine.core.bll.tasks.interfaces.CommandCallback;
 import org.ovirt.engine.core.bll.utils.PermissionSubject;
 import org.ovirt.engine.core.bll.validator.HasStoragePoolValidator;
@@ -74,6 +73,12 @@ public class AddNetworkCommand<T extends AddNetworkStoragePoolParameters> extend
     @Inject
     @Typed(ConcurrentChildCommandsExecutionCallback.class)
     private Instance<ConcurrentChildCommandsExecutionCallback> callbackProvider;
+    @Inject
+    private Instance<HasStoragePoolValidator> hasStoragePoolValidatorInstance;
+    @Inject
+    private ProviderValidatorFactory providerValidatorFactory;
+    @Inject
+    private Instance<NetworkValidator> addNetworkValidatorInstance;
 
     public AddNetworkCommand(T parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -119,8 +124,8 @@ public class AddNetworkCommand<T extends AddNetworkStoragePoolParameters> extend
 
     @Override
     protected boolean validate() {
-        HasStoragePoolValidator hasStoragePoolValidator = new HasStoragePoolValidator(getNetwork());
-        AddNetworkValidator validator = getNetworkValidator();
+        HasStoragePoolValidator hasStoragePoolValidator = hasStoragePoolValidatorInstance.get().init(getNetwork());
+        NetworkValidator validator = getNetworkValidator();
         return validate(hasStoragePoolValidator.storagePoolExists())
                 && validate(validator.stpForVmNetworkOnly())
                 && validate(validator.portIsolationForVmNetworkOnly())
@@ -132,13 +137,13 @@ public class AddNetworkCommand<T extends AddNetworkStoragePoolParameters> extend
                 && (!getNetwork().isExternal() || externalNetworkValid(validator));
     }
 
-    protected AddNetworkValidator getNetworkValidator() {
-        return new AddNetworkValidator(getNetwork());
+    protected NetworkValidator getNetworkValidator() {
+        return addNetworkValidatorInstance.get().init(getNetwork());
     }
 
-    private boolean externalNetworkValid(AddNetworkValidator validator) {
+    private boolean externalNetworkValid(NetworkValidator validator) {
         ProviderValidator providerValidator =
-                new ProviderValidator(providerDao.get(getNetwork().getProvidedBy().getProviderId()));
+                providerValidatorFactory.createValidator(providerDao.get(getNetwork().getProvidedBy().getProviderId()));
         return validate(providerValidator.providerIsSet())
                 && validate(validator.externalNetworkNewInDataCenter())
                 && validate(validator.externalNetworkIsVmNetwork())
@@ -246,75 +251,6 @@ public class AddNetworkCommand<T extends AddNetworkStoragePoolParameters> extend
             runInternalAction(ActionType.AutodefineExternalNetwork,
                     new IdParameters(getNetwork().getId()),
                     getContext().clone().withoutLock());
-        }
-    }
-
-    protected static class AddNetworkValidator extends NetworkValidator {
-
-        public AddNetworkValidator(Network network) {
-            super(network);
-        }
-
-        public ValidationResult externalNetworkVlanValid() {
-            return ValidationResult.failWith(EngineMessage.ACTION_TYPE_FAILED_EXTERNAL_NETWORK_WITH_VLAN_MUST_BE_CUSTOM)
-                    .when(network.getProvidedBy().hasExternalVlanId() && !network.getProvidedBy()
-                            .hasCustomPhysicalNetworkName());
-        }
-
-        /**
-         * @return An error iff the network represents an external network that already exists in the data center that
-         *         the network should be on.
-         */
-        public ValidationResult externalNetworkNewInDataCenter() {
-            for (Network otherNetwork : getNetworks()) {
-                if (network.getProvidedBy().equals(otherNetwork.getProvidedBy())) {
-                    return new ValidationResult(EngineMessage.ACTION_TYPE_FAILED_EXTERNAL_NETWORK_ALREADY_EXISTS);
-                }
-            }
-
-            return ValidationResult.VALID;
-        }
-
-        /**
-         * @return An error iff the network represents an external network is not a VM network, since we don't know how
-         *         to handle non-VM external networks.
-         */
-        public ValidationResult externalNetworkIsVmNetwork() {
-            return network.isVmNetwork() ? ValidationResult.VALID
-                    : new ValidationResult(EngineMessage.ACTION_TYPE_FAILED_EXTERNAL_NETWORK_MUST_BE_VM_NETWORK);
-        }
-
-        /**
-         * @return An error if the network selected as provider physical network does not exist in the data center or
-         *         if label or vlan id is specified.
-         */
-        public ValidationResult providerPhysicalNetworkValid() {
-            if (!network.getProvidedBy().isSetPhysicalNetworkId()) {
-                return ValidationResult.VALID;
-            }
-
-            List<EngineMessage> errorMessages = new ArrayList<>();
-
-            if (isLabelOrVlanSet()) {
-                errorMessages.add(EngineMessage.ACTION_TYPE_FAILED_LABEL_AND_VLAN_CANNOT_BE_SET_WITH_PROVIDER_PHYSICAL_NETWORK);
-            }
-            if (!providerPhysicalNetworkInDataCenter()) {
-                errorMessages.add(EngineMessage.ACTION_TYPE_FAILED_PROVIDER_PHYSICAL_NETWORK_DOES_NOT_EXIST_ON_DC);
-            }
-
-            if (errorMessages.isEmpty()) {
-                return ValidationResult.VALID;
-            }
-            return new ValidationResult(errorMessages);
-        }
-
-        private boolean isLabelOrVlanSet() {
-            return network.getLabel() != null || network.getVlanId() != null;
-        }
-
-        private boolean providerPhysicalNetworkInDataCenter() {
-            return getNetworks().stream().anyMatch(
-                    otherNetwork -> network.getProvidedBy().getPhysicalNetworkId().equals(otherNetwork.getId()));
         }
     }
 

@@ -8,6 +8,9 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import javax.enterprise.inject.Instance;
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.bll.ValidationResult;
 import org.ovirt.engine.core.common.action.ActionType;
 import org.ovirt.engine.core.common.businessentities.StorageDomain;
@@ -16,7 +19,6 @@ import org.ovirt.engine.core.common.businessentities.storage.DiskImage;
 import org.ovirt.engine.core.common.errors.EngineMessage;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dao.StorageDomainDao;
-import org.ovirt.engine.core.di.Injector;
 
 /**
  * A validator for multiple storage domains.
@@ -29,6 +31,11 @@ import org.ovirt.engine.core.di.Injector;
  * validation, and the others will not be inspected.
  */
 public class MultipleStorageDomainsValidator {
+
+    @Inject
+    private StorageDomainDao storageDomainDao;
+    @Inject
+    private Instance<StorageDomainValidator> storageDomainValidatorInstance;
 
     /** The ID of the storage pool all the domains belong to */
     private Guid storagePoolId;
@@ -46,6 +53,21 @@ public class MultipleStorageDomainsValidator {
         for (Guid id : sdIds) {
             domainValidators.put(id, null);
         }
+    }
+
+    /**
+     * Used for CDI
+     */
+    public MultipleStorageDomainsValidator() {
+    }
+
+    public MultipleStorageDomainsValidator init(Guid storagePoolId, Collection<Guid> sdIds) {
+        this.storagePoolId = storagePoolId;
+        domainValidators = new HashMap<>();
+        for (Guid id : sdIds) {
+            domainValidators.put(id, null);
+        }
+        return this;
     }
 
     private Map<Guid, List<DiskImage>> getDomainsDisksMap(Collection<DiskImage> diskImages) {
@@ -188,7 +210,7 @@ public class MultipleStorageDomainsValidator {
     protected StorageDomainValidator getStorageDomainValidator(Map.Entry<Guid, StorageDomainValidator> entry) {
         if (entry.getValue() == null) {
             StorageDomain storageDomain = getStorageDomainDao().getForStoragePool(entry.getKey(), storagePoolId);
-            entry.setValue(new StorageDomainValidator(storageDomain));
+            entry.setValue(storageDomainValidatorInstance.get().createInstance(storageDomain));
         }
 
         return entry.getValue();
@@ -196,7 +218,7 @@ public class MultipleStorageDomainsValidator {
 
     /** @return The Dao object used to retrieve storage domains */
     public StorageDomainDao getStorageDomainDao() {
-        return Injector.get(StorageDomainDao.class);
+        return storageDomainDao;
     }
 
     /**

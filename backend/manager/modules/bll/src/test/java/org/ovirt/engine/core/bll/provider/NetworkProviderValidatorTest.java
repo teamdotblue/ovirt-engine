@@ -1,13 +1,16 @@
 package org.ovirt.engine.core.bll.provider;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
 import static org.ovirt.engine.core.bll.validator.ValidationResultMatchers.failsWith;
 import static org.ovirt.engine.core.bll.validator.ValidationResultMatchers.isValid;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
@@ -15,6 +18,7 @@ import org.ovirt.engine.core.common.businessentities.OpenstackNetworkPluginType;
 import org.ovirt.engine.core.common.businessentities.OpenstackNetworkProviderProperties;
 import org.ovirt.engine.core.common.businessentities.ProviderType;
 import org.ovirt.engine.core.common.errors.EngineMessage;
+import org.ovirt.engine.core.dao.provider.ProviderDao;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -22,9 +26,18 @@ public class NetworkProviderValidatorTest extends ProviderValidatorTest {
 
     private static final ProviderType NON_NETWORK_PROVIDER_TYPE = ProviderType.FOREMAN;
 
+    @Spy
     private NetworkProviderValidator validator = new NetworkProviderValidator(provider);
     @Mock
     private OpenstackNetworkProviderProperties properties;
+    @Mock
+    private ProviderDao providerDao;
+
+    @BeforeEach
+    public void setup() {
+        doReturn(providerDao).when(validator).getProviderDao();
+        super.setup();
+    }
 
     @Test
     public void validNetworkProviderType() {

@@ -76,7 +76,6 @@ import org.ovirt.engine.core.dao.VmBackupDao;
 import org.ovirt.engine.core.dao.VmCheckpointDao;
 import org.ovirt.engine.core.dao.VmDao;
 import org.ovirt.engine.core.dao.VmDeviceDao;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.utils.ReplacementUtils;
 import org.ovirt.engine.core.utils.lock.EngineLock;
 import org.ovirt.engine.core.utils.transaction.TransactionSupport;
@@ -106,6 +105,10 @@ public class StartVmBackupCommand<T extends VmBackupParameters> extends VmComman
     private CommandCoordinatorUtil commandCoordinatorUtil;
     @Inject
     private VdsCommandsHelper vdsCommandsHelper;
+    @Inject
+    private Instance<DiskExistenceValidator> diskExistenceValidatorInstance;
+    @Inject
+    private Instance<DiskImagesValidator> diskImagesValidatorInstance;
 
     private List<DiskImage> disksList;
     private VmCheckpoint vmCheckpointsLeaf;
@@ -798,11 +801,11 @@ public class StartVmBackupCommand<T extends VmBackupParameters> extends VmComman
     }
 
     public DiskExistenceValidator createDiskExistenceValidator(Set<Guid> disksGuids) {
-        return Injector.injectMembers(new DiskExistenceValidator(disksGuids));
+        return diskExistenceValidatorInstance.get().init(disksGuids);
     }
 
     public DiskImagesValidator createDiskImagesValidator(List<DiskImage> disks) {
-        return Injector.injectMembers(new DiskImagesValidator(disks));
+        return diskImagesValidatorInstance.get().init(disks);
     }
 
     public Set<Guid> getDiskIds() {

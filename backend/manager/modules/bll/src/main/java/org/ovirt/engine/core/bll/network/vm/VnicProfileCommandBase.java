@@ -3,6 +3,7 @@ package org.ovirt.engine.core.bll.network.vm;
 import java.util.Collections;
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.CommandBase;
@@ -26,6 +27,8 @@ public abstract class VnicProfileCommandBase<T extends VnicProfileParameters> ex
     private StoragePoolDao storagePoolDao;
     @Inject
     private NetworkDao networkDao;
+    @Inject
+    private Instance<VnicProfileValidator> vnicProfileValidatorInstance;
 
     public VnicProfileCommandBase(T parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -82,6 +85,6 @@ public abstract class VnicProfileCommandBase<T extends VnicProfileParameters> ex
     }
 
     protected VnicProfileValidator createVnicProfileValidator() {
-        return new VnicProfileValidator(getVnicProfile());
+        return vnicProfileValidatorInstance.get().init(getVnicProfile());
     }
 }

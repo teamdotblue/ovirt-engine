@@ -68,7 +68,8 @@ public class StorageDomainToPoolRelationValidatorTest {
 
     private void spyValidator() {
         // Create the spied validators.
-        validator = spy(new StorageDomainToPoolRelationValidator(storageDomain.getStorageStaticData(), storagePool));
+        validator = spy(new StorageDomainToPoolRelationValidator()
+                .createInstance(storageDomain.getStorageStaticData(), storagePool));
 
         doReturn(storagePoolIsoMapDao).when(validator).getStoragePoolIsoMapDao();
         doReturn(storageDomainDao).when(validator).getStorageDomainDao();

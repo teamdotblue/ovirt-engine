@@ -12,6 +12,9 @@ import java.util.Map;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import javax.enterprise.inject.Instance;
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.bll.ValidationResult;
 import org.ovirt.engine.core.bll.VmCommand;
 import org.ovirt.engine.core.bll.hostdev.HostDeviceManager;
@@ -53,15 +56,40 @@ import org.ovirt.engine.core.dao.DiskVmElementDao;
 import org.ovirt.engine.core.dao.SnapshotDao;
 import org.ovirt.engine.core.dao.network.VmNetworkInterfaceDao;
 import org.ovirt.engine.core.dao.network.VnicProfileDao;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.utils.ReplacementUtils;
 
 /** A Validator for various VM validate needs */
 public class VmValidator {
+
+    @Inject
+    private Instance<DiskImagesValidator> diskImagesValidatorInstance;
+    @Inject
+    private DiskDao diskDao;
+    @Inject
+    private SnapshotDao snapshotDao;
+    @Inject
+    private HostDeviceManager hostDeviceManager;
+    @Inject
+    private VmDeviceUtils vmDeviceUtils;
+    @Inject
+    private DiskVmElementDao diskVmElementDao;
+    @Inject
+    private VmNetworkInterfaceDao vmNetworkInterfaceDao;
+    @Inject
+    private VnicProfileDao vnicProfileDao;
+
     private VM vm;
 
     public VmValidator(VM vm) {
         this.vm = vm;
+    }
+
+    public VmValidator() {
+    }
+
+    public VmValidator init(VM vm) {
+        this.vm = vm;
+        return this;
     }
 
     protected VmPropertiesUtils getVmPropertiesUtils() {
@@ -143,7 +171,7 @@ public class VmValidator {
     }
 
     public ValidationResult vmNotRunningStateless() {
-        if (Injector.get(SnapshotDao.class).exists(vm.getId(), SnapshotType.STATELESS)) {
+        if (getSnapshotDao().exists(vm.getId(), SnapshotType.STATELESS)) {
             EngineMessage message = vm.isRunning() ? EngineMessage.ACTION_TYPE_FAILED_VM_RUNNING_STATELESS :
                     EngineMessage.ACTION_TYPE_FAILED_VM_HAS_STATELESS_SNAPSHOT_LEFTOVER;
             return new ValidationResult(message);
@@ -158,7 +186,7 @@ public class VmValidator {
     public ValidationResult vmNotHavingDeviceSnapshotsAttachedToOtherVms(boolean onlyPlugged) {
         List<Disk> vmDisks = getDiskDao().getAllForVm(vm.getId());
         ValidationResult result =
-                new DiskImagesValidator(DisksFilter.filterImageDisks(vmDisks, ONLY_NOT_SHAREABLE, ONLY_ACTIVE))
+                diskImagesValidatorInstance.get().init(DisksFilter.filterImageDisks(vmDisks, ONLY_NOT_SHAREABLE, ONLY_ACTIVE))
                         .diskImagesSnapshotsNotAttachedToOtherVms(onlyPlugged);
         if (result != ValidationResult.VALID) {
             return result;
@@ -195,14 +223,26 @@ public class VmValidator {
     }
 
     public DiskDao getDiskDao() {
-        return Injector.get(DiskDao.class);
+        return diskDao;
+    }
+
+    public SnapshotDao getSnapshotDao() {
+        return snapshotDao;
+    }
+
+    // public OsRepository getOsRepository() {
+    //     return osRepository;
+    // }
+
+    public VnicProfileDao getVnicProfileDao() {
+        return vnicProfileDao;
     }
 
     /**
      * @return ValidationResult indicating whether a vm contains non-migratable, plugged, passthrough vnics
      */
     public ValidationResult allPassthroughVnicsMigratable() {
-        List<VmNetworkInterface> vnics = Injector.get(VmNetworkInterfaceDao.class).getAllForVm(vm.getId());
+        List<VmNetworkInterface> vnics = getVmNetworkInterfaceDao().getAllForVm(vm.getId());
 
         List<String> nonMigratablePassthroughVnicNames = vnics.stream()
                 .filter(isVnicMigratable(vm).negate())
@@ -225,7 +265,7 @@ public class VmValidator {
     }
 
     private VnicProfile getVnicProfile(VmNic vnic) {
-        return Injector.get(VnicProfileDao.class).get(vnic.getVnicProfileId());
+        return getVnicProfileDao().get(vnic.getVnicProfileId());
     }
 
     /**
@@ -277,12 +317,16 @@ public class VmValidator {
         return ValidationResult.VALID;
     }
 
-    private HostDeviceManager getHostDeviceManager() {
-        return Injector.get(HostDeviceManager.class);
+    HostDeviceManager getHostDeviceManager() {
+        return hostDeviceManager;
     }
 
     VmDeviceUtils getVmDeviceUtils() {
-        return Injector.get(VmDeviceUtils.class);
+        return vmDeviceUtils;
+    }
+
+    VmNetworkInterfaceDao getVmNetworkInterfaceDao() {
+        return vmNetworkInterfaceDao;
     }
 
     public ValidationResult isPinnedVmRunningOnDedicatedHost(VM recentVm, VmStatic paramVm) {
@@ -312,8 +356,7 @@ public class VmValidator {
      * This method checks that with the given parameters, the max PCI and IDE limits defined are not passed.
      */
     public static ValidationResult checkPciAndIdeLimit(
-            int osId,
-            Version clusterVersion,
+            int maxPciSlots,
             int monitorsNumber,
             List<? extends VmNic> interfaces,
             List<DiskVmElement> diskVmElements,
@@ -348,10 +391,6 @@ public class VmValidator {
 
         // Sound device controller requires one PCI slot
         pciInUse += isSoundDeviceEnabled ? 1 : 0;
-
-        OsRepository osRepository = Injector.get(OsRepository.class);
-
-        int maxPciSlots = osRepository.getMaxPciDevices(osId, clusterVersion);
 
         ArrayList<EngineMessage> messages = new ArrayList<>();
         if (pciInUse > maxPciSlots) {
@@ -424,7 +463,7 @@ public class VmValidator {
     }
 
     public DiskVmElementDao getDiskVmElementDao() {
-        return Injector.get(DiskVmElementDao.class);
+        return diskVmElementDao;
     }
 
     public ValidationResult canMigrate(boolean forceMigration) {

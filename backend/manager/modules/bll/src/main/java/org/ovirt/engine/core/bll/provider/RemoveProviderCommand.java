@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.CommandBase;
@@ -29,8 +30,8 @@ import org.ovirt.engine.core.utils.ReplacementUtils;
 public class RemoveProviderCommand<P extends ProviderParameters> extends CommandBase<P> {
 
     private Provider<?> deletedProvider;
-
     private ProviderProxy providerProxy;
+
     @Inject
     private ProviderDao providerDao;
     @Inject
@@ -39,6 +40,8 @@ public class RemoveProviderCommand<P extends ProviderParameters> extends Command
     private ClusterDao clusterDao;
     @Inject
     private ProviderProxyFactory providerProxyFactory;
+    @Inject
+    private Instance<NetworkValidator> networkValidatorInstance;
 
     public RemoveProviderCommand(Guid commandId) {
         super(commandId);
@@ -78,7 +81,7 @@ public class RemoveProviderCommand<P extends ProviderParameters> extends Command
 
     @Override
     protected boolean validate() {
-        RemoveProviderValidator validator = new RemoveProviderValidator(networkDao, clusterDao, getDeletedProvider());
+        RemoveProviderValidator validator = new RemoveProviderValidator(networkDao, clusterDao, getDeletedProvider(), networkValidatorInstance);
         return validate(validator.providerIsSet()) && validate(validator.providerNetworksNotUsed())
                 && validate(validator.providerIsNoDefaultProvider()) && validateRemoveProvider();
     }
@@ -123,11 +126,14 @@ public class RemoveProviderCommand<P extends ProviderParameters> extends Command
 
         private final NetworkDao networkDao;
         private final ClusterDao clusterDao;
+        private final Instance<NetworkValidator> networkValidatorInstance;
 
-        public RemoveProviderValidator(NetworkDao networkDao, ClusterDao clusterDao, Provider<?> provider) {
+        public RemoveProviderValidator(NetworkDao networkDao, ClusterDao clusterDao, Provider<?> provider,
+            Instance<NetworkValidator> networkValidatorInstance) {
             super(provider);
             this.networkDao = networkDao;
             this.clusterDao = clusterDao;
+            this.networkValidatorInstance = networkValidatorInstance;
         }
 
         public ValidationResult providerNetworksNotUsed() {
@@ -164,7 +170,7 @@ public class RemoveProviderCommand<P extends ProviderParameters> extends Command
         }
 
         protected NetworkValidator getValidator(Network network) {
-            return new NetworkValidator(network);
+            return networkValidatorInstance.get().init(network);
         }
     }
 }

@@ -15,6 +15,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.enterprise.inject.Instance;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.ovirt.engine.core.bll.ValidationResult;
@@ -24,6 +26,7 @@ import org.ovirt.engine.core.bll.validator.HostInterfaceValidator;
 import org.ovirt.engine.core.bll.validator.HostNetworkQosValidator;
 import org.ovirt.engine.core.bll.validator.NetworkAttachmentValidator;
 import org.ovirt.engine.core.bll.validator.NetworkAttachmentsValidator;
+import org.ovirt.engine.core.bll.validator.NetworkValidator;
 import org.ovirt.engine.core.bll.validator.network.NetworkAttachmentIpConfigurationValidator;
 import org.ovirt.engine.core.bll.validator.network.NetworkExclusivenessValidator;
 import org.ovirt.engine.core.bll.validator.network.NetworkExclusivenessValidatorResolver;
@@ -96,6 +99,8 @@ public class HostSetupNetworksValidator {
     private NetworkAttachmentIpConfigurationValidator networkAttachmentIpConfigurationValidator;
     private UnmanagedNetworkValidator unmanagedNetworkValidator;
     private BackendInternal backendInternal;
+    private Instance<NetworkValidator> networkValidatorInstance;
+    private Instance<HostNetworkQosValidator> hostNetworkQosValidatorInstance;
 
     public HostSetupNetworksValidator(VDS host,
             HostSetupNetworksParameters params,
@@ -111,7 +116,9 @@ public class HostSetupNetworksValidator {
             NetworkExclusivenessValidatorResolver networkExclusivenessValidatorResolver,
             NetworkAttachmentIpConfigurationValidator networkAttachmentIpConfigurationValidator,
             UnmanagedNetworkValidator unmanagedNetworkValidator,
-            BackendInternal backendInternal) {
+            BackendInternal backendInternal,
+            Instance<NetworkValidator> networkValidatorInstance,
+            Instance<HostNetworkQosValidator> hostNetworkQosValidatorInstance) {
 
         this.host = host;
         this.params = params;
@@ -136,6 +143,8 @@ public class HostSetupNetworksValidator {
 
         existingAttachmentsById = Entities.businessEntitiesById(existingAttachments);
         createOrUpdateBondBusinessEntityMap = new BusinessEntityMap<>(params.getCreateOrUpdateBonds());
+        this.networkValidatorInstance = networkValidatorInstance;
+        this.hostNetworkQosValidatorInstance = hostNetworkQosValidatorInstance;
 
         nicLabelByLabel = Entities.entitiesByName(params.getLabels());
 
@@ -281,7 +290,7 @@ public class HostSetupNetworksValidator {
     }
 
     HostNetworkQosValidator createHostNetworkQosValidator(HostNetworkQos hostNetworkQos) {
-        return new HostNetworkQosValidator(hostNetworkQos);
+        return hostNetworkQosValidatorInstance.get().init(hostNetworkQos);
     }
 
     private Network getNetworkRelatedToAttachment(NetworkAttachment networkAttachment) {
@@ -829,7 +838,7 @@ public class HostSetupNetworksValidator {
     }
 
     private NetworkAttachmentValidator createNetworkAttachmentValidator(NetworkAttachment attachmentToValidate) {
-        return new NetworkAttachmentValidator(attachmentToValidate, host, networkClusterDao, networkDao, vdsDao);
+        return new NetworkAttachmentValidator(attachmentToValidate, host, networkClusterDao, networkDao, vdsDao, networkValidatorInstance);
     }
 
     /**

@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
 
+import javax.enterprise.inject.Instance;
 import javax.validation.ConstraintViolation;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -42,6 +43,9 @@ import org.ovirt.engine.core.bll.network.macpool.MacPool;
 import org.ovirt.engine.core.bll.network.macpool.MacPoolPerCluster;
 import org.ovirt.engine.core.bll.validator.ImportValidator;
 import org.ovirt.engine.core.bll.validator.VmNicMacsUtils;
+import org.ovirt.engine.core.bll.validator.storage.MultipleStorageDomainsValidator;
+import org.ovirt.engine.core.bll.validator.storage.StorageDomainValidator;
+import org.ovirt.engine.core.bll.validator.storage.StoragePoolValidator;
 import org.ovirt.engine.core.common.action.ImportVmParameters;
 import org.ovirt.engine.core.common.businessentities.ArchitectureType;
 import org.ovirt.engine.core.common.businessentities.BiosType;
@@ -102,6 +106,18 @@ public class ImportVmCommandTest extends BaseCommandTest {
     @Mock
     private CloudInitHandler cloudInitHandler;
 
+    @Mock
+    private MultipleStorageDomainsValidator multipleStorageDomainsValidator;
+
+    @Mock
+    private Instance<StorageDomainValidator> storageDomainValidatorInstance;
+
+    @Mock
+    private StorageDomainValidator storageDomainValidator;
+
+    @Mock
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
+
 
     public static Stream<MockConfigDescriptor<?>> mockConfiguration() {
         return Stream.of(
@@ -126,11 +142,17 @@ public class ImportVmCommandTest extends BaseCommandTest {
     public void setUp() {
         doReturn(null).when(cmd).getCluster();
         doReturn(emptyList()).when(cloudInitHandler).validate(any());
+        doReturn(new StoragePoolValidator()).when(storagePoolValidatorInstance).get();
+        doReturn(storageDomainValidator).when(storageDomainValidatorInstance).get();
+        doReturn(storageDomainValidator).when(storageDomainValidator).createInstance(any());
+        doReturn(ValidationResult.VALID).when(storageDomainValidator).isDomainExistAndActive();
+        doReturn(ValidationResult.VALID).when(storageDomainValidator).domainIsValidDestination();
 
         cmd.getParameters().setCopyCollapse(true);
 
         ImportValidator validator = spy(new ImportValidator(cmd.getParameters()));
         doReturn(validator).when(cmd).getImportValidator();
+        doReturn(multipleStorageDomainsValidator).when(validator).createMultipleStorageDomainsValidator(any());
 
         doNothing().when(cmd).updateVmVersion();
         doReturn(true).when(cmd).validateNoDuplicateVm();

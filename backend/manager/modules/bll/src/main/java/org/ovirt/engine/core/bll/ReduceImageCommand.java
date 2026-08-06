@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.context.CommandContext;
@@ -50,6 +51,8 @@ public class ReduceImageCommand<T extends ImagesActionsParametersBase> extends B
     private SnapshotDao snapshotDao;
     @Inject
     private DiskImageDao diskImageDao;
+    @Inject
+    private Instance<DiskValidator> diskValidatorInstance;
 
     public ReduceImageCommand(T parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -148,7 +151,7 @@ public class ReduceImageCommand<T extends ImagesActionsParametersBase> extends B
     }
 
     protected DiskValidator createDiskValidator() {
-        return new DiskValidator(getDiskImage());
+        return diskValidatorInstance.get().init(getDiskImage());
     }
 
     private boolean isVmRunningOnSpm() {

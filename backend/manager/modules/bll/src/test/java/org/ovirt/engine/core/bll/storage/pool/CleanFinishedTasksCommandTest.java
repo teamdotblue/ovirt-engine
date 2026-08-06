@@ -4,11 +4,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+
+import javax.enterprise.inject.Instance;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,6 +24,7 @@ import org.ovirt.engine.core.bll.BaseCommandTest;
 import org.ovirt.engine.core.bll.ValidateTestUtils;
 import org.ovirt.engine.core.bll.tasks.CommandCoordinatorUtil;
 import org.ovirt.engine.core.bll.tasks.interfaces.CommandCoordinator;
+import org.ovirt.engine.core.bll.validator.storage.StoragePoolValidator;
 import org.ovirt.engine.core.common.AuditLogType;
 import org.ovirt.engine.core.common.action.StoragePoolParametersBase;
 import org.ovirt.engine.core.common.businessentities.AsyncTaskStatusEnum;
@@ -48,6 +52,8 @@ public class CleanFinishedTasksCommandTest extends BaseCommandTest {
     private CommandCoordinator commandCoordinator;
     @Mock
     private CommandCoordinatorUtil commandCoordinatorUtil;
+    @Mock
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
 
     private Guid storagePoolId = Guid.newGuid();
     private Guid vdsmTaskId1 = Guid.newGuid();
@@ -63,6 +69,7 @@ public class CleanFinishedTasksCommandTest extends BaseCommandTest {
 
     @BeforeEach
     public void setup() {
+        doReturn(new StoragePoolValidator()).when(storagePoolValidatorInstance).get();
         initializeStoragePool();
         mockCommand();
     }

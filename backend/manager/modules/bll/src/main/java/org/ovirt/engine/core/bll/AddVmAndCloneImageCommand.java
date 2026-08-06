@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.context.CommandContext;
@@ -63,6 +64,10 @@ import org.ovirt.engine.core.utils.transaction.TransactionSupport;
 public abstract class AddVmAndCloneImageCommand<T extends AddVmParameters> extends AddVmCommand<T> {
 
     @Inject
+    private Instance<DiskImagesValidator> diskImagesValidatorInstance;
+    @Inject
+    private Instance<VmValidator> vmValidatorInstance;
+    @Inject
     private StorageDomainDao storageDomainDao;
     @Inject
     private DiskDao diskDao;
@@ -70,6 +75,12 @@ public abstract class AddVmAndCloneImageCommand<T extends AddVmParameters> exten
     private DiskImageDao diskImageDao;
     @Inject
     private VmStaticDao vmStaticDao;
+    @Inject
+    private Instance<MultipleStorageDomainsValidator> multipleStorageDomainsValidator;
+    @Inject
+    private Instance<StorageDomainValidator> storageDomainValidatorProvider;
+    @Inject
+    private Instance<VnicProfileHelper> vnicProfileHelperInstance;
 
     protected AddVmAndCloneImageCommand(Guid commandId) {
         super(commandId);
@@ -179,14 +190,14 @@ public abstract class AddVmAndCloneImageCommand<T extends AddVmParameters> exten
     @Override
     protected boolean validate() {
         List<DiskImage> disksToCheck = getDiskImagesToValidate();
-        DiskImagesValidator diskImagesValidator = new DiskImagesValidator(disksToCheck);
+        DiskImagesValidator diskImagesValidator = diskImagesValidatorInstance.get().init(disksToCheck);
         if (!validate(diskImagesValidator.diskImagesNotLocked())) {
             return false;
         }
 
         Set<Guid> storageIds = ImagesHandler.getAllStorageIdsForImageIds(disksToCheck);
         MultipleStorageDomainsValidator storageValidator =
-                new MultipleStorageDomainsValidator(getStoragePoolId(), storageIds);
+                multipleStorageDomainsValidator.get().init(getStoragePoolId(), storageIds);
         if (!validate(storageValidator.allDomainsExistAndActive())) {
             return false;
         }
@@ -194,7 +205,7 @@ public abstract class AddVmAndCloneImageCommand<T extends AddVmParameters> exten
             return false;
         }
 
-        if (!validate(new VmValidator(getSourceVmFromDb()).vmNotLocked())) {
+        if (!validate(vmValidatorInstance.get().init(getSourceVmFromDb()).vmNotLocked())) {
             return false;
         }
 
@@ -256,7 +267,7 @@ public abstract class AddVmAndCloneImageCommand<T extends AddVmParameters> exten
             List<StorageDomain> domains = storageDomainDao.getAllForStoragePool(getStoragePoolId());
             Map<Guid, StorageDomain> storageDomainsMap = new HashMap<>();
             for (StorageDomain storageDomain : domains) {
-                StorageDomainValidator validator = new StorageDomainValidator(storageDomain);
+                StorageDomainValidator validator = storageDomainValidatorProvider.get().createInstance(storageDomain);
                 if (validate(validator.isDomainExistAndActive()) && validate(validator.domainIsValidDestination())) {
                     storageDomainsMap.put(storageDomain.getId(), storageDomain);
                 }
@@ -370,7 +381,7 @@ public abstract class AddVmAndCloneImageCommand<T extends AddVmParameters> exten
     @Override
     protected void addVmNetwork() {
         VnicProfileHelper vnicProfileHelper =
-                new VnicProfileHelper(getClusterId(),
+                vnicProfileHelperInstance.get().init(getClusterId(),
                         getStoragePoolId(),
                         AuditLogType.ADD_VM_FROM_SNAPSHOT_INVALID_INTERFACES);
 

@@ -11,6 +11,14 @@ public class KVMVmProviderProxy extends AbstractVmProviderProxy<KVMVmProviderPro
         super(provider);
     }
 
+    public KVMVmProviderProxy() {
+    }
+
+    public KVMVmProviderProxy init(Provider<KVMVmProviderProperties> provider) {
+        setProvider(provider);
+        return this;
+    }
+
     @Override
     protected GetVmsFromExternalProviderQueryParameters buildGetVmsFromExternalProviderQueryParameters() {
         return new GetVmsFromExternalProviderQueryParameters(

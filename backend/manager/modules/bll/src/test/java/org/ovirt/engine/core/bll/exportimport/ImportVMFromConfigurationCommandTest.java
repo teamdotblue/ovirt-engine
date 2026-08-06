@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
+import javax.enterprise.inject.Instance;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,8 +39,10 @@ import org.ovirt.engine.core.bll.ValidateTestUtils;
 import org.ovirt.engine.core.bll.ValidationResult;
 import org.ovirt.engine.core.bll.VmHandler;
 import org.ovirt.engine.core.bll.context.CompensationContext;
+import org.ovirt.engine.core.bll.network.VmInterfaceManager;
 import org.ovirt.engine.core.bll.network.macpool.MacPool;
 import org.ovirt.engine.core.bll.network.vm.ExternalVmMacsFinder;
+import org.ovirt.engine.core.bll.network.vm.VnicProfileHelper;
 import org.ovirt.engine.core.bll.storage.ovfstore.DrMappingHelper;
 import org.ovirt.engine.core.bll.storage.ovfstore.OvfHelper;
 import org.ovirt.engine.core.bll.storage.utils.BlockStorageDiscardFunctionalityHelper;
@@ -165,6 +169,18 @@ public class ImportVMFromConfigurationCommandTest extends BaseCommandTest implem
     @Mock
     private VmDeviceUtils vmDeviceUtils;
 
+    @Mock
+    private VmInterfaceManager vmInterfaceManager;
+
+    @Mock
+    private Instance<VmInterfaceManager> vmInterfaceManagerInstance;
+
+    @Mock
+    private VnicProfileHelper vnicProfileHelper;
+
+    @Mock
+    private Instance<VnicProfileHelper> vnicProfileHelperInstance;
+
     private ArgumentCaptor<VmStatic> vmStaticArgumentCaptor;
 
     @BeforeEach
@@ -206,6 +222,12 @@ public class ImportVMFromConfigurationCommandTest extends BaseCommandTest implem
 
         doReturn(null).when(affinityGroupDao).getByName(any());
         doReturn(null).when(labelDao).getByName(any());
+
+        doReturn(vmInterfaceManager).when(vmInterfaceManagerInstance).get();
+        doReturn(vmInterfaceManager).when(vmInterfaceManager).init(any());
+
+        doReturn(vnicProfileHelper).when(vnicProfileHelperInstance).get();
+        doReturn(vnicProfileHelper).when(vnicProfileHelper).init(any(), any(), any());
 
         setXmlOvfData();
         setXmlOvfData2();

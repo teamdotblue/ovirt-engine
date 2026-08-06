@@ -8,6 +8,9 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import javax.enterprise.inject.Instance;
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.bll.ValidationResult;
 import org.ovirt.engine.core.bll.storage.disk.image.ImagesHandler;
 import org.ovirt.engine.core.bll.validator.storage.DiskImagesValidator;
@@ -28,11 +31,27 @@ import org.ovirt.engine.core.dao.DiskDao;
 import org.ovirt.engine.core.dao.DiskImageDao;
 import org.ovirt.engine.core.dao.StorageDomainDao;
 import org.ovirt.engine.core.dao.StoragePoolDao;
-import org.ovirt.engine.core.di.Injector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class ImportValidator {
+
+    @Inject
+    private StorageDomainDao storageDomainDao;
+    @Inject
+    private DiskImageDao diskImageDao;
+    @Inject
+    private DiskDao diskDao;
+    @Inject
+    private StoragePoolDao storagePoolDao;
+    @Inject
+    private DbUserDao dbUserDao;
+    @Inject
+    private Instance<MultipleStorageDomainsValidator> multipleStorageDomainsValidator;
+    @Inject
+    private Instance<DiskImagesValidator> diskImagesValidatorInstance;
+    @Inject
+    private Instance<StorageDomainValidator> storageDomainValidatorInstance;
 
     private ImportParameters params;
 
@@ -41,6 +60,14 @@ public class ImportValidator {
 
     public ImportValidator(ImportParameters params) {
         this.params = params;
+    }
+
+    public ImportValidator() {
+    }
+
+    public ImportValidator init(ImportParameters params) {
+        this.params = params;
+        return this;
     }
 
     protected Logger log = LoggerFactory.getLogger(getClass());
@@ -69,7 +96,7 @@ public class ImportValidator {
             Map<Guid, String> failedDisksToImport) {
         // Creating new ArrayList in order to manipulate the original List and remove the existing disks.
         for (DiskImage newDisk : new ArrayList<>(disks)) {
-            DiskImage existingDisk = getDiskImageDao().get(newDisk.getImageId());
+            DiskImage existingDisk = diskImageDao.get(newDisk.getImageId());
             if (!DiskImagesValidator.diskNotExistsOrBothShareable(existingDisk, newDisk)) {
                 log.info("Disk image '{}' already exists for disk '{}' with id '{}' in storage domain '{}'",
                         newDisk.getImageId(),
@@ -109,9 +136,9 @@ public class ImportValidator {
             Map<Guid, Guid> imageToDestinationDomainMap,
             Map<Guid, String> failedDisksToImport) {
         for (DiskImage image : new ArrayList<>(images)) {
-            StorageDomain sd = getStorageDomainDao().getForStoragePool(
+            StorageDomain sd = storageDomainDao.getForStoragePool(
                     image.getStorageIds().get(0), params.getStoragePoolId());
-            ValidationResult result = new StorageDomainValidator(sd).isDomainExistAndActive();
+            ValidationResult result = storageDomainValidatorInstance.get().createInstance(sd).isDomainExistAndActive();
             if (!result.isValid()) {
                 log.error("Storage Domain '{}' with id '{}', could not be found for disk alias '{}' with image id '{}'",
                         sd == null ? "unknown" : sd.getStorageName(),
@@ -134,24 +161,24 @@ public class ImportValidator {
             Map<Guid, String> failedDisksToImport) {
         for (Snapshot snap : snapshots) {
             if (snap.containsMemory()) {
-                DiskImage memoryDump = (DiskImage) getDiskDao().get(snap.getMemoryDiskId());
+                DiskImage memoryDump = (DiskImage) diskDao.get(snap.getMemoryDiskId());
                 // If a memory disk is not found in the DB there will be an attempt to import it from the domain
                 if (memoryDump == null) {
                     return ValidationResult.VALID;
                 }
-                StorageDomain dumpSd = getStorageDomainDao().getForStoragePool(memoryDump.getStorageIds().get(0), params.getStoragePoolId());
-                ValidationResult dumpSdResult = new StorageDomainValidator(dumpSd).isDomainExistAndActive();
+                StorageDomain dumpSd = storageDomainDao.getForStoragePool(memoryDump.getStorageIds().get(0), params.getStoragePoolId());
+                ValidationResult dumpSdResult = storageDomainValidatorInstance.get().createInstance(dumpSd).isDomainExistAndActive();
                 if (!handleStorageValidationResult(dumpSdResult, memoryDump, snap, failedDisksToImport) && !allowPartial) {
                     return dumpSdResult;
                 }
 
-                DiskImage memoryConf = (DiskImage) getDiskDao().get(snap.getMetadataDiskId());
+                DiskImage memoryConf = (DiskImage) diskDao.get(snap.getMetadataDiskId());
                 // If a memory disk is not found in the DB there will be an attempt to import it from the domain
                 if (memoryConf == null) {
                     return ValidationResult.VALID;
                 }
-                StorageDomain confSd = getStorageDomainDao().getForStoragePool(memoryConf.getStorageIds().get(0), params.getStoragePoolId());
-                ValidationResult confSdResult = new StorageDomainValidator(confSd).isDomainExistAndActive();
+                StorageDomain confSd = storageDomainDao.getForStoragePool(memoryConf.getStorageIds().get(0), params.getStoragePoolId());
+                ValidationResult confSdResult = storageDomainValidatorInstance.get().createInstance(confSd).isDomainExistAndActive();
                 if (!handleStorageValidationResult(confSdResult, memoryConf, snap, failedDisksToImport) && !allowPartial) {
                     return confSdResult;
                 }
@@ -192,7 +219,7 @@ public class ImportValidator {
 
     public ValidationResult verifyDisks(Collection<DiskImage> imageList, Map<Guid, Guid> imageToDestinationDomainMap) {
         if (!params.isImportAsNewEntity() && !params.isImagesExistOnTargetStorageDomain()) {
-            return new DiskImagesValidator(imageList).diskImagesOnStorage(imageToDestinationDomainMap, params.getStoragePoolId());
+            return diskImagesValidatorInstance.get().init(imageList).diskImagesOnStorage(imageToDestinationDomainMap, params.getStoragePoolId());
         }
 
         return ValidationResult.VALID;
@@ -218,40 +245,24 @@ public class ImportValidator {
     }
 
     public MultipleStorageDomainsValidator createMultipleStorageDomainsValidator(Collection<DiskImage> diskImages) {
-        return new MultipleStorageDomainsValidator(params.getStoragePoolId(),
+        return multipleStorageDomainsValidator.get().init(params.getStoragePoolId(),
                 ImagesHandler.getAllStorageIdsForImageIds(diskImages));
     }
 
     protected StorageDomain getStorageDomain(Guid domainId) {
-        return getStorageDomainDao().getForStoragePool(domainId, getStoragePool().getId());
-    }
-
-    public StorageDomainDao getStorageDomainDao() {
-        return Injector.get(StorageDomainDao.class);
-    }
-
-    public DiskImageDao getDiskImageDao() {
-        return Injector.get(DiskImageDao.class);
-    }
-
-    public DiskDao getDiskDao() {
-        return Injector.get(DiskDao.class);
-    }
-
-    protected StoragePoolDao getStoragePoolDao() {
-        return Injector.get(StoragePoolDao.class);
+        return storageDomainDao.getForStoragePool(domainId, getStoragePool().getId());
     }
 
     public StoragePool getStoragePool() {
         if (cachedStoragePool == null) {
-            cachedStoragePool = getStoragePoolDao().get(params.getStoragePoolId());
+            cachedStoragePool = storagePoolDao.get(params.getStoragePoolId());
         }
         return cachedStoragePool;
     }
 
     public StorageDomain getStorageDomain() {
         if (cachedStorageDomain == null) {
-            cachedStorageDomain = getStorageDomainDao().get(params.getStorageDomainId());
+            cachedStorageDomain = storageDomainDao.get(params.getStorageDomainId());
         }
         return cachedStorageDomain;
     }
@@ -293,7 +304,7 @@ public class ImportValidator {
         List<DbUser> missingUsers = new ArrayList<>();
 
         usersToAdd.forEach(dbUser -> {
-            DbUser userToAdd = getDbUserDao().getByUsernameAndDomain(dbUser.getLoginName(), dbUser.getDomain());
+            DbUser userToAdd = dbUserDao.getByUsernameAndDomain(dbUser.getLoginName(), dbUser.getDomain());
             if (userToAdd == null) {
                 missingUsers.add(dbUser);
             }
@@ -307,10 +318,6 @@ public class ImportValidator {
         }
 
         return missingUsers;
-    }
-
-    private DbUserDao getDbUserDao() {
-        return Injector.get(DbUserDao.class);
     }
 
 }

@@ -2,6 +2,8 @@ package org.ovirt.engine.core.bll.provider.storage;
 
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
+import javax.enterprise.inject.Typed;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.ValidationResult;
@@ -22,24 +24,32 @@ import org.ovirt.engine.core.dao.StorageDomainDao;
 import org.ovirt.engine.core.dao.StoragePoolDao;
 import org.ovirt.engine.core.dao.provider.ProviderDao;
 
+@Typed(CinderProviderValidator.class)
 public class CinderProviderValidator extends ProviderValidator {
 
     @Inject
     private StoragePoolDao storagePoolDao;
-
     @Inject
     private StorageDomainDao storageDomainDao;
-
     @Inject
     private DiskImageDao diskImageDao;
-
     @Inject
     private ProviderDao providerDao;
+    @Inject
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
 
     StorageDomain cinderStorageDomain;
 
     public CinderProviderValidator(Provider<?> provider) {
         super(provider);
+    }
+
+    public CinderProviderValidator() {
+    }
+
+    public CinderProviderValidator createInstance(Provider<?> provider) {
+        init(provider);
+        return this;
     }
 
     @Override
@@ -90,7 +100,7 @@ public class CinderProviderValidator extends ProviderValidator {
     }
 
     private ValidationResult validateAttachStorageDomain() {
-        StoragePoolValidator spValidator = new StoragePoolValidator(getStoragePool());
+        StoragePoolValidator spValidator = storagePoolValidatorInstance.get().init(getStoragePool());
         ValidationResult result;
 
         result = spValidator.isAnyDomainInProcess();

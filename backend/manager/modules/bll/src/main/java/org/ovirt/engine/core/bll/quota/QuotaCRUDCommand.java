@@ -2,6 +2,7 @@ package org.ovirt.engine.core.bll.quota;
 
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.CommandBase;
@@ -22,6 +23,8 @@ public abstract class QuotaCRUDCommand extends CommandBase<QuotaCRUDParameters> 
     private Quota quota;
     @Inject
     private QuotaDao quotaDao;
+    @Inject
+    private Instance<QuotaValidator> quotaValidatorInstance;
 
     public QuotaCRUDCommand(QuotaCRUDParameters parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -56,7 +59,7 @@ public abstract class QuotaCRUDCommand extends CommandBase<QuotaCRUDParameters> 
             return false;
         }
 
-        QuotaValidator quotaValidator = QuotaValidator.createInstance(quota, false);
+        QuotaValidator quotaValidator = createQuotaValidator(quota, false);
 
         // Validate quota and check if the name already exists
         return validate(quotaValidator.isValid()) &&
@@ -162,6 +165,10 @@ public abstract class QuotaCRUDCommand extends CommandBase<QuotaCRUDParameters> 
 
     public String getQuotaName() {
         return getQuota().getQuotaName();
+    }
+
+    public QuotaValidator createQuotaValidator(Quota quota, boolean allowNullId) {
+        return quotaValidatorInstance.get().createInstance(quota, allowNullId);
     }
 
 }

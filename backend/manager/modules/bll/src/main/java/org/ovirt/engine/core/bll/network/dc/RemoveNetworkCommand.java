@@ -25,6 +25,7 @@ import org.ovirt.engine.core.bll.network.cluster.NetworkClusterHelper;
 import org.ovirt.engine.core.bll.network.cluster.NetworkHelper;
 import org.ovirt.engine.core.bll.provider.ProviderProxyFactory;
 import org.ovirt.engine.core.bll.provider.ProviderValidator;
+import org.ovirt.engine.core.bll.provider.ProviderValidatorFactory;
 import org.ovirt.engine.core.bll.provider.network.NetworkProviderProxy;
 import org.ovirt.engine.core.bll.tasks.interfaces.CommandCallback;
 import org.ovirt.engine.core.bll.validator.NetworkValidator;
@@ -75,6 +76,10 @@ public class RemoveNetworkCommand<T extends RemoveNetworkParameters> extends Net
     @Inject
     @Typed(ConcurrentChildCommandsExecutionCallback.class)
     private Instance<ConcurrentChildCommandsExecutionCallback> callbackProvider;
+    @Inject
+    private Instance<NetworkValidator> networkValidatorInstance;
+    @Inject
+    private ProviderValidatorFactory providerValidatorFactory;
 
     private Network network;
     private Provider<?> provider;
@@ -177,7 +182,7 @@ public class RemoveNetworkCommand<T extends RemoveNetworkParameters> extends Net
 
     @Override
     protected boolean validate() {
-        NetworkValidator validator = new NetworkValidator(getNetwork());
+        NetworkValidator validator = networkValidatorInstance.get().init(getNetwork());
 
         return validate(validator.networkIsSet(getNetworkId()))
                 && validate(validator.notRemovingManagementNetwork())
@@ -193,7 +198,7 @@ public class RemoveNetworkCommand<T extends RemoveNetworkParameters> extends Net
         if (providerNetwork == null || !getParameters().isRemoveFromNetworkProvider()) {
             return ValidationResult.VALID;
         }
-        ProviderValidator providerValidator = new ProviderValidator(getProvider());
+        ProviderValidator providerValidator = providerValidatorFactory.createValidator(getProvider());
         return providerValidator.validateReadOnlyActions();
     }
 

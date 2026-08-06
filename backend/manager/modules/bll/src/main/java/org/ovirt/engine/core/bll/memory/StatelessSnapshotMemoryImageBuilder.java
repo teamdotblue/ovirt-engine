@@ -1,11 +1,12 @@
 package org.ovirt.engine.core.bll.memory;
 
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.common.businessentities.Snapshot;
 import org.ovirt.engine.core.common.businessentities.Snapshot.SnapshotType;
 import org.ovirt.engine.core.common.businessentities.VM;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dao.SnapshotDao;
-import org.ovirt.engine.core.di.Injector;
 
 /**
  * This builder is responsible to create the memory volumes for stateless snapshot -
@@ -13,10 +14,23 @@ import org.ovirt.engine.core.di.Injector;
  */
 public class StatelessSnapshotMemoryImageBuilder implements MemoryImageBuilder {
 
-    private final Snapshot activeSnapshot;
+    @Inject
+    private SnapshotDao snapshotDao;
+
+    private Guid vmId;
+
+    private Snapshot activeSnapshot;
 
     public StatelessSnapshotMemoryImageBuilder(VM vm) {
-        activeSnapshot = getSnapshotDao().get(vm.getId(), SnapshotType.ACTIVE);
+        this.vmId = vm.getId();
+    }
+
+    public StatelessSnapshotMemoryImageBuilder() {
+    }
+
+    public StatelessSnapshotMemoryImageBuilder init(VM vm) {
+        this.vmId = vm.getId();
+        return this;
     }
 
     @Override
@@ -26,20 +40,18 @@ public class StatelessSnapshotMemoryImageBuilder implements MemoryImageBuilder {
 
     @Override
     public Guid getMemoryDiskId() {
+        activeSnapshot = snapshotDao.get(vmId, SnapshotType.ACTIVE);
         return activeSnapshot.getMemoryDiskId();
     }
 
     @Override
     public Guid getMetadataDiskId() {
+        activeSnapshot = snapshotDao.get(vmId, SnapshotType.ACTIVE);
         return activeSnapshot.getMetadataDiskId();
     }
 
     @Override
     public boolean isCreateTasks() {
         return false;
-    }
-
-    protected SnapshotDao getSnapshotDao() {
-        return Injector.get(SnapshotDao.class);
     }
 }

@@ -2,6 +2,7 @@ package org.ovirt.engine.core.bll.provider.storage;
 
 import java.util.List;
 
+import javax.enterprise.inject.Typed;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.ValidationResult;
@@ -12,11 +13,11 @@ import org.ovirt.engine.core.common.errors.EngineMessage;
 import org.ovirt.engine.core.dao.AsyncTaskDao;
 import org.ovirt.engine.core.dao.StorageDomainDao;
 
+@Typed(GlanceProviderValidator.class)
 public class GlanceProviderValidator extends ProviderValidator {
 
     @Inject
     private StorageDomainDao storageDomainDao;
-
     @Inject
     private AsyncTaskDao asyncTaskDao;
 
@@ -24,6 +25,14 @@ public class GlanceProviderValidator extends ProviderValidator {
 
     public GlanceProviderValidator(Provider<?> provider) {
         super(provider);
+    }
+
+    public GlanceProviderValidator() {
+    }
+
+    public GlanceProviderValidator createWithProvider(Provider<?> provider) {
+        init(provider);
+        return this;
     }
 
     @Override

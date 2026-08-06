@@ -20,7 +20,6 @@ import org.ovirt.engine.core.common.utils.ValidationUtils;
 import org.ovirt.engine.core.dao.StoragePoolDao;
 import org.ovirt.engine.core.dao.VdsDao;
 import org.ovirt.engine.core.dao.VdsStaticDao;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.utils.ReplacementUtils;
 import org.ovirt.engine.core.utils.crypt.EngineEncryptionUtils;
 
@@ -28,20 +27,21 @@ public class HostValidator {
 
     @Inject
     private VdsDao hostDao;
-
     @Inject
     private StoragePoolDao storagePoolDao;
-
     @Inject
     private VdsStaticDao hostStaticDao;
-
     @Inject
     private HostedEngineHelper hostedEngineHelper;
 
     private VDS host;
 
-    public static HostValidator createInstance(VDS host) {
-        return Injector.injectMembers(new HostValidator(host));
+    public HostValidator() {
+    }
+
+    public HostValidator createInstance(VDS host) {
+        this.host = host;
+        return this;
     }
 
     protected HostValidator(VDS host) {

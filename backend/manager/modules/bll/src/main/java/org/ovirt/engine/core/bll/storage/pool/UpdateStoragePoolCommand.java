@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.apache.commons.lang.StringUtils;
@@ -57,7 +58,6 @@ public class UpdateStoragePoolCommand<T extends StoragePoolManagementParameter> 
 
     @Inject
     private AuditLogDirector auditLogDirector;
-
     @Inject
     private ManagementNetworkUtil managementNetworkUtil;
     @Inject
@@ -78,6 +78,12 @@ public class UpdateStoragePoolCommand<T extends StoragePoolManagementParameter> 
     private DiskLunMapDao diskLunMapDao;
     @Inject
     private VmDao vmDao;
+    @Inject
+    private Instance<NetworkValidator> networkValidatorInstance;
+    @Inject
+    private Instance<StorageDomainToPoolRelationValidator> storageDomainToPoolRelationValidatorInstance;
+    @Inject
+    private Instance<RefreshPoolSingleAsyncOperationFactory> refreshPoolSingleAsyncOperationFactoryInstance;
 
     /**
      * Constructor for command creation when compensation is applied on startup
@@ -190,7 +196,7 @@ public class UpdateStoragePoolCommand<T extends StoragePoolManagementParameter> 
             }
         }
 
-        runSynchronizeOperation(new RefreshPoolSingleAsyncOperationFactory(), new ArrayList<Guid>());
+        runSynchronizeOperation(refreshPoolSingleAsyncOperationFactoryInstance.get(), new ArrayList<Guid>());
     }
 
     private void updateMemberDomainsFormat(StorageFormatType targetFormat) {
@@ -309,7 +315,7 @@ public class UpdateStoragePoolCommand<T extends StoragePoolManagementParameter> 
     }
 
     protected StorageDomainToPoolRelationValidator getAttachDomainValidator(StorageDomainStatic domainStatic) {
-        return new StorageDomainToPoolRelationValidator(domainStatic, getStoragePool());
+        return storageDomainToPoolRelationValidatorInstance.get().createInstance(domainStatic, getStoragePool());
     }
 
     protected boolean checkAllClustersLevel() {
@@ -346,7 +352,7 @@ public class UpdateStoragePoolCommand<T extends StoragePoolManagementParameter> 
     }
 
     protected NetworkValidator getNetworkValidator(Network network) {
-        return new NetworkValidator(network);
+        return networkValidatorInstance.get().init(network);
     }
 
     @Override

@@ -13,6 +13,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.apache.commons.lang.StringUtils;
@@ -98,8 +99,9 @@ public abstract class StorageHandlingCommandBase<T extends StoragePoolParameters
     protected List<UnregisteredDisk> unregisteredDisks = new ArrayList<>();
 
     @Inject
+    private Instance<CinderBroker> cinderBrokerInstance;
+    @Inject
     private AuditLogDirector auditLogDirector;
-
     @Inject
     private MacPoolPerCluster macPoolPerCluster;
     @Inject
@@ -134,6 +136,8 @@ public abstract class StorageHandlingCommandBase<T extends StoragePoolParameters
     protected StorageHelperDirector storageHelperDirector;
     @Inject
     protected StoragePoolStatusHandler storagePoolStatusHandler;
+    @Inject
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
 
     protected StorageHandlingCommandBase(T parameters, CommandContext commandContext) {
         super(parameters, commandContext);
@@ -202,7 +206,7 @@ public abstract class StorageHandlingCommandBase<T extends StoragePoolParameters
     }
 
     protected StoragePoolValidator createStoragePoolValidator() {
-        return new StoragePoolValidator(getStoragePool());
+        return storagePoolValidatorInstance.get().init(getStoragePool());
     }
 
     protected boolean canDetachStorageDomainWithVmsAndDisks(StorageDomain storageDomain) {
@@ -742,7 +746,7 @@ public abstract class StorageHandlingCommandBase<T extends StoragePoolParameters
 
     public CinderBroker getCinderBroker() {
         if (cinderBroker == null) {
-            cinderBroker = new CinderBroker(getStorageDomainId(), getReturnValue().getExecuteFailedMessages());
+            cinderBroker = cinderBrokerInstance.get().init(getStorageDomainId(), getReturnValue().getExecuteFailedMessages());
         }
         return cinderBroker;
     }

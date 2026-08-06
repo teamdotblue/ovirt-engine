@@ -56,6 +56,8 @@ import org.ovirt.engine.core.dao.VdsDao;
 public class CopyImageGroupCommand<T extends MoveOrCopyImageGroupParameters> extends BaseImagesCommand<T> {
 
     @Inject
+    private Instance<DiskImagesValidator> diskImagesValidatorInstance;
+    @Inject
     private PostDeleteActionHandler postDeleteActionHandler;
     @Inject
     private DiskDao diskDao;
@@ -76,6 +78,8 @@ public class CopyImageGroupCommand<T extends MoveOrCopyImageGroupParameters> ext
     private Instance<ConcurrentChildCommandsExecutionCallback> callbackProvider;
     @Inject
     private VdsCommandsHelper vdsCommandsHelper;
+    @Inject
+    private Instance<DiskValidator> diskValidatorInstance;
 
     public CopyImageGroupCommand(T parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -123,11 +127,11 @@ public class CopyImageGroupCommand<T extends MoveOrCopyImageGroupParameters> ext
     }
 
     public DiskValidator createDiskValidator(Disk disk) {
-        return new DiskValidator(disk);
+        return diskValidatorInstance.get().init(disk);
     }
 
     public DiskImagesValidator createDiskImagesValidator(DiskImage diskImage) {
-        return new DiskImagesValidator(Collections.singletonList(diskImage));
+        return diskImagesValidatorInstance.get().init(Collections.singletonList(diskImage));
     }
 
     @Override

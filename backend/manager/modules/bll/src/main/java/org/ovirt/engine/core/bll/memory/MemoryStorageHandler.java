@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -30,6 +31,8 @@ public class MemoryStorageHandler {
 
     @Inject
     private StorageDomainDao storageDomainDao;
+    @Inject
+    private Instance<StorageDomainSpaceRequirementsFilter> storageDomainSpaceRequirementsFilterInstance;
 
     /**
      * Returns a <code>StorageDomain</code> in the given <code>StoragePool</code> that has
@@ -83,7 +86,7 @@ public class MemoryStorageHandler {
     protected List<Predicate<StorageDomain>> getStorageDomainFilters(MemoryDisks memoryDisks) {
         return Arrays.asList(ACTIVE_DOMAINS_PREDICATE,
                 DATA_DOMAINS_PREDICATE,
-                new StorageDomainSpaceRequirementsFilter(this, memoryDisks));
+                storageDomainSpaceRequirementsFilterInstance.get().init(this, memoryDisks));
     }
 
     protected List<Comparator<StorageDomain>> getStorageDomainComparators(Collection<DiskImage> vmDisks) {

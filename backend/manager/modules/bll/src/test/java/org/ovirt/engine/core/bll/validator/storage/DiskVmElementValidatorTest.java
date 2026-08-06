@@ -3,6 +3,7 @@ package org.ovirt.engine.core.bll.validator.storage;
 import static org.hamcrest.CoreMatchers.both;
 import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
 import static org.ovirt.engine.core.bll.validator.ValidationResultMatchers.failsWith;
 import static org.ovirt.engine.core.bll.validator.ValidationResultMatchers.isValid;
@@ -12,6 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
@@ -29,6 +31,7 @@ import org.ovirt.engine.core.common.businessentities.storage.ScsiGenericIO;
 import org.ovirt.engine.core.common.errors.EngineMessage;
 import org.ovirt.engine.core.common.osinfo.OsRepository;
 import org.ovirt.engine.core.compat.Guid;
+import org.ovirt.engine.core.dao.StorageDomainDao;
 import org.ovirt.engine.core.utils.InjectedMock;
 import org.ovirt.engine.core.utils.InjectorExtension;
 
@@ -47,21 +50,25 @@ public class DiskVmElementValidatorTest {
     @InjectedMock
     public VmValidationUtils vmValidationUtils;
 
+    @Mock
+    public StorageDomainDao storageDomainDao;
+
     private static final int OS_WITH_SUPPORTED_INTERFACES = 1;
     private static final int OS_WITH_NO_SUPPORTED_INTERFACES = 2;
 
-    private Disk disk;
-    private DiskVmElement dve;
-    private DiskVmElementValidator validator;
+    private Disk disk = new DiskImage();
+    private DiskVmElement dve = new DiskVmElement();
+
+    @Spy
+    private DiskVmElementValidator validator = new DiskVmElementValidator(disk, dve);
 
     @BeforeEach
     public void setUp() {
         initializeInterfaceValidation(DiskInterface.VirtIO);
-
-        disk = new DiskImage();
-        dve = new DiskVmElement();
-
-        validator = new DiskVmElementValidator(disk, dve);
+        doReturn(vmDeviceUtils).when(validator).getVmDeviceUtils();
+        doReturn(vmValidationUtils).when(validator).getVmValidationUtils();
+        doReturn(storageDomainDao).when(validator).getStorageDomainDao();
+        doReturn(osRepository).when(validator).getOsRepository();
     }
 
     @Test

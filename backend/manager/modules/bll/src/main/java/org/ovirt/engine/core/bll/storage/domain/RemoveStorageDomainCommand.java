@@ -43,6 +43,8 @@ public class RemoveStorageDomainCommand<T extends RemoveStorageDomainParameters>
     private StoragePoolIsoMapDao storagePoolIsoMapDao;
     @Inject
     private StorageDomainDao storageDomainDao;
+    @Inject
+    private StorageDomainToPoolRelationValidator storageDomainToPoolRelationValidator;
 
     public RemoveStorageDomainCommand(T parameters, CommandContext commandContext) {
         super(parameters, commandContext);
@@ -179,7 +181,7 @@ public class RemoveStorageDomainCommand<T extends RemoveStorageDomainParameters>
     }
 
     protected StorageDomainToPoolRelationValidator createDomainToPoolValidator(StorageDomain dom) {
-        return new StorageDomainToPoolRelationValidator(dom.getStorageStaticData(), null);
+        return storageDomainToPoolRelationValidator.createInstance(dom.getStorageStaticData(), null);
     }
 
     private Pair<Boolean, EngineFault> connectStorage() {

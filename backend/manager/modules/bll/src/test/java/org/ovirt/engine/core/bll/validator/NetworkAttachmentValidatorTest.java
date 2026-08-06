@@ -13,6 +13,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.enterprise.inject.Instance;
+
 import org.hamcrest.Matcher;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -52,6 +54,9 @@ public class NetworkAttachmentValidatorTest extends BaseCommandTest {
     @Mock
     private NetworkValidator networkValidatorMock;
 
+    @Mock
+    private Instance<NetworkValidator> networkValidatorInstanceMock;
+
     private final VDS host;
 
     public NetworkAttachmentValidatorTest() {
@@ -62,7 +67,7 @@ public class NetworkAttachmentValidatorTest extends BaseCommandTest {
     }
 
     private NetworkAttachmentValidator createNetworkAttachmentValidator(NetworkAttachment attachment) {
-        return new NetworkAttachmentValidator(attachment, host, networkClusterDaoMock, networkDaoMock, vdsDaoMock);
+        return new NetworkAttachmentValidator(attachment, host, networkClusterDaoMock, networkDaoMock, vdsDaoMock, networkValidatorInstanceMock);
     }
 
     @Test

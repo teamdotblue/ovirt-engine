@@ -4,7 +4,9 @@ import static java.util.stream.Collectors.joining;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 import static org.ovirt.engine.core.bll.validator.ValidationResultMatchers.failsWith;
 import static org.ovirt.engine.core.bll.validator.ValidationResultMatchers.isValid;
@@ -60,7 +62,6 @@ public class NetworkValidatorTest {
     private Network network;
 
     @Mock
-    @InjectedMock
     public ManagementNetworkUtil managementNetworkUtil;
 
     @Mock
@@ -76,7 +77,6 @@ public class NetworkValidatorTest {
     public IscsiBondDao iscsiBondDao;
 
     @Mock
-    @InjectedMock
     public VdsDao hostDao;
 
     private List<Network> networks = new ArrayList<>();
@@ -86,7 +86,13 @@ public class NetworkValidatorTest {
     public void setup() {
 
         // spy on attempts to access the database
-        validator = new NetworkValidator(network);
+        validator = spy(new NetworkValidator(network));
+        doReturn(networkDao).when(validator).getNetworkDao();
+        doReturn(managementNetworkUtil).when(validator).getManagementNetworkUtil();
+        doReturn(iscsiBondDao).when(validator).getIscsiBondDao();
+        doReturn(vmDao).when(validator).getVmDao();
+        doReturn(templateDao).when(validator).getVmTemplateDao();
+        doReturn(hostDao).when(validator).getVdsDao();
 
         // mock their getters
         when(networkDao.getAllForDataCenter(any())).thenReturn(networks);

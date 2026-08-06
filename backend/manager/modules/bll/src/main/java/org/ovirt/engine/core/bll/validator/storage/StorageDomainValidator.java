@@ -8,6 +8,8 @@ import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.bll.ValidationResult;
 import org.ovirt.engine.core.bll.VmHandler;
 import org.ovirt.engine.core.bll.interfaces.BackendInternal;
@@ -40,19 +42,37 @@ import org.ovirt.engine.core.common.queries.QueryType;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dao.VmDao;
 import org.ovirt.engine.core.dao.VmDynamicDao;
-import org.ovirt.engine.core.di.Injector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class StorageDomainValidator {
+
+    @Inject
+    private BackendInternal backendInternal;
+    @Inject
+    private VmDao vmDao;
+    @Inject
+    private VmDynamicDao vmDynamicDao;
+    @Inject
+    private BlockStorageDiscardFunctionalityHelper blockStorageDiscardFunctionalityHelper;
+
+
     private static final long INITIAL_BLOCK_ALLOCATION_SIZE = 1024L * 1024L * 1024L;
     private static final long EMPTY_QCOW_HEADER_SIZE = 1024L * 1024L;
 
     private final Logger log = LoggerFactory.getLogger(StorageDomainValidator.class);
-    protected final StorageDomain storageDomain;
+    protected StorageDomain storageDomain;
 
     public StorageDomainValidator(StorageDomain domain) {
         storageDomain = domain;
+    }
+
+    public StorageDomainValidator() {
+    }
+
+    public StorageDomainValidator createInstance(StorageDomain domain) {
+        this.storageDomain = domain;
+        return this;
     }
 
     public ValidationResult isDomainExist() {
@@ -425,7 +445,7 @@ public class StorageDomainValidator {
     }
 
     protected Supplier<Boolean> getDiscardAfterDeleteLegalForNewBlockStorageDomainPredicate(Collection<LUNs> luns) {
-        return () -> Injector.get(BlockStorageDiscardFunctionalityHelper.class).allLunsSupportDiscard(luns);
+        return () -> blockStorageDiscardFunctionalityHelper.allLunsSupportDiscard(luns);
     }
 
     protected ValidationResult isDiscardAfterDeleteLegal(Supplier<Boolean> supportsDiscardSupplier) {
@@ -452,12 +472,12 @@ public class StorageDomainValidator {
             return new ValidationResult(EngineMessage.ACTION_TYPE_FAILED_RETRIEVE_VMS_FOR_WITH_LEASES);
         }
         getRetVal(ret).forEach(vmBase -> {
-            VmDynamic vm = getVmDynamicDao().get(vmBase.getId());
+            VmDynamic vm = vmDynamicDao.get(vmBase.getId());
             if (vm != null && vm.getStatus() != VMStatus.Down) {
                 invalidVmsForBackupStorageDomain.add(vmBase.getName());
             }
         });
-        List<VM> vms = getVmDao().getAllActiveForStorageDomain(storageDomain.getId());
+        List<VM> vms = vmDao.getAllActiveForStorageDomain(storageDomain.getId());
         vms.forEach(vmHandler::updateDisksFromDb);
         invalidVmsForBackupStorageDomain.addAll(vms.stream()
                         .filter(vm -> vm.getDiskMap()
@@ -489,20 +509,8 @@ public class StorageDomainValidator {
     }
 
     protected QueryReturnValue getEntitiesWithLeaseIdForStorageDomain(Guid storageDomainId) {
-        return getBackend().runInternalQuery(
+        return backendInternal.runInternalQuery(
                     QueryType.GetEntitiesWithLeaseByStorageId,
                     new IdQueryParameters(storageDomainId));
-    }
-
-    private BackendInternal getBackend() {
-        return Injector.get(BackendInternal.class);
-    }
-
-    protected VmDao getVmDao() {
-        return Injector.get(VmDao.class);
-    }
-
-    protected VmDynamicDao getVmDynamicDao() {
-        return Injector.get(VmDynamicDao.class);
     }
 }

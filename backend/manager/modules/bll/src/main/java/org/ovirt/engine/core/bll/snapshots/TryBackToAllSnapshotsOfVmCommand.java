@@ -88,6 +88,10 @@ public class TryBackToAllSnapshotsOfVmCommand<T extends TryBackToAllSnapshotsOfV
     private List<DiskImage> imagesToPreview;
 
     @Inject
+    private Instance<DiskImagesValidator> diskImagesValidatorInstance;
+    @Inject
+    private Instance<DiskSnapshotsValidator> diskSnapshotsValidatorInstance;
+    @Inject
     private LockManager lockManager;
     @Inject
     private OvfHelper ovfHelper;
@@ -106,6 +110,16 @@ public class TryBackToAllSnapshotsOfVmCommand<T extends TryBackToAllSnapshotsOfV
     @Inject
     @Typed(ConcurrentChildCommandsExecutionCallback.class)
     private Instance<ConcurrentChildCommandsExecutionCallback> callbackProvider;
+    @Inject
+    private Instance<MultipleStorageDomainsValidator> multipleStorageDomainsValidator;
+    @Inject
+    private Instance<VmInterfaceManager> vmInterfaceManagerInstance;
+    @Inject
+    private Instance<VmValidator> vmValidatorInstance;
+    @Inject
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
+    @Inject
+    private Instance<CinderDisksValidator> cinderDisksValidatorInstance;
 
     /**
      * Constructor for command creation when compensation is applied on startup
@@ -196,7 +210,7 @@ public class TryBackToAllSnapshotsOfVmCommand<T extends TryBackToAllSnapshotsOfV
     private boolean canRestoreVmConfigFromSnapshot() {
         return getSnapshotsManager().canRestoreVmConfigurationFromSnapshot(getVm(),
                 getDstSnapshot(),
-                new VmInterfaceManager(getMacPool()));
+                vmInterfaceManagerInstance.get().init(getMacPool()));
     }
 
     private void restoreVmConfigFromSnapshot() {
@@ -218,7 +232,7 @@ public class TryBackToAllSnapshotsOfVmCommand<T extends TryBackToAllSnapshotsOfV
                 getFilteredImagesToPreview(),
                 getCompensationContext(),
                 getCurrentUser(),
-                new VmInterfaceManager(getMacPool()),
+                vmInterfaceManagerInstance.get().init(getMacPool()),
                 snapshot.containsMemory());
 
         // custom preview - without leases
@@ -568,7 +582,7 @@ public class TryBackToAllSnapshotsOfVmCommand<T extends TryBackToAllSnapshotsOfV
             }
         }
 
-        VmValidator vmValidator = new VmValidator(getVm());
+        VmValidator vmValidator = vmValidatorInstance.get().init(getVm());
         if (!validate(vmValidator.isVmExists())
                 || !validate(vmValidator.vmDown())
                 || !validate(snapshotsValidator.snapshotExists(getVmId(), getParameters().getDstSnapshotId()))
@@ -584,18 +598,18 @@ public class TryBackToAllSnapshotsOfVmCommand<T extends TryBackToAllSnapshotsOfV
                         ONLY_SNAPABLE, ONLY_ACTIVE);
         diskImages.addAll(DisksFilter.filterCinderDisks(getVm().getDiskMap().values(), ONLY_PLUGGED));
         if (!diskImages.isEmpty()) {
-            if (!validate(new StoragePoolValidator(getStoragePool()).existsAndUp())) {
+            if (!validate(storagePoolValidatorInstance.get().init(getStoragePool()).existsAndUp())) {
                 return false;
             }
 
-            DiskImagesValidator diskImagesValidator = new DiskImagesValidator(diskImages);
+            DiskImagesValidator diskImagesValidator = diskImagesValidatorInstance.get().init(diskImages);
             if (!validate(diskImagesValidator.diskImagesNotIllegal()) ||
                     !validate(diskImagesValidator.diskImagesNotLocked())) {
                 return false;
             }
 
             List<DiskImage> images = getImagesToPreview();
-            DiskImagesValidator diskImagesToPreviewValidator = new DiskImagesValidator(images);
+            DiskImagesValidator diskImagesToPreviewValidator = diskImagesValidatorInstance.get().init(images);
             if (!validate(diskImagesToPreviewValidator.noDuplicatedIds()) ||
                     !validate(diskImagesToPreviewValidator.diskImagesSnapshotsAttachedToVm(getVmId())) ||
                     !validate(diskImagesToPreviewValidator.diskImagesNotIllegal()) ||
@@ -615,7 +629,7 @@ public class TryBackToAllSnapshotsOfVmCommand<T extends TryBackToAllSnapshotsOfV
             }
 
             MultipleStorageDomainsValidator storageValidator =
-                    new MultipleStorageDomainsValidator(getVm().getStoragePoolId(), storageIds);
+                    multipleStorageDomainsValidator.get().init(getVm().getStoragePoolId(), storageIds);
             if (!validate(storageValidator.allDomainsExistAndActive())
                     || !validate(storageValidator.allDomainsWithinThresholds())
                     || !validateCinder()
@@ -628,7 +642,7 @@ public class TryBackToAllSnapshotsOfVmCommand<T extends TryBackToAllSnapshotsOfV
             }
         }
 
-        DiskSnapshotsValidator diskSnapshotsValidator = new DiskSnapshotsValidator(getParameters().getDisks());
+        DiskSnapshotsValidator diskSnapshotsValidator = diskSnapshotsValidatorInstance.get().init(getParameters().getDisks());
         if (!validate(diskSnapshotsValidator.canDiskSnapshotsBePreviewed(getParameters().getDstSnapshotId()))) {
             return false;
         }
@@ -679,7 +693,7 @@ public class TryBackToAllSnapshotsOfVmCommand<T extends TryBackToAllSnapshotsOfV
     }
 
     protected CinderDisksValidator getCinderDisksValidator(List<CinderDisk> cinderDisks) {
-        return new CinderDisksValidator(cinderDisks);
+        return cinderDisksValidatorInstance.get().init(cinderDisks);
     }
 
     private Snapshot getDstSnapshot() {

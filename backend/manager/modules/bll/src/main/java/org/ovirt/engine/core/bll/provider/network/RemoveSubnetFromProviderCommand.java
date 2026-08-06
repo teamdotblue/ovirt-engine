@@ -3,6 +3,7 @@ package org.ovirt.engine.core.bll.provider.network;
 import java.util.Collections;
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.CommandBase;
@@ -27,9 +28,10 @@ public class RemoveSubnetFromProviderCommand<T extends ExternalSubnetParameters>
 
     @Inject
     private ProviderDao providerDao;
-
     @Inject
     private ProviderProxyFactory providerProxyFactory;
+    @Inject
+    private Instance<ProviderValidator> providerValidatorInstance;
 
     private Provider<?> provider;
 
@@ -59,7 +61,7 @@ public class RemoveSubnetFromProviderCommand<T extends ExternalSubnetParameters>
 
     @Override
     protected boolean validate() {
-        ProviderValidator validator = new ProviderValidator(getProvider());
+        ProviderValidator validator = providerValidatorInstance.get().init(getProvider());
 
         return validate(validator.providerIsSet()) && validate(validator.validateReadOnlyActions());
     }

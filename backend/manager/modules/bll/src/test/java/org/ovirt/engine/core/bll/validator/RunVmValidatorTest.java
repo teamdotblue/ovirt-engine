@@ -21,6 +21,8 @@ import java.util.Map;
 import java.util.Random;
 import java.util.stream.Stream;
 
+import javax.enterprise.inject.Instance;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,6 +35,7 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.ovirt.engine.core.bll.ValidationResult;
 import org.ovirt.engine.core.bll.snapshots.SnapshotsValidator;
+import org.ovirt.engine.core.bll.validator.storage.DiskImagesValidator;
 import org.ovirt.engine.core.bll.validator.storage.MultipleDiskVmElementValidator;
 import org.ovirt.engine.core.common.businessentities.ArchitectureType;
 import org.ovirt.engine.core.common.businessentities.BootSequence;
@@ -88,10 +91,19 @@ public class RunVmValidatorTest {
     @Mock
     private VmNicDao vmNicDao;
 
+    @Mock
+    private Instance<DiskImagesValidator> diskImagesValidatorInstance;
+
+    @Mock
+    private DiskImagesValidator diskImagesValidator;
+
     @BeforeEach
     public void setup() throws InitializationException {
         mockVmPropertiesUtils();
         mockOsRepository();
+        when(diskImagesValidatorInstance.get()).thenReturn(diskImagesValidator);
+        when(diskImagesValidator.init(any())).thenReturn(diskImagesValidator);
+        when(diskImagesValidator.diskImagesNotLocked()).thenReturn(ValidationResult.VALID);
     }
 
     @AfterEach

@@ -9,7 +9,6 @@ import org.ovirt.engine.core.common.businessentities.QuotaStorage;
 import org.ovirt.engine.core.common.errors.EngineMessage;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dao.QuotaDao;
-import org.ovirt.engine.core.di.Injector;
 
 public class QuotaValidator {
 
@@ -21,12 +20,20 @@ public class QuotaValidator {
     private Quota quota;
     private boolean quotaDaoAccessed = false;
 
-    public static QuotaValidator createInstance(Guid quotaId, boolean allowNullId) {
-        return Injector.injectMembers(new QuotaValidator(quotaId, allowNullId));
+    public QuotaValidator() {
     }
 
-    public static QuotaValidator createInstance(Quota quota, boolean allowNullId) {
-        return Injector.injectMembers(new QuotaValidator(quota, allowNullId));
+    public QuotaValidator createInstance(Guid quotaId, boolean allowNullId) {
+        this.quotaId = quotaId;
+        this.allowNullId = allowNullId;
+        return this;
+    }
+
+    public QuotaValidator createInstance(Quota quota, boolean allowNullId) {
+        this.quota = quota;
+        this.quotaId = quota.getId();
+        this.allowNullId = allowNullId;
+        return this;
     }
 
     protected QuotaValidator(Guid quotaId, boolean allowNullId) {

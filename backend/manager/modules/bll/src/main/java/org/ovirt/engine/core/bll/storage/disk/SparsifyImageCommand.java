@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.LockMessagesMatchUtil;
@@ -49,9 +50,12 @@ public class SparsifyImageCommand<T extends StorageJobCommandParameters> extends
     private DiskImageDao diskImageDao;
     @Inject
     private VmTemplateDao vmTemplateDao;
-
     @Inject
     private ImagesHandler imagesHandler;
+    @Inject
+    private Instance<DiskValidator> diskValidatorInstance;
+    @Inject
+    private Instance<DiskImagesValidator> diskImagesValidatorInstance;
 
     public SparsifyImageCommand(T parameters, CommandContext commandContext) {
         super(parameters, commandContext);
@@ -94,7 +98,7 @@ public class SparsifyImageCommand<T extends StorageJobCommandParameters> extends
 
     @Override
     protected boolean validate() {
-        DiskValidator diskValidator = new DiskValidator(getDiskImage());
+        DiskValidator diskValidator = diskValidatorInstance.get().init(getDiskImage());
         if (!validate(diskValidator.isDiskExists()) ||
                 !validate(diskValidator.isDiskPluggedToAnyNonDownVm(false)) ||
                 !validate(diskValidator.isSparsifySupported())) {
@@ -105,7 +109,7 @@ public class SparsifyImageCommand<T extends StorageJobCommandParameters> extends
             return failValidation(EngineMessage.ACTION_TYPE_FAILED_DISK_HAS_SNAPSHOTS);
         }
 
-        DiskImagesValidator diskImagesValidator = new DiskImagesValidator(Collections.singletonList(getDiskImage()));
+        DiskImagesValidator diskImagesValidator = diskImagesValidatorInstance.get().init(Collections.singletonList(getDiskImage()));
         return validate(diskImagesValidator.diskImagesNotIllegal()) &&
                 validate(diskImagesValidator.diskImagesNotLocked()) &&
                 validate(diskImagesValidator.diskImagesHaveNoDerivedDisks(null));

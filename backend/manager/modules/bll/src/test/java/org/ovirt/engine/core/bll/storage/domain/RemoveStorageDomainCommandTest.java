@@ -9,6 +9,8 @@ import static org.mockito.Mockito.when;
 
 import java.util.Collections;
 
+import javax.enterprise.inject.Instance;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -56,6 +58,9 @@ public class RemoveStorageDomainCommandTest extends BaseCommandTest {
     @Mock
     private VDSBrokerFrontend vdsBrokerFrontend;
 
+    @Mock
+    private Instance<StorageDomainToPoolRelationValidator> storageDomainToPoolRelationValidatorInstance;
+
     private StorageDomain storageDomain;
 
     @BeforeEach
@@ -79,7 +84,9 @@ public class RemoveStorageDomainCommandTest extends BaseCommandTest {
 
         doReturn(vds).when(vdsDaoMock).get(vdsID);
 
-        StorageDomainToPoolRelationValidator domainToPoolValidator = spy(new StorageDomainToPoolRelationValidator(storageDomain.getStorageStaticData(), null));
+        StorageDomainToPoolRelationValidator domainToPoolValidator = spy(new StorageDomainToPoolRelationValidator());
+        when(storageDomainToPoolRelationValidatorInstance.get()).thenReturn(domainToPoolValidator);
+        domainToPoolValidator.createInstance(storageDomain.getStorageStaticData(), null);
         doReturn(ValidationResult.VALID).when(domainToPoolValidator).isStorageDomainNotInAnyPool();
         doReturn(domainToPoolValidator).when(command).createDomainToPoolValidator(storageDomain);
         doReturn(Boolean.FALSE).when(command).isStorageDomainAttached(storageDomain);

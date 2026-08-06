@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.apache.commons.lang.StringUtils;
@@ -37,6 +38,8 @@ public class CleanFinishedTasksCommand<T extends StoragePoolParametersBase> exte
     private CommandCoordinatorUtil commandCoordinatorUtil;
     @Inject
     private StoragePoolDao storagePoolDao;
+    @Inject
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
 
     private Map<Guid, Boolean> taskCleanupStatuses = new HashMap<>();
 
@@ -52,7 +55,7 @@ public class CleanFinishedTasksCommand<T extends StoragePoolParametersBase> exte
     @Override
     protected boolean validate() {
         StoragePool storagePool = storagePoolDao.get(getStoragePoolId());
-        StoragePoolValidator spValidator = new StoragePoolValidator(storagePool);
+        StoragePoolValidator spValidator = storagePoolValidatorInstance.get().init(storagePool);
         return validate(spValidator.existsAndUp());
     }
 

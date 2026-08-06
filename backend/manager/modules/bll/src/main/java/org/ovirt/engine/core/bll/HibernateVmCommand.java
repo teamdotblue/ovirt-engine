@@ -4,6 +4,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.context.CommandContext;
@@ -63,6 +64,8 @@ public class HibernateVmCommand<T extends VmOperationParameterBase> extends VmOp
     private CommandCoordinatorUtil commandCoordinatorUtil;
     @Inject
     protected SnapshotsValidator snapshotsValidator;
+    @Inject
+    private Instance<VmValidator> vmValidatorInstance;
 
     /**
      * Constructor for command creation when compensation is applied on startup
@@ -225,7 +228,7 @@ public class HibernateVmCommand<T extends VmOperationParameterBase> extends VmOp
         if (getStorageDomainId() == null) {
             return failValidation(EngineMessage.ACTION_TYPE_FAILED_NO_SUITABLE_DOMAIN_FOUND);
         }
-        VmValidator vmValidator = new VmValidator(getVm());
+        VmValidator vmValidator = vmValidatorInstance.get().init(getVm());
         if (!validate(vmValidator.vmNotHavingScsiPassthroughDevices())) {
             return false;
         }

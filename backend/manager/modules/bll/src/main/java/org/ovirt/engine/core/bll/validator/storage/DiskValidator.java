@@ -4,6 +4,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import javax.inject.Inject;
+
 import org.apache.commons.lang.StringUtils;
 import org.ovirt.engine.core.bll.ValidationResult;
 import org.ovirt.engine.core.common.businessentities.StorageDomain;
@@ -27,7 +29,6 @@ import org.ovirt.engine.core.dao.DiskImageDao;
 import org.ovirt.engine.core.dao.DiskLunMapDao;
 import org.ovirt.engine.core.dao.StorageDomainDao;
 import org.ovirt.engine.core.dao.VmDao;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.utils.ReplacementUtils;
 
 /**
@@ -36,7 +37,18 @@ import org.ovirt.engine.core.utils.ReplacementUtils;
  */
 public class DiskValidator {
 
-    private final Disk disk;
+    @Inject
+    private VmDao vmDao;
+    @Inject
+    private DiskImageDao diskImageDao;
+    @Inject
+    private DiskLunMapDao diskLunMapDao;
+    @Inject
+    private StorageDomainDao storageDomainDao;
+    @Inject
+    private DiskDao diskDao;
+
+    private Disk disk;
 
     protected static final String DISK_NAME_VARIABLE = "DiskName";
     protected static final String VM_LIST = "VmList";
@@ -46,12 +58,32 @@ public class DiskValidator {
         this.disk = disk;
     }
 
-    protected VmDao getVmDao() {
-        return Injector.get(VmDao.class);
+    public DiskValidator() {
+    }
+
+    public DiskValidator init(Disk disk) {
+        this.disk = disk;
+        return this;
+    }
+
+    public VmDao getVmDao() {
+        return vmDao;
+    }
+
+    public DiskLunMapDao getDiskLunMapDao() {
+        return diskLunMapDao;
     }
 
     protected DiskImageDao getDiskImageDao() {
-        return Injector.get(DiskImageDao.class);
+        return diskImageDao;
+    }
+
+    protected StorageDomainDao getStorageDomainDao() {
+        return storageDomainDao;
+    }
+
+    protected DiskDao getDiskDao() {
+        return diskDao;
     }
 
     public ValidationResult validateUnsupportedDiskStorageType(DiskStorageType... diskStorageTypes) {
@@ -110,7 +142,7 @@ public class DiskValidator {
 
     public ValidationResult validateLunAlreadyInUse() {
         if (disk.getDiskStorageType() == DiskStorageType.LUN) {
-            if (Injector.get(DiskLunMapDao.class).getDiskIdByLunId(((LunDisk) disk).getLun().getLUNId()) != null) {
+            if (getDiskLunMapDao().getDiskIdByLunId(((LunDisk) disk).getLun().getLUNId()) != null) {
                 return new ValidationResult(EngineMessage.ACTION_TYPE_FAILED_DISK_LUN_IS_ALREADY_IN_USE);
             }
         }
@@ -166,7 +198,7 @@ public class DiskValidator {
     }
 
     public ValidationResult isIsoDiskAttachedToAnyNonDownVm() {
-        List<String> vmNames = Injector.get(VmDao.class).getAllRunningNamesWithSpecificIsoAttached(disk.getId());
+        List<String> vmNames = getVmDao().getAllRunningNamesWithSpecificIsoAttached(disk.getId());
         if (!vmNames.isEmpty()) {
             return new ValidationResult(EngineMessage.ERROR_ISO_DISK_ATTACHED_TO_RUNNING_VMS,
                     ReplacementUtils.createSetVariableString(DISK_NAME_VARIABLE, disk.getDiskAlias()),
@@ -176,7 +208,7 @@ public class DiskValidator {
     }
 
     public ValidationResult isVmNotContainsBootDisk(VM vm) {
-        Disk bootDisk = Injector.get(DiskDao.class).getVmBootActiveDisk(vm.getId());
+        Disk bootDisk = getDiskDao().getVmBootActiveDisk(vm.getId());
         if (bootDisk != null) {
             return new ValidationResult(EngineMessage.ACTION_TYPE_FAILED_DISK_BOOT_IN_USE,
                     ReplacementUtils.createSetVariableString("VmName", vm.getName()),
@@ -207,7 +239,7 @@ public class DiskValidator {
         }
 
         StorageDomain diskStorageDomain =
-                Injector.get(StorageDomainDao.class).get(((DiskImage) disk).getStorageIds().get(0));
+                getStorageDomainDao().get(((DiskImage) disk).getStorageIds().get(0));
         StorageType domainStorageType = diskStorageDomain.getStorageType();
 
         if (!domainStorageType.isFileDomain() && !domainStorageType.isBlockDomain()) {

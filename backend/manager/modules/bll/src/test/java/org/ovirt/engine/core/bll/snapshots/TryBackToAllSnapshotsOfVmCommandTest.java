@@ -3,6 +3,8 @@ package org.ovirt.engine.core.bll.snapshots;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 
+import javax.enterprise.inject.Instance;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -12,6 +14,7 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.ovirt.engine.core.bll.BaseCommandTest;
 import org.ovirt.engine.core.bll.ValidateTestUtils;
+import org.ovirt.engine.core.bll.validator.VmValidator;
 import org.ovirt.engine.core.common.action.TryBackToAllSnapshotsOfVmParameters;
 import org.ovirt.engine.core.common.businessentities.Snapshot;
 import org.ovirt.engine.core.common.businessentities.VM;
@@ -36,6 +39,9 @@ public class TryBackToAllSnapshotsOfVmCommandTest extends BaseCommandTest {
     @Mock
     private VmDao vmDao;
 
+    @Mock
+    private Instance<VmValidator> vmValidatorInstance;
+
     private VM vm;
 
     @BeforeEach
@@ -48,6 +54,8 @@ public class TryBackToAllSnapshotsOfVmCommandTest extends BaseCommandTest {
         snapshot.setId(cmd.getParameters().getDstSnapshotId());
         snapshot.setVmId(cmd.getParameters().getVmId());
         when(snapshotDao.get(cmd.getParameters().getDstSnapshotId())).thenReturn(snapshot);
+
+        when(vmValidatorInstance.get()).thenReturn(new VmValidator());
 
         doNothing().when(cmd).updateVmDisksFromDb();
     }

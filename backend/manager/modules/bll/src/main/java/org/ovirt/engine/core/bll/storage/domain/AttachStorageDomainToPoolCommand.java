@@ -54,19 +54,20 @@ import org.ovirt.engine.core.dao.profiles.DiskProfileDao;
 public class AttachStorageDomainToPoolCommand<T extends AttachStorageDomainToPoolParameters> extends
         StorageDomainCommandBase<T> {
 
+    private StoragePoolIsoMap map;
+
     @Inject
     private AuditLogDirector auditLogDirector;
-
     @Inject
     private DiskProfileDao diskProfileDao;
-
-    private StoragePoolIsoMap map;
     @Inject
     private StoragePoolIsoMapDao storagePoolIsoMapDao;
     @Inject
     private UnregisteredOVFDataDao unregisteredOVFDataDao;
     @Inject
     private CINDERStorageHelper cinderStorageHelper;
+    @Inject
+    private StorageDomainToPoolRelationValidator storageDomainToPoolRelationValidator;
 
     public AttachStorageDomainToPoolCommand(T parameters, CommandContext commandContext) {
         super(parameters, commandContext);
@@ -317,8 +318,8 @@ public class AttachStorageDomainToPoolCommand<T extends AttachStorageDomainToPoo
         }
 
         StorageDomainToPoolRelationValidator
-                storageDomainToPoolRelationValidator = new StorageDomainToPoolRelationValidator(getStorageDomain().getStorageStaticData(), getStoragePool());
-        if (!validate(storageDomainToPoolRelationValidator.validateDomainCanBeAttachedToPool())) {
+                validator = storageDomainToPoolRelationValidator.createInstance(getStorageDomain().getStorageStaticData(), getStoragePool());
+        if (!validate(validator.validateDomainCanBeAttachedToPool())) {
             return false;
         }
 
@@ -334,7 +335,7 @@ public class AttachStorageDomainToPoolCommand<T extends AttachStorageDomainToPoo
             return checkMasterDomainIsUp();
         }
         if (getStorageDomain().getBlockSize() == StorageBlockSize.BLOCK_4K &&
-                !validate(storageDomainToPoolRelationValidator.isBlockSizeAutoDetectionSupported())) {
+                !validate(validator.isBlockSizeAutoDetectionSupported())) {
             return false;
         }
         return true;

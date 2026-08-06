@@ -27,9 +27,12 @@ import org.ovirt.engine.core.bll.NonTransactiveCommandAttribute;
 import org.ovirt.engine.core.bll.RenamedEntityInfoProvider;
 import org.ovirt.engine.core.bll.ValidationResult;
 import org.ovirt.engine.core.bll.context.CommandContext;
+import org.ovirt.engine.core.bll.host.HostConnectivityChecker;
+import org.ovirt.engine.core.bll.interfaces.BackendInternal;
 import org.ovirt.engine.core.bll.network.AddNetworkParametersBuilder;
 import org.ovirt.engine.core.bll.network.HostSetupNetworksParametersBuilder;
 import org.ovirt.engine.core.bll.network.RemoveNetworkParametersBuilder;
+import org.ovirt.engine.core.bll.network.cluster.ManagementNetworkUtil;
 import org.ovirt.engine.core.bll.network.cluster.NetworkClusterHelper;
 import org.ovirt.engine.core.bll.tasks.interfaces.CommandCallback;
 import org.ovirt.engine.core.bll.validator.HasStoragePoolValidator;
@@ -53,6 +56,7 @@ import org.ovirt.engine.core.common.businessentities.network.VmNic;
 import org.ovirt.engine.core.common.errors.EngineError;
 import org.ovirt.engine.core.common.errors.EngineException;
 import org.ovirt.engine.core.common.errors.EngineMessage;
+import org.ovirt.engine.core.common.interfaces.VDSBrokerFrontend;
 import org.ovirt.engine.core.common.utils.NetworkCommonUtils;
 import org.ovirt.engine.core.common.utils.Pair;
 import org.ovirt.engine.core.common.validation.group.UpdateEntity;
@@ -67,7 +71,6 @@ import org.ovirt.engine.core.dao.network.NetworkAttachmentDao;
 import org.ovirt.engine.core.dao.network.NetworkClusterDao;
 import org.ovirt.engine.core.dao.network.NetworkDao;
 import org.ovirt.engine.core.dao.network.VmNicDao;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.utils.NetworkUtils;
 import org.ovirt.engine.core.utils.transaction.TransactionSupport;
 import org.ovirt.engine.core.vdsbroker.NetworkImplementationDetailsUtils;
@@ -94,6 +97,12 @@ public class UpdateNetworkCommand<T extends AddNetworkStoragePoolParameters> ext
     private Instance<ConcurrentChildCommandsExecutionCallback> callbackProvider;
     @Inject
     private AuditLogDirector auditLogDirector;
+    @Inject
+    private InterfaceDao interfaceDao;
+    @Inject
+    private Instance<NetworkValidator> networkValidatorInstance;
+    @Inject
+    private Instance<HasStoragePoolValidator> hasStoragePoolValidatorInstance;
 
     private Network oldNetwork;
 
@@ -172,9 +181,9 @@ public class UpdateNetworkCommand<T extends AddNetworkStoragePoolParameters> ext
             return true;
         }
 
-        final HasStoragePoolValidator hasStoragePoolValidator = new HasStoragePoolValidator(getNetwork());
-        final NetworkValidator validatorNew = new NetworkValidator(getNetwork());
-        final UpdateNetworkValidator validatorOld = new UpdateNetworkValidator(getOldNetwork());
+        final HasStoragePoolValidator hasStoragePoolValidator = hasStoragePoolValidatorInstance.get().init(getNetwork());
+        final NetworkValidator validatorNew = networkValidatorInstance.get().init(getNetwork());
+        final UpdateNetworkValidator validatorOld = new UpdateNetworkValidator(getOldNetwork(), interfaceDao);
         return validate(hasStoragePoolValidator.storagePoolExists())
                 && validate(validatorNew.stpForVmNetworkOnly())
                 && validate(validatorNew.networkPrefixValid())
@@ -269,8 +278,11 @@ public class UpdateNetworkCommand<T extends AddNetworkStoragePoolParameters> ext
 
     protected static class UpdateNetworkValidator extends NetworkValidator {
 
-        public UpdateNetworkValidator(Network network) {
+        private InterfaceDao interfaceDao;
+
+        public UpdateNetworkValidator(Network network, InterfaceDao interfaceDao) {
             super(network);
+            this.interfaceDao = interfaceDao;
         }
 
         public ValidationResult notRenamingLabel(String newLabel) {
@@ -279,7 +291,7 @@ public class UpdateNetworkCommand<T extends AddNetworkStoragePoolParameters> ext
                 return ValidationResult.VALID;
             }
 
-            List<VdsNetworkInterface> nics = Injector.get(InterfaceDao.class).getVdsInterfacesByNetworkId(network.getId());
+            List<VdsNetworkInterface> nics = interfaceDao.getVdsInterfacesByNetworkId(network.getId());
             for (VdsNetworkInterface nic : nics) {
                 VdsNetworkInterface labeledNic = nic;
                 if (NetworkCommonUtils.isVlan(nic)) {
@@ -295,7 +307,7 @@ public class UpdateNetworkCommand<T extends AddNetworkStoragePoolParameters> ext
         }
 
         private VdsNetworkInterface getBaseInterface(VdsNetworkInterface vlan) {
-            List<VdsNetworkInterface> hostNics = Injector.get(InterfaceDao.class).getAllInterfacesForVds(vlan.getVdsId());
+            List<VdsNetworkInterface> hostNics = interfaceDao.getAllInterfacesForVds(vlan.getVdsId());
 
             for (VdsNetworkInterface hostNic : hostNics) {
                 if (NetworkUtils.interfaceBasedOn(vlan, hostNic.getName())) {
@@ -406,8 +418,14 @@ public class UpdateNetworkCommand<T extends AddNetworkStoragePoolParameters> ext
         public SyncNetworkParametersBuilder(InterfaceDao interfaceDao,
                 VdsStaticDao vdsStaticDao,
                 NetworkClusterDao networkClusterDao,
-                NetworkAttachmentDao networkAttachmentDao) {
-            super(interfaceDao, vdsStaticDao, networkClusterDao, networkAttachmentDao);
+                NetworkAttachmentDao networkAttachmentDao,
+                VDSBrokerFrontend vdsBrokerFrontend,
+                BackendInternal backendInternal,
+                AuditLogDirector auditLogDirector,
+                ManagementNetworkUtil managementNetworkUtil,
+                HostConnectivityChecker hostConnectivityChecker) {
+            super(interfaceDao, vdsStaticDao, networkClusterDao, networkAttachmentDao,
+                    vdsBrokerFrontend, backendInternal, auditLogDirector, managementNetworkUtil, hostConnectivityChecker);
         }
 
         private ArrayList<ActionParametersBase> buildParameters(Network network, Network oldNetwork) {

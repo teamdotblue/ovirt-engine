@@ -12,6 +12,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
+import javax.enterprise.inject.Instance;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,6 +24,7 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.ovirt.engine.core.bll.BaseCommandTest;
 import org.ovirt.engine.core.bll.ValidateTestUtils;
+import org.ovirt.engine.core.bll.validator.storage.StoragePoolValidator;
 import org.ovirt.engine.core.common.action.ExtendSANStorageDomainParameters;
 import org.ovirt.engine.core.common.businessentities.StorageDomain;
 import org.ovirt.engine.core.common.businessentities.StorageDomainStatic;
@@ -63,8 +66,12 @@ public class RefreshLunsSizeCommandTest extends BaseCommandTest {
     @Mock
     private LunDao lunsDao;
 
+    @Mock
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
+
     @BeforeEach
     public void setUp() {
+        doReturn(new StoragePoolValidator()).when(storagePoolValidatorInstance).get();
         StorageDomainStatic sdStatic = createStorageDomain();
         spId = Guid.newGuid();
 

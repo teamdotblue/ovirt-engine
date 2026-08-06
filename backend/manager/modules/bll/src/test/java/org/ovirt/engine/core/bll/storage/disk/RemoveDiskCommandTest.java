@@ -2,10 +2,13 @@ package org.ovirt.engine.core.bll.storage.disk;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.Collections;
+
+import javax.enterprise.inject.Instance;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,6 +19,10 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.ovirt.engine.core.bll.BaseCommandTest;
 import org.ovirt.engine.core.bll.ValidateTestUtils;
+import org.ovirt.engine.core.bll.ValidationResult;
+import org.ovirt.engine.core.bll.validator.storage.DiskImagesValidator;
+import org.ovirt.engine.core.bll.validator.storage.DiskValidator;
+import org.ovirt.engine.core.bll.validator.storage.StorageDomainValidator;
 import org.ovirt.engine.core.common.action.ActionType;
 import org.ovirt.engine.core.common.action.RemoveDiskParameters;
 import org.ovirt.engine.core.common.businessentities.OriginType;
@@ -55,6 +62,24 @@ public class RemoveDiskCommandTest extends BaseCommandTest {
     @Mock
     private VmStaticDao vmStaticDao;
 
+    @Mock
+    private Instance<DiskValidator> diskValidatorInstance;
+
+    @Mock
+    private DiskValidator diskValidator;
+
+    @Mock
+    private Instance<StorageDomainValidator> storageDomainValidatorInstance;
+
+    @Mock
+    private StorageDomainValidator storageDomainValidator;
+
+    @Mock
+    private Instance<DiskImagesValidator> diskImagesValidatorInstance;
+
+    @Mock
+    private DiskImagesValidator diskImagesValidator;
+
     private Guid diskId = Guid.newGuid();
     private Disk disk;
     private VM vm;
@@ -83,11 +108,21 @@ public class RemoveDiskCommandTest extends BaseCommandTest {
 
         doReturn(disk).when(cmd).getDisk();
         doReturn(ActionType.RemoveDisk).when(cmd).getActionType();
+        when(diskValidatorInstance.get()).thenReturn(diskValidator);
+        when(diskValidator.init(any())).thenReturn(diskValidator);
+        when(diskImagesValidatorInstance.get()).thenReturn(diskImagesValidator);
+        when(diskImagesValidator.init(any())).thenReturn(diskImagesValidator);
+        doReturn(storageDomainValidator).when(storageDomainValidatorInstance).get();
+        doReturn(storageDomainValidator).when(storageDomainValidator).createInstance(any());
+        doReturn(ValidationResult.VALID).when(storageDomainValidator).isDomainExistAndActive();
     }
 
     protected void setupDisk() {
         disk.setId(diskId);
         disk.setVmEntityType(VmEntityType.VM);
+        if (disk instanceof DiskImage) {
+            ((DiskImage) disk).setStorageIds(new ArrayList<>(Collections.singletonList(Guid.newGuid())));
+        }
     }
 
     /* Tests for validate() flow */
@@ -140,6 +175,9 @@ public class RemoveDiskCommandTest extends BaseCommandTest {
     public void testValidateOvfDiskNotIllegal() {
         ((DiskImage) disk).setImageStatus(ImageStatus.OK);
         disk.setContentType(DiskContentType.OVF_STORE);
+        when(diskImagesValidator.disksInStatus(ImageStatus.ILLEGAL,
+            EngineMessage.ACTION_TYPE_FAILED_OVF_DISK_NOT_IN_APPLICABLE_STATUS))
+            .thenReturn(new ValidationResult(EngineMessage.ACTION_TYPE_FAILED_OVF_DISK_NOT_IN_APPLICABLE_STATUS));
         ValidateTestUtils.runAndAssertValidateFailure(cmd,
                 EngineMessage.ACTION_TYPE_FAILED_OVF_DISK_NOT_IN_APPLICABLE_STATUS);
     }
@@ -169,9 +207,16 @@ public class RemoveDiskCommandTest extends BaseCommandTest {
         vm.setOrigin(OriginType.MANAGED_HOSTED_ENGINE);
         vm.setStatus(VMStatus.Up);
         doReturn(disk).when(cmd).getDisk();
+        spyDiskValidator(disk);
         ValidateTestUtils.runAndAssertValidateFailure(
                 cmd,
                 EngineMessage.ACTION_TYPE_FAILED_HOSTED_ENGINE_DISK);
+    }
+
+    private DiskValidator spyDiskValidator(Disk disk) {
+        DiskValidator realDiskValidator = spy(new DiskValidator(disk));
+        when(diskValidatorInstance.get()).thenReturn(realDiskValidator);
+        return realDiskValidator;
     }
 
     @Test

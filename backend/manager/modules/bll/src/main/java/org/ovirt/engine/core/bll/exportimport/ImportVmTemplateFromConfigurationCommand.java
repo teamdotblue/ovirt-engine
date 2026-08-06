@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.apache.commons.collections.MapUtils;
@@ -82,7 +83,6 @@ public class ImportVmTemplateFromConfigurationCommand<T extends ImportVmTemplate
 
     @Inject
     private AuditLogDirector auditLogDirector;
-
     @Inject
     private OvfHelper ovfHelper;
     @Inject
@@ -103,6 +103,10 @@ public class ImportVmTemplateFromConfigurationCommand<T extends ImportVmTemplate
     private DiskVmElementDao diskVmElementDao;
     @Inject
     private DiskImageDao diskImageDao;
+    @Inject
+    private Instance<ImportValidator> importValidatorInstance;
+    @Inject
+    private Instance<StorageDomainValidator> storageDomainValidatorInstance;
 
     public ImportVmTemplateFromConfigurationCommand(Guid commandId) {
         super(commandId);
@@ -141,7 +145,7 @@ public class ImportVmTemplateFromConfigurationCommand<T extends ImportVmTemplate
             }
         }
 
-        ImportValidator importValidator = new ImportValidator(getParameters());
+        ImportValidator importValidator = importValidatorInstance.get().init(getParameters());
         removeInvalidUsers(importValidator);
         removeInavlidRoles(importValidator);
         return true;
@@ -199,7 +203,7 @@ public class ImportVmTemplateFromConfigurationCommand<T extends ImportVmTemplate
             return failValidation(EngineMessage.ACTION_TYPE_FAILED_OVF_CONFIGURATION_NOT_SUPPORTED);
         }
 
-        ImportValidator importValidator = new ImportValidator(getParameters());
+        ImportValidator importValidator = importValidatorInstance.get().init(getParameters());
 
         if (!validate(importValidator.validateDiskImagesNotExistOrShareable(
                 getImages(),
@@ -286,7 +290,7 @@ public class ImportVmTemplateFromConfigurationCommand<T extends ImportVmTemplate
             while (iterator.hasNext()) {
                 Guid storageDomainId = iterator.next();
                 StorageDomain sd = storageDomainDao.getForStoragePool(storageDomainId, getStoragePool().getId());
-                ValidationResult result = new StorageDomainValidator(sd).isDomainExistAndActive();
+                ValidationResult result = storageDomainValidatorInstance.get().createInstance(sd).isDomainExistAndActive();
                 if (!result.isValid()) {
                     log.warn("Storage domain '{}' does not exist.", storageDomainId);
                     iterator.remove();

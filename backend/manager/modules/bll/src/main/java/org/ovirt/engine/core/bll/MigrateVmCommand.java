@@ -17,6 +17,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.apache.commons.lang.StringUtils;
@@ -76,6 +77,7 @@ import org.ovirt.engine.core.common.vdscommands.VDSReturnValue;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogDirector;
 import org.ovirt.engine.core.dao.DiskDao;
+import org.ovirt.engine.core.dao.DiskImageDao;
 import org.ovirt.engine.core.dao.VdsDao;
 import org.ovirt.engine.core.dao.VmDynamicDao;
 import org.ovirt.engine.core.dao.network.HostNetworkQosDao;
@@ -89,6 +91,11 @@ import org.slf4j.LoggerFactory;
 
 @NonTransactiveCommandAttribute
 public class MigrateVmCommand<T extends MigrateVmParameters> extends RunVmCommandBase<T> {
+
+    @Inject
+    private Instance<DiskImagesValidator> diskImagesValidatorInstance;
+    @Inject
+    private Instance<VmValidator> vmValidatorInstance;
 
     private static int PARALLEL_MIGRATION_CONNECTION_BANDWIDTH_MBPS = 10 * 1024;
 
@@ -117,6 +124,10 @@ public class MigrateVmCommand<T extends MigrateVmParameters> extends RunVmComman
     private ManagedBlockStorageCommandUtil managedBlockStorageCommandUtil;
     @Inject
     private KubevirtMonitoring kubevirt;
+    @Inject
+    private Instance<ChangeVmClusterValidator> changeVmClusterValidatorInstance;
+    @Inject
+    private DiskImageDao diskImageDao;
 
     /** The VDS that the VM is going to migrate to */
     private VDS destinationVds;
@@ -924,13 +935,13 @@ public class MigrateVmCommand<T extends MigrateVmParameters> extends RunVmComman
             return false;
         }
 
-        if (!validate(new MultipleVmsValidator(vm).vmNotHavingPluggedDiskSnapshots(EngineMessage.ACTION_TYPE_FAILED_VM_HAS_PLUGGED_DISK_SNAPSHOT))
+        if (!validate(new MultipleVmsValidator(vm, diskImageDao).vmNotHavingPluggedDiskSnapshots(EngineMessage.ACTION_TYPE_FAILED_VM_HAS_PLUGGED_DISK_SNAPSHOT))
                 || !validate(vmValidator.allPassthroughVnicsMigratable())) {
             return false;
         }
 
         if (getParameters().getTargetClusterId() != null) {
-            ChangeVmClusterValidator changeVmClusterValidator = ChangeVmClusterValidator.create(
+            ChangeVmClusterValidator changeVmClusterValidator = changeVmClusterValidatorInstance.get().create(
                     getVm(),
                     getParameters().getTargetClusterId(),
                     getVm().getCustomCompatibilityVersion(),
@@ -943,7 +954,7 @@ public class MigrateVmCommand<T extends MigrateVmParameters> extends RunVmComman
         return validate(snapshotsValidator.vmNotDuringSnapshot(vm.getId()))
                 // This check was added to prevent migration of VM while its disks are being migrated
                 // TODO: replace it with a better solution
-                && validate(new DiskImagesValidator(callFilterImageDisks(vm)).diskImagesNotLocked())
+                && validate(diskImagesValidatorInstance.get().init(callFilterImageDisks(vm)).diskImagesNotLocked())
                 && canScheduleVm();
     }
 
@@ -1128,7 +1139,7 @@ public class MigrateVmCommand<T extends MigrateVmParameters> extends RunVmComman
     }
 
     protected VmValidator getVmValidator() {
-        return new VmValidator(getVm());
+        return vmValidatorInstance.get().init(getVm());
     }
 
     @Override
@@ -1142,6 +1153,6 @@ public class MigrateVmCommand<T extends MigrateVmParameters> extends RunVmComman
     }
 
     private VdsManager getDestinationVdsManager() {
-        return resourceManager.getVdsManager(getDestinationVdsId());
+        return resourceManagerInstance.get().getVdsManager(getDestinationVdsId());
     }
 }

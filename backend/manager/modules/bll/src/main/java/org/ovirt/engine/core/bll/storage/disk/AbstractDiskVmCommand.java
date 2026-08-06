@@ -8,6 +8,7 @@ import java.util.Objects;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.apache.commons.lang.StringUtils;
@@ -41,6 +42,7 @@ import org.ovirt.engine.core.common.businessentities.storage.VolumeFormat;
 import org.ovirt.engine.core.common.errors.EngineError;
 import org.ovirt.engine.core.common.errors.EngineException;
 import org.ovirt.engine.core.common.errors.EngineMessage;
+import org.ovirt.engine.core.common.osinfo.OsRepository;
 import org.ovirt.engine.core.common.vdscommands.HotPlugDiskVDSParameters;
 import org.ovirt.engine.core.common.vdscommands.VDSCommandType;
 import org.ovirt.engine.core.compat.Guid;
@@ -60,6 +62,8 @@ public abstract class AbstractDiskVmCommand<T extends VmDiskOperationParameterBa
     private CinderBroker cinderBroker;
 
     @Inject
+    private Instance<CinderBroker> cinderBrokerInstance;
+    @Inject
     private VmInfoBuildUtils vmInfoBuildUtils;
     @Inject
     private StorageServerConnectionDao storageServerConnectionDao;
@@ -72,7 +76,13 @@ public abstract class AbstractDiskVmCommand<T extends VmDiskOperationParameterBa
     @Inject
     private StorageHelperDirector storageHelperDirector;
     @Inject
-    private ResourceManager resourceManager;
+    private Instance<ResourceManager> resourceManagerInstance;
+    @Inject
+    private OsRepository osRepository;
+    @Inject
+    private Instance<DiskValidator> diskValidatorInstance;
+    @Inject
+    private Instance<DiskVmElementValidator> diskVmElementValidatorInstance;
 
     protected AbstractDiskVmCommand(Guid commandId) {
         super(commandId);
@@ -163,11 +173,11 @@ public abstract class AbstractDiskVmCommand<T extends VmDiskOperationParameterBa
     protected boolean isDiskPassPciAndIdeLimit() {
         List<VmNic> vmInterfaces = vmNicDao.getAllForVm(getVmId());
         List<DiskVmElement> diskVmElements = diskVmElementDao.getAllForVm(getVmId());
+        int maxPciSlots = osRepository.getMaxPciDevices(getVm().getOs(), getVm().getCompatibilityVersion());
 
         diskVmElements.add(getDiskVmElement());
 
-        return validate(VmValidator.checkPciAndIdeLimit(getVm().getOs(),
-                getVm().getCompatibilityVersion(),
+        return validate(VmValidator.checkPciAndIdeLimit(maxPciSlots,
                 getVm().getNumOfMonitors(),
                 vmInterfaces,
                 diskVmElements,
@@ -240,11 +250,11 @@ public abstract class AbstractDiskVmCommand<T extends VmDiskOperationParameterBa
     }
 
     protected DiskValidator getDiskValidator(Disk disk) {
-        return new DiskValidator(disk);
+        return diskValidatorInstance.get().init(disk);
     }
 
     protected DiskVmElementValidator getDiskVmElementValidator(Disk disk, DiskVmElement diskVmElement) {
-        return new DiskVmElementValidator(disk, diskVmElement);
+        return diskVmElementValidatorInstance.get().init(disk, diskVmElement);
     }
 
     protected boolean isVmNotInPreviewSnapshot() {
@@ -255,7 +265,7 @@ public abstract class AbstractDiskVmCommand<T extends VmDiskOperationParameterBa
 
     public CinderBroker getCinderBroker() {
         if (cinderBroker == null) {
-            cinderBroker = new CinderBroker(getStorageDomainId(), getReturnValue().getExecuteFailedMessages());
+            cinderBroker = cinderBrokerInstance.get().init(getStorageDomainId(), getReturnValue().getExecuteFailedMessages());
         }
         return cinderBroker;
     }
@@ -353,6 +363,6 @@ public abstract class AbstractDiskVmCommand<T extends VmDiskOperationParameterBa
             };
         }
 
-        return resourceManager.getVmManager(getVmId()).getVmDevicesLock();
+        return resourceManagerInstance.get().getVmManager(getVmId()).getVmDevicesLock();
     }
 }

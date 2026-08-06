@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.DisableInPrepareMode;
@@ -45,10 +46,15 @@ import org.ovirt.engine.core.utils.transaction.TransactionSupport;
 public class ExportVmTemplateCommand<T extends MoveOrCopyParameters> extends MoveOrCopyTemplateCommand<T> {
 
     @Inject
+    private Instance<DiskImagesValidator> diskImagesValidatorInstance;
+    @Inject
     private OvfUpdateProcessHelper ovfUpdateProcessHelper;
-
     @Inject
     private StoragePoolIsoMapDao storagePoolIsoMapDao;
+    @Inject
+    private Instance<MultipleStorageDomainsValidator> multipleStorageDomainsValidatorInstance;
+    @Inject
+    private Instance<StorageDomainValidator> storageDomainValidatorProvider;
 
     private String cachedTemplateIsBeingExportedMessage;
 
@@ -146,7 +152,7 @@ public class ExportVmTemplateCommand<T extends MoveOrCopyParameters> extends Mov
         if (getVmTemplate() == null) {
             return failValidation(EngineMessage.ACTION_TYPE_FAILED_TEMPLATE_DOES_NOT_EXIST);
         }
-        StorageDomainValidator storageDomainValidator = new StorageDomainValidator(getStorageDomain());
+        StorageDomainValidator storageDomainValidator = storageDomainValidatorProvider.get().createInstance(getStorageDomain());
         if (!validate(storageDomainValidator.isDomainExistAndActive())) {
             return false;
         }
@@ -182,7 +188,7 @@ public class ExportVmTemplateCommand<T extends MoveOrCopyParameters> extends Mov
             }
 
             MultipleStorageDomainsValidator multipleStorageDomainsValidator =
-                    new MultipleStorageDomainsValidator(getStoragePoolId(), imageToDestinationDomainMap.values());
+                    multipleStorageDomainsValidatorInstance.get().init(getStoragePoolId(), imageToDestinationDomainMap.values());
             if (!validate(multipleStorageDomainsValidator.isSupportedByManagedBlockStorageDomains(getActionType()))) {
                 return false;
             }
@@ -204,7 +210,7 @@ public class ExportVmTemplateCommand<T extends MoveOrCopyParameters> extends Mov
     }
 
     private StorageDomainValidator createStorageDomainValidator(StorageDomain storageDomain) {
-        return new StorageDomainValidator(storageDomain);
+        return storageDomainValidatorProvider.get().createInstance(storageDomain);
     }
 
     private boolean validateFreeSpaceOnDestinationDomain(StorageDomainValidator storageDomainValidator, List<DiskImage> disksList) {
@@ -212,7 +218,7 @@ public class ExportVmTemplateCommand<T extends MoveOrCopyParameters> extends Mov
     }
 
     private boolean checkIfDisksExist(Collection<DiskImage> disksList) {
-        return validate(new DiskImagesValidator(disksList).diskImagesOnStorage(imageToDestinationDomainMap, getStoragePoolId()));
+        return validate(diskImagesValidatorInstance.get().init(disksList).diskImagesOnStorage(imageToDestinationDomainMap, getStoragePoolId()));
     }
 
     @Override

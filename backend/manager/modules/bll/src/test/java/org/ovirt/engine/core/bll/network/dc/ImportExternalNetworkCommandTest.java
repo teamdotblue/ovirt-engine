@@ -5,8 +5,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import javax.enterprise.inject.Instance;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,8 +23,10 @@ import org.ovirt.engine.core.bll.ValidateTestUtils;
 import org.ovirt.engine.core.bll.context.CommandContext;
 import org.ovirt.engine.core.bll.interfaces.BackendInternal;
 import org.ovirt.engine.core.bll.network.cluster.NetworkHelper;
+import org.ovirt.engine.core.bll.provider.NetworkProviderValidator;
 import org.ovirt.engine.core.bll.provider.ProviderProxyFactory;
 import org.ovirt.engine.core.bll.provider.network.openstack.ExternalNetworkProviderProxy;
+import org.ovirt.engine.core.bll.validator.NetworkValidator;
 import org.ovirt.engine.core.common.action.ActionReturnValue;
 import org.ovirt.engine.core.common.action.ActionType;
 import org.ovirt.engine.core.common.action.ImportExternalNetworkParameters;
@@ -54,6 +60,12 @@ public class ImportExternalNetworkCommandTest extends BaseCommandTest {
     @Mock
     private NetworkHelper networkHelper;
 
+    @Mock
+    private Instance<NetworkValidator> networkValidatorInstance;
+
+    @Mock
+    private Instance<NetworkProviderValidator> networkProviderValidatorInstance;
+
     @InjectMocks
     private ImportExternalNetworkCommand<ImportExternalNetworkParameters> command =
             new ImportExternalNetworkCommand<>(new ImportExternalNetworkParameters(PROVIDER_ID, EXTERNAL_ID,
@@ -73,6 +85,10 @@ public class ImportExternalNetworkCommandTest extends BaseCommandTest {
         returnValue.setSucceeded(true);
         returnValue.setActionReturnValue(NETWORK_ID);
         when(backend.runInternalAction(eq(ActionType.InternalImportExternalNetwork), any(), any())).thenReturn(returnValue);
+        NetworkValidator networkValidator = spy(new NetworkValidator(getProviderNetwork()));
+        doReturn(networkValidator).when(networkValidatorInstance).get();
+        NetworkProviderValidator networkProviderValidator = spy(new NetworkProviderValidator(provider));
+        doReturn(networkProviderValidator).when(networkProviderValidatorInstance).get();
     }
 
     @Test

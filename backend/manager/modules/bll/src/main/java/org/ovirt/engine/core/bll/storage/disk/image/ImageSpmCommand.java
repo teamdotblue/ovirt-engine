@@ -3,6 +3,7 @@ package org.ovirt.engine.core.bll.storage.disk.image;
 import java.util.Collections;
 import java.util.Map;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.context.CommandContext;
@@ -24,6 +25,8 @@ public abstract class ImageSpmCommand<T extends ImagesContainterParametersBase> 
     private Guid cachedSpmId;
     @Inject
     private VdsDynamicDao vdsDynamicDao;
+    @Inject
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
 
     public ImageSpmCommand(T parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -49,7 +52,7 @@ public abstract class ImageSpmCommand<T extends ImagesContainterParametersBase> 
         }
 
         setStoragePool(null);
-        StoragePoolValidator spValidator = new StoragePoolValidator(getStoragePool());
+        StoragePoolValidator spValidator = storagePoolValidatorInstance.get().init(getStoragePool());
         if (!validate(spValidator.exists())) {
             return false;
         }

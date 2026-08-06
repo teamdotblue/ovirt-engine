@@ -4,6 +4,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.HostLocking;
@@ -51,6 +52,8 @@ public class FenceVdsManualyCommand<T extends FenceVdsManualyParameters> extends
     private AlertDirector alertDirector;
     @Inject
     private HostLocking hostLocking;
+    @Inject
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
 
     private VDS problematicVds;
 
@@ -90,7 +93,7 @@ public class FenceVdsManualyCommand<T extends FenceVdsManualyParameters> extends
                         return false;
                     }
                 }
-                if (!validate(new StoragePoolValidator(getStoragePool()).isInStatus
+                if (!validate(storagePoolValidatorInstance.get().init(getStoragePool()).isInStatus
                         (StoragePoolStatus.NotOperational, StoragePoolStatus.NonResponsive, StoragePoolStatus.Maintenance))) {
                     return false;
                 }

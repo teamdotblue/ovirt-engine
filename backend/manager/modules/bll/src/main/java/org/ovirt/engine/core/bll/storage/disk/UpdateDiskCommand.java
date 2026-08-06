@@ -117,23 +117,13 @@ public class UpdateDiskCommand<T extends UpdateDiskParameters> extends AbstractD
     private final List<VM> vmsDiskOrSnapshotPluggedTo = new LinkedList<>();
     private final List<VM> vmsDiskOrSnapshotAttachedTo = new LinkedList<>();
     private List<DiskImage> allDiskImages = null;
-
-    @Inject
-    private AuditLogDirector auditLogDirector;
-
-    @Inject
-    VmSlaPolicyUtils vmSlaPolicyUtils;
-    @Inject
-    private DiskProfileHelper diskProfileHelper;
-    @Inject
-    private VmDao vmDao;
-
     /**
      * vm device for the given vm and disk
      */
     private VmDevice vmDeviceForVm;
     private Disk oldDisk;
     private DiskVmElement oldDiskVmElement;
+
     @Inject
     private StorageDomainDao storageDomainDao;
     @Inject
@@ -160,10 +150,25 @@ public class UpdateDiskCommand<T extends UpdateDiskParameters> extends AbstractD
     private MetadataDiskDescriptionHandler metadataDiskDescriptionHandler;
     @Inject
     private CommandCoordinatorUtil commandCoordinatorUtil;
-
     @Inject
     @Typed(SerialChildCommandsExecutionCallback.class)
     private Instance<SerialChildCommandsExecutionCallback> callbackProvider;
+    @Inject
+    private Instance<StorageDomainValidator> storageDomainValidatorInstance;
+    @Inject
+    private Instance<VmValidator> vmValidatorInstance;
+    @Inject
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
+    @Inject
+    private Instance<DiskImagesValidator> diskImagesValidatorInstance;
+    @Inject
+    private AuditLogDirector auditLogDirector;
+    @Inject
+    VmSlaPolicyUtils vmSlaPolicyUtils;
+    @Inject
+    private DiskProfileHelper diskProfileHelper;
+    @Inject
+    private VmDao vmDao;
 
     public UpdateDiskCommand(T parameters, CommandContext commandContext) {
         super(parameters, commandContext);
@@ -249,7 +254,9 @@ public class UpdateDiskCommand<T extends UpdateDiskParameters> extends AbstractD
                 DiskStorageType.CINDER == getOldDisk().getDiskStorageType();
 
         if (isDiskImageOrCinder) {
-            ValidationResult imagesNotLocked = new DiskImagesValidator((DiskImage) getOldDisk()).diskImagesNotLocked();
+            ValidationResult imagesNotLocked = diskImagesValidatorInstance.get()
+                    .init(Collections.singletonList((DiskImage) getOldDisk()))
+                    .diskImagesNotLocked();
             if (!imagesNotLocked.isValid()) {
                 return validate(imagesNotLocked);
             }
@@ -288,7 +295,7 @@ public class UpdateDiskCommand<T extends UpdateDiskParameters> extends AbstractD
     }
 
     private boolean validateVmDisk(DiskValidator oldDiskValidator) {
-        if (!validate(new VmValidator(getVm()).isVmExists()) || !isDiskExistAndAttachedToVm(getOldDisk()) ||
+        if (!validate(vmValidatorInstance.get().init(getVm()).isVmExists()) || !isDiskExistAndAttachedToVm(getOldDisk()) ||
                 !validateDiskVmData()) {
             return false;
         }
@@ -349,7 +356,7 @@ public class UpdateDiskCommand<T extends UpdateDiskParameters> extends AbstractD
     protected StorageDomainValidator getStorageDomainValidator(DiskImage diskImage) {
         StorageDomain storageDomain = storageDomainDao.getForStoragePool(
                 diskImage.getStorageIds().get(0), diskImage.getStoragePoolId());
-        return new StorageDomainValidator(storageDomain);
+        return storageDomainValidatorInstance.get().createInstance(storageDomain);
     }
 
     @Override
@@ -478,10 +485,10 @@ public class UpdateDiskCommand<T extends UpdateDiskParameters> extends AbstractD
     private boolean validateCanAmendDisk() {
         DiskImage disk = (DiskImage) getNewDisk();
         setStoragePoolId(disk.getStoragePoolId());
-        if (!validate(new StoragePoolValidator(getStoragePool()).existsAndUp())) {
+        if (!validate(storagePoolValidatorInstance.get().init(getStoragePool()).existsAndUp())) {
             return false;
         }
-        DiskImagesValidator diskImagesValidator = new DiskImagesValidator(List.of(disk));
+        DiskImagesValidator diskImagesValidator = diskImagesValidatorInstance.get().init(List.of(disk));
         return validate(diskImagesValidator.diskImagesNotIllegal());
     }
 

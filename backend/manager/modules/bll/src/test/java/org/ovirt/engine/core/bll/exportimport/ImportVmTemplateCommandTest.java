@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import javax.enterprise.inject.Instance;
 import javax.validation.ConstraintViolation;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -30,9 +31,12 @@ import org.mockito.quality.Strictness;
 import org.ovirt.engine.core.bll.Backend;
 import org.ovirt.engine.core.bll.BaseCommandTest;
 import org.ovirt.engine.core.bll.ValidateTestUtils;
+import org.ovirt.engine.core.bll.ValidationResult;
 import org.ovirt.engine.core.bll.VmHandler;
 import org.ovirt.engine.core.bll.context.CommandContext;
 import org.ovirt.engine.core.bll.validator.VmNicMacsUtils;
+import org.ovirt.engine.core.bll.validator.storage.StorageDomainValidator;
+import org.ovirt.engine.core.bll.validator.storage.StoragePoolValidator;
 import org.ovirt.engine.core.common.action.ImportVmTemplateParameters;
 import org.ovirt.engine.core.common.businessentities.BusinessEntitiesDefinitions;
 import org.ovirt.engine.core.common.businessentities.Cluster;
@@ -93,6 +97,15 @@ public class ImportVmTemplateCommandTest extends BaseCommandTest {
     @Mock
     private ImportUtils importUtils;
 
+    @Mock
+    private Instance<StorageDomainValidator> storageDomainValidatorInstance;
+
+    @Mock
+    private StorageDomainValidator storageDomainValidator;
+
+    @Mock
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
+
     @Spy
     @InjectMocks
     private ImportVmTemplateCommand<ImportVmTemplateParameters> command =
@@ -101,6 +114,11 @@ public class ImportVmTemplateCommandTest extends BaseCommandTest {
     @BeforeEach
     public void setUp() {
         doNothing().when(command).updateTemplateVersion();
+        doReturn(new StoragePoolValidator()).when(storagePoolValidatorInstance).get();
+        doReturn(storageDomainValidator).when(storageDomainValidatorInstance).get();
+        doReturn(storageDomainValidator).when(storageDomainValidator).createInstance(any());
+        doReturn(ValidationResult.VALID).when(storageDomainValidator).isDomainExistAndActive();
+        doReturn(ValidationResult.VALID).when(storageDomainValidator).domainIsValidDestination();
     }
 
     @Test

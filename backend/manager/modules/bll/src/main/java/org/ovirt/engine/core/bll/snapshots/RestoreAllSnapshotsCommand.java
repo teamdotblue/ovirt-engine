@@ -98,6 +98,8 @@ import org.ovirt.engine.core.utils.transaction.TransactionSupport;
 public class RestoreAllSnapshotsCommand<T extends RestoreAllSnapshotsParameters> extends VmCommand<T> implements QuotaStorageDependent {
 
     @Inject
+    private Instance<DiskImagesValidator> diskImagesValidatorInstance;
+    @Inject
     private SnapshotVmConfigurationHelper snapshotVmConfigurationHelper;
     @Inject
     private VmStaticDao vmStaticDao;
@@ -116,6 +118,14 @@ public class RestoreAllSnapshotsCommand<T extends RestoreAllSnapshotsParameters>
     @Inject
     @Typed(ConcurrentChildCommandsExecutionCallback.class)
     private Instance<ConcurrentChildCommandsExecutionCallback> callbackProvider;
+    @Inject
+    private Instance<MultipleStorageDomainsValidator> multipleStorageDomainsValidator;
+    @Inject
+    private Instance<VmInterfaceManager> vmInterfaceManagerInstance;
+    @Inject
+    private Instance<VmValidator> vmValidatorInstance;
+    @Inject
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
 
     private final Set<Guid> snapshotsToRemove = new HashSet<>();
     private Snapshot snapshot;
@@ -667,7 +677,7 @@ public class RestoreAllSnapshotsCommand<T extends RestoreAllSnapshotsParameters>
                 null,
                 getCompensationContext(),
                 getCurrentUser(),
-                new VmInterfaceManager(getMacPool()),
+                vmInterfaceManagerInstance.get().init(getMacPool()),
                 targetSnapshot.containsMemory());
         snapshotDao.remove(targetSnapshot.getId());
         // add active snapshot with status locked, so that other commands that depend on the VM's snapshots won't run in parallel
@@ -834,7 +844,7 @@ public class RestoreAllSnapshotsCommand<T extends RestoreAllSnapshotsParameters>
 
         if (!validate(snapshotsValidator.snapshotExists(getSnapshot()))
                 || !validate(snapshotsValidator.snapshotExists(getVmId(), getSnapshot().getId())) ||
-                !validate(new StoragePoolValidator(getStoragePool()).existsAndUp())) {
+                !validate(storagePoolValidatorInstance.get().init(getStoragePool()).existsAndUp())) {
             return false;
         }
         if (Guid.Empty.equals(getSnapshot().getId())) {
@@ -869,7 +879,7 @@ public class RestoreAllSnapshotsCommand<T extends RestoreAllSnapshotsParameters>
         return snapshot.getType() == SnapshotType.PREVIEW ?
                 getSnapshotsManager().canRestoreVmConfigurationFromSnapshot(getVm(),
                         snapshot,
-                        new VmInterfaceManager(getMacPool()))
+                        vmInterfaceManagerInstance.get().init(getMacPool()))
                 : true;
     }
 
@@ -880,18 +890,18 @@ public class RestoreAllSnapshotsCommand<T extends RestoreAllSnapshotsParameters>
     }
 
     protected VmValidator createVmValidator(VM vm) {
-        return new VmValidator(vm);
+        return vmValidatorInstance.get().init(vm);
     }
 
     protected MultipleStorageDomainsValidator createStorageDomainValidator() {
         Set<Guid> storageIds = ImagesHandler.getAllStorageIdsForImageIds(getImagesList());
-        return new MultipleStorageDomainsValidator(getStoragePoolId(), storageIds);
+        return multipleStorageDomainsValidator.get().init(getStoragePoolId(), storageIds);
     }
 
     protected boolean performImagesChecks() {
         List<DiskImage> diskImagesToCheck =
                 DisksFilter.filterImageDisks(getImagesList(), ONLY_NOT_SHAREABLE, ONLY_ACTIVE);
-        DiskImagesValidator diskImagesValidator = new DiskImagesValidator(diskImagesToCheck);
+        DiskImagesValidator diskImagesValidator = diskImagesValidatorInstance.get().init(diskImagesToCheck);
         return validate(diskImagesValidator.diskImagesNotLocked());
     }
 

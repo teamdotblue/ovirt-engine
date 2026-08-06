@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -12,6 +13,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
+
+import javax.enterprise.inject.Instance;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,6 +29,7 @@ import org.ovirt.engine.core.bll.ValidateTestUtils;
 import org.ovirt.engine.core.bll.context.CommandContext;
 import org.ovirt.engine.core.bll.interfaces.BackendInternal;
 import org.ovirt.engine.core.bll.network.cluster.NetworkHelper;
+import org.ovirt.engine.core.bll.validator.NetworkValidator;
 import org.ovirt.engine.core.common.action.ActionReturnValue;
 import org.ovirt.engine.core.common.action.ActionType;
 import org.ovirt.engine.core.common.action.IdParameters;
@@ -82,6 +86,9 @@ public class AutodefineExternalNetworkCommandTest extends BaseCommandTest {
     AuditLogDirector auditLogDirector;
 
     @Mock
+    private Instance<NetworkValidator> networkValidatorInstance;
+
+    @Mock
     EngineLock engineLock;
 
     @Spy
@@ -111,6 +118,8 @@ public class AutodefineExternalNetworkCommandTest extends BaseCommandTest {
                 any())).thenReturn(actionReturnValue);
         doReturn(engineLock).when(command).acquireLockForProvider(eq(CLUSTER_DEFAULT_PROVIDER_ID));
         doNothing().when(engineLock).close();
+        NetworkValidator networkValidator = spy(new NetworkValidator(physicalNetwork));
+        doReturn(networkValidator).when(networkValidatorInstance).get();
     }
 
     public static Stream<MockConfigDescriptor<?>> mockConfiguration() {

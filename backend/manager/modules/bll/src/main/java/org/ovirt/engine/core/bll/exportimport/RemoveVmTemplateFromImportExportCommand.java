@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.NonTransactiveCommandAttribute;
@@ -40,6 +41,8 @@ public class RemoveVmTemplateFromImportExportCommand<T extends VmTemplateImportE
 
     @Inject
     private VmTemplateDao vmTemplateDao;
+    @Inject
+    private Instance<StorageDomainValidator> storageDomainValidatorInstance;
 
     private Map<VmTemplate, List<DiskImage>> templatesFromExport;
     // this is needed since overriding getVmTemplate()
@@ -74,7 +77,7 @@ public class RemoveVmTemplateFromImportExportCommand<T extends VmTemplateImportE
             return failValidation(EngineMessage.ACTION_TYPE_FAILED_TEMPLATE_DOES_NOT_EXIST);
         }
 
-        StorageDomainValidator validator = new StorageDomainValidator(getStorageDomain());
+        StorageDomainValidator validator = storageDomainValidatorInstance.get().createInstance(getStorageDomain());
         if (!validate(validator.isDomainExistAndActive())) {
             return false;
         }

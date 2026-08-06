@@ -1,20 +1,36 @@
 package org.ovirt.engine.core.bll.validator;
 
+import javax.enterprise.inject.Instance;
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.bll.ValidationResult;
 import org.ovirt.engine.core.bll.validator.storage.StoragePoolValidator;
 import org.ovirt.engine.core.common.businessentities.HasStoragePool;
 import org.ovirt.engine.core.dao.StoragePoolDao;
-import org.ovirt.engine.core.di.Injector;
 
 /**
  * A validator for an {@link HasStoragePool} instance.
  */
 public class HasStoragePoolValidator {
+
+    @Inject
+    private StoragePoolDao storagePoolDao;
+    @Inject
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
+
     private HasStoragePool entity;
     private StoragePoolValidator spValidator;
 
     public HasStoragePoolValidator(HasStoragePool entity) {
         this.entity = entity;
+    }
+
+    public HasStoragePoolValidator() {
+    }
+
+    public HasStoragePoolValidator init(HasStoragePool entity) {
+        this.entity = entity;
+        return this;
     }
 
     /**
@@ -29,13 +45,9 @@ public class HasStoragePoolValidator {
 
     private StoragePoolValidator getStoragePoolValidator() {
         if (spValidator == null) {
-            spValidator = new StoragePoolValidator(getStoragePoolDao().get(entity.getStoragePoolId()));
+            spValidator = storagePoolValidatorInstance.get().init(storagePoolDao.get(entity.getStoragePoolId()));
         }
         return spValidator;
-    }
-
-    protected StoragePoolDao getStoragePoolDao() {
-        return Injector.get(StoragePoolDao.class);
     }
 
 }

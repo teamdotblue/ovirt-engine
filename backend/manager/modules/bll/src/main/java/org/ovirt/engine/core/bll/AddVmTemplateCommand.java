@@ -111,6 +111,7 @@ import org.ovirt.engine.core.dao.StorageDomainDao;
 import org.ovirt.engine.core.dao.StorageDomainStaticDao;
 import org.ovirt.engine.core.dao.VmDao;
 import org.ovirt.engine.core.dao.VmDynamicDao;
+import org.ovirt.engine.core.dao.VmIconDao;
 import org.ovirt.engine.core.dao.VmStaticDao;
 import org.ovirt.engine.core.dao.VmTemplateDao;
 import org.ovirt.engine.core.dao.network.VmNicDao;
@@ -122,6 +123,8 @@ import org.ovirt.engine.core.utils.transaction.TransactionSupport;
 public class AddVmTemplateCommand<T extends AddVmTemplateParameters> extends VmTemplateManagementCommand<T>
         implements QuotaStorageDependent, QuotaVdsDependent, SerialChildExecutingCommand {
 
+    @Inject
+    private Instance<DiskImagesValidator> diskImagesValidatorInstance;
     @Inject
     private AuditLogDirector auditLogDirector;
     @Inject
@@ -162,12 +165,20 @@ public class AddVmTemplateCommand<T extends AddVmTemplateParameters> extends VmT
     private ManagedScheduledExecutorService schedulerService;
     @Inject
     protected ImagesHandler imagesHandler;
-
     @Inject
     private MultiLevelAdministrationHandler multiLevelAdministrationHandler;
-
     @Inject
     private IconUtils iconUtils;
+    @Inject
+    private VmIconDao vmIconDao;
+    @Inject
+    private Instance<MultipleStorageDomainsValidator> multipleStorageDomainsValidator;
+    @Inject
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
+    @Inject
+    private Instance<CinderDisksValidator> cinderDisksValidatorInstance;
+    @Inject
+    private Instance<MultipleDiskVmElementValidator> multipleDiskVmElementValidatorInstance;
 
     protected final List<DiskImage> images = new ArrayList<>();
     private Guid[] targetDiskIds;
@@ -650,13 +661,13 @@ public class AddVmTemplateCommand<T extends AddVmTemplateParameters> extends VmT
 
         if (getParameters().getMasterVm().getSmallIconId() != null
                 && getParameters().getVmLargeIcon() == null // icon id is ignored if large icon is sent
-                && !validate(IconValidator.validateIconId(getParameters().getMasterVm().getSmallIconId(), "Small"))) {
+                && !validate(IconValidator.validateIconId(getParameters().getMasterVm().getSmallIconId(), "Small", vmIconDao))) {
             return false;
         }
 
         if (getParameters().getMasterVm().getLargeIconId() != null
                 && getParameters().getVmLargeIcon() == null // icon id is ignored if large icon is sent
-                && !validate(IconValidator.validateIconId(getParameters().getMasterVm().getLargeIconId(), "Large"))) {
+                && !validate(IconValidator.validateIconId(getParameters().getMasterVm().getLargeIconId(), "Large", vmIconDao))) {
             return false;
         }
 
@@ -797,12 +808,12 @@ public class AddVmTemplateCommand<T extends AddVmTemplateParameters> extends VmT
                 return false;
             }
 
-            if (!validate(new StoragePoolValidator(getStoragePool()).existsAndUp())) {
+            if (!validate(storagePoolValidatorInstance.get().init(getStoragePool()).existsAndUp())) {
                 return false;
             }
 
             List<CinderDisk> cinderDisks = getCinderDisks();
-            CinderDisksValidator cinderDisksValidator = new CinderDisksValidator(cinderDisks);
+            CinderDisksValidator cinderDisksValidator = cinderDisksValidatorInstance.get().init(cinderDisks);
             if (!validate(cinderDisksValidator.validateCinderDiskLimits())) {
                 return false;
             }
@@ -814,7 +825,7 @@ public class AddVmTemplateCommand<T extends AddVmTemplateParameters> extends VmT
             List<DiskImage> diskImagesToCheck = DisksFilter.filterImageDisks(images, ONLY_NOT_SHAREABLE, ONLY_ACTIVE);
             diskImagesToCheck.addAll(cinderDisks);
             diskImagesToCheck.addAll(getManagedBlockStorageDisks());
-            DiskImagesValidator diskImagesValidator = new DiskImagesValidator(diskImagesToCheck);
+            DiskImagesValidator diskImagesValidator = diskImagesValidatorInstance.get().init(diskImagesToCheck);
             if (!validate(diskImagesValidator.diskImagesNotIllegal()) ||
                     !validate(diskImagesValidator.diskImagesNotLocked())) {
                 return false;
@@ -871,9 +882,9 @@ public class AddVmTemplateCommand<T extends AddVmTemplateParameters> extends VmT
         return multipleDiskVmElementValidator.isPassDiscardSupportedForDestSds(diskIdToDestSdId);
     }
 
-    protected MultipleDiskVmElementValidator createMultipleDiskVmElementValidator(
+    public MultipleDiskVmElementValidator createMultipleDiskVmElementValidator(
             Map<Disk, DiskVmElement> diskToDiskVmElement) {
-        return new MultipleDiskVmElementValidator(diskToDiskVmElement);
+        return multipleDiskVmElementValidatorInstance.get().init(diskToDiskVmElement);
     }
 
     protected boolean validateSpaceRequirements() {
@@ -890,7 +901,7 @@ public class AddVmTemplateCommand<T extends AddVmTemplateParameters> extends VmT
     }
 
     protected MultipleStorageDomainsValidator getStorageDomainsValidator(Guid spId, Set<Guid> disks) {
-        return new MultipleStorageDomainsValidator(spId, disks);
+        return multipleStorageDomainsValidator.get().init(spId, disks);
     }
 
     protected boolean validateVmNotDuringSnapshot() {

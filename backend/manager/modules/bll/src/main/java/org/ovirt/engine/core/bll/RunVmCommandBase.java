@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.stream.Collectors;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.context.CommandContext;
@@ -87,12 +88,13 @@ public abstract class RunVmCommandBase<T extends VmOperationParameterBase> exten
     @Inject
     protected SchedulingManager schedulingManager;
     @Inject
-    protected ResourceManager resourceManager;
+    protected Instance<ResourceManager> resourceManagerInstance;
+    @Inject
+    protected Instance<CinderBroker> cinderBrokerInstance;
     @Inject
     protected JobRepository jobRepository;
     @Inject
     private StorageServerConnectionDao storageServerConnectionDao;
-
     @Inject
     private VnicProfileDao vnicProfileDao;
     @Inject
@@ -315,7 +317,7 @@ public abstract class RunVmCommandBase<T extends VmOperationParameterBase> exten
         }
         List<CinderDisk> cinderDisks = DisksFilter.filterCinderDisks(getVm().getDiskMap().values(), ONLY_PLUGGED);
         for (CinderDisk cinderDisk : cinderDisks) {
-            CinderBroker cinderBroker = new CinderBroker(cinderDisk.getStorageIds().get(0), getReturnValue().getExecuteFailedMessages());
+            CinderBroker cinderBroker = cinderBrokerInstance.get().init(cinderDisk.getStorageIds().get(0), getReturnValue().getExecuteFailedMessages());
             try {
                 cinderBroker.updateConnectionInfoForDisk(cinderDisk);
             } catch (OpenStackResponseException ex) {
@@ -348,7 +350,7 @@ public abstract class RunVmCommandBase<T extends VmOperationParameterBase> exten
      * @return VdsMonitor for signaling on thread actions
      */
     private VdsMonitor getMonitor(Guid vdsId) {
-        return resourceManager.getVdsManager(vdsId).getVdsMonitor();
+        return resourceManagerInstance.get().getVdsManager(vdsId).getVdsMonitor();
     }
 
     @Override
@@ -421,7 +423,7 @@ public abstract class RunVmCommandBase<T extends VmOperationParameterBase> exten
     }
 
     protected VdsManager getVdsManager() {
-        return resourceManager.getVdsManager(getVdsId());
+        return resourceManagerInstance.get().getVdsManager(getVdsId());
     }
 
 }

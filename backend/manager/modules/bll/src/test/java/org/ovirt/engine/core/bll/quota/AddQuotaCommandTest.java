@@ -1,6 +1,12 @@
 package org.ovirt.engine.core.bll.quota;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.Mockito.when;
+
 import java.util.stream.Stream;
+
+import javax.enterprise.inject.Instance;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -9,6 +15,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.ovirt.engine.core.bll.BaseCommandTest;
 import org.ovirt.engine.core.bll.ValidateTestUtils;
+import org.ovirt.engine.core.bll.validator.QuotaValidator;
 import org.ovirt.engine.core.common.action.QuotaCRUDParameters;
 import org.ovirt.engine.core.common.businessentities.Quota;
 import org.ovirt.engine.core.common.businessentities.QuotaCluster;
@@ -24,6 +31,11 @@ import org.ovirt.engine.core.utils.MockConfigExtension;
 public class AddQuotaCommandTest extends BaseCommandTest {
     @Mock
     private QuotaDao quotaDao;
+    @Mock
+    private QuotaValidator quotaValidator;
+
+    @Mock
+    private Instance<QuotaValidator> quotaValidatorInstance;
 
     /**
      * The command under test.
@@ -43,6 +55,8 @@ public class AddQuotaCommandTest extends BaseCommandTest {
     @BeforeEach
     public void testSetup() {
         command.init();
+        when(quotaValidatorInstance.get()).thenReturn(quotaValidator);
+        when(quotaValidator.createInstance(any(Quota.class), anyBoolean())).thenReturn(quotaValidator);
     }
 
     @Test

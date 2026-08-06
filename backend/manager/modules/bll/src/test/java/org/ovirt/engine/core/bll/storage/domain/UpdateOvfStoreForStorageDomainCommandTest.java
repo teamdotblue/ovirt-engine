@@ -3,15 +3,20 @@ package org.ovirt.engine.core.bll.storage.domain;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
 
 import java.util.Collections;
 
+import javax.enterprise.inject.Instance;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.ovirt.engine.core.bll.BaseCommandTest;
 import org.ovirt.engine.core.bll.context.CommandContext;
+import org.ovirt.engine.core.bll.validator.storage.StoragePoolValidator;
 import org.ovirt.engine.core.common.action.StorageDomainParametersBase;
 import org.ovirt.engine.core.common.businessentities.StorageDomain;
 import org.ovirt.engine.core.common.businessentities.StoragePool;
@@ -27,9 +32,17 @@ public class UpdateOvfStoreForStorageDomainCommandTest extends BaseCommandTest {
     @Mock
     private StoragePoolDao storagePoolDao;
 
+    @Mock
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
+
     @InjectMocks
     private UpdateOvfStoreForStorageDomainCommand<StorageDomainParametersBase> cmd =
             new UpdateOvfStoreForStorageDomainCommand<>(params, CommandContext.createContext(params.getSessionId()));
+
+    @BeforeEach
+    public void setUp() {
+        doReturn(new StoragePoolValidator()).when(storagePoolValidatorInstance).get();
+    }
 
     @Test
     public void storageAndPoolExists() {

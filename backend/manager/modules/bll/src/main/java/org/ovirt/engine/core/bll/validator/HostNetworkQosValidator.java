@@ -1,17 +1,29 @@
 package org.ovirt.engine.core.bll.validator;
 
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.bll.ValidationResult;
 import org.ovirt.engine.core.common.businessentities.network.HostNetworkQos;
 import org.ovirt.engine.core.common.errors.EngineMessage;
 import org.ovirt.engine.core.dao.network.HostNetworkQosDao;
 import org.ovirt.engine.core.dao.qos.QosDao;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.utils.ReplacementUtils;
 
 public class HostNetworkQosValidator extends QosValidator<HostNetworkQos> {
 
+    @Inject
+    private HostNetworkQosDao hostNetworkQosDao;
+
     public HostNetworkQosValidator(HostNetworkQos qos) {
         super(qos);
+    }
+
+    public HostNetworkQosValidator() {
+    }
+
+    public HostNetworkQosValidator init(HostNetworkQos qos) {
+        super.init(qos);
+        return this;
     }
 
     @Override
@@ -69,7 +81,7 @@ public class HostNetworkQosValidator extends QosValidator<HostNetworkQos> {
 
     @Override
     protected QosDao<HostNetworkQos> getQosDao() {
-        return Injector.get(HostNetworkQosDao.class);
+        return hostNetworkQosDao;
     }
 
 }

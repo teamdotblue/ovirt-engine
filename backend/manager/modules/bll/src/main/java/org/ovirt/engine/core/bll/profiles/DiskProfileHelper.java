@@ -10,6 +10,7 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -25,7 +26,6 @@ import org.ovirt.engine.core.common.errors.EngineMessage;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dao.PermissionDao;
 import org.ovirt.engine.core.dao.profiles.DiskProfileDao;
-import org.ovirt.engine.core.di.Injector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,9 +36,10 @@ public class DiskProfileHelper {
 
     @Inject
     private DiskProfileDao diskProfileDao;
-
     @Inject
     private PermissionDao permissionDao;
+    @Inject
+    private Instance<DiskProfileValidator> diskProfileValidatorInstance;
 
     public DiskProfile createDiskProfile(Guid storageDomainId, String name) {
         DiskProfile profile = new DiskProfile();
@@ -100,7 +101,7 @@ public class DiskProfileHelper {
     }
 
     public ValidationResult isDiskProfileParentEntityValid(DiskProfile diskProfile, Guid storageDomainId) {
-        return Injector.injectMembers(new DiskProfileValidator(diskProfile)).isParentEntityValid(storageDomainId);
+        return diskProfileValidatorInstance.get().createWithProfile(diskProfile).isParentEntityValid(storageDomainId);
     }
 
     /**

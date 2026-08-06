@@ -2,10 +2,14 @@ package org.ovirt.engine.core.bll.storage.domain;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
 
 import java.util.Collections;
 
+import javax.enterprise.inject.Instance;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -13,6 +17,7 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.ovirt.engine.core.bll.BaseCommandTest;
 import org.ovirt.engine.core.bll.ValidateTestUtils;
+import org.ovirt.engine.core.bll.validator.storage.StoragePoolValidator;
 import org.ovirt.engine.core.common.action.StorageDomainPoolParametersBase;
 import org.ovirt.engine.core.common.businessentities.StorageDomain;
 import org.ovirt.engine.core.common.businessentities.StorageDomainStatus;
@@ -35,9 +40,17 @@ public class ActivateStorageDomainCommandTest extends BaseCommandTest {
     @Mock
     private VdsDao vdsDao;
 
+    @Mock
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
+
     @InjectMocks
     private ActivateStorageDomainCommand<StorageDomainPoolParametersBase> cmd =
             new ActivateStorageDomainCommand<>(new StorageDomainPoolParametersBase(Guid.newGuid(), Guid.newGuid()), null);
+
+    @BeforeEach
+    public void setUp() {
+        doReturn(new StoragePoolValidator()).when(storagePoolValidatorInstance).get();
+    }
 
     @Test
     public void internalLockedAllowed() {

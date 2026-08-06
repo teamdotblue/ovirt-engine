@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.apache.commons.collections.CollectionUtils;
@@ -55,6 +56,8 @@ public abstract class ImportVmTemplateCommandBase<T extends ImportVmTemplatePara
         implements QuotaStorageDependent {
 
     @Inject
+    private Instance<DiskImagesValidator> diskImagesValidatorInstance;
+    @Inject
     private VmNicMacsUtils vmNicMacsUtils;
     @Inject
     private CpuProfileHelper cpuProfileHelper;
@@ -70,6 +73,10 @@ public abstract class ImportVmTemplateCommandBase<T extends ImportVmTemplatePara
     private ImportUtils importUtils;
     @Inject
     private CloudInitHandler cloudInitHandler;
+    @Inject
+    private Instance<StorageDomainValidator> storageDomainValidatorInstance;
+    @Inject
+    private Instance<VnicProfileHelper> vnicProfileHelperInstance;
 
     protected final Map<Guid, Guid> originalDiskIdMap = new HashMap<>();
     protected final Map<Guid, Guid> originalDiskImageIdMap = new HashMap<>();
@@ -280,7 +287,7 @@ public abstract class ImportVmTemplateCommandBase<T extends ImportVmTemplatePara
 
     protected boolean validateNoDuplicateDiskImages(Collection<DiskImage> images) {
         if (!getParameters().isImportAsNewEntity() && !getParameters().isImagesExistOnTargetStorageDomain()) {
-            DiskImagesValidator diskImagesValidator = new DiskImagesValidator(images);
+            DiskImagesValidator diskImagesValidator = diskImagesValidatorInstance.get().init(images);
             return validate(diskImagesValidator.disksNotExistOrShareable());
         }
 
@@ -293,7 +300,7 @@ public abstract class ImportVmTemplateCommandBase<T extends ImportVmTemplatePara
 
     private boolean validateLeaseStorageDomain(Guid leaseStorageDomainId) {
         StorageDomain domain = storageDomainDao.getForStoragePool(leaseStorageDomainId, getStoragePoolId());
-        StorageDomainValidator validator = new StorageDomainValidator(domain);
+        StorageDomainValidator validator = storageDomainValidatorInstance.get().createInstance(domain);
         return validate(validator.isDomainExistAndActive()) && validate(validator.isDataDomain());
     }
 
@@ -404,7 +411,7 @@ public abstract class ImportVmTemplateCommandBase<T extends ImportVmTemplatePara
 
     private void addVmInterfaces() {
         VnicProfileHelper vnicProfileHelper =
-                new VnicProfileHelper(getVmTemplate().getClusterId(),
+                vnicProfileHelperInstance.get().init(getVmTemplate().getClusterId(),
                         getStoragePoolId(),
                         AuditLogType.IMPORTEXPORT_IMPORT_TEMPLATE_INVALID_INTERFACES);
 

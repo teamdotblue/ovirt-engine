@@ -9,6 +9,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.apache.http.HttpStatus;
@@ -69,36 +70,28 @@ public class SyncNetworkProviderCommand<P extends IdParameters> extends CommandB
 
     @Inject
     private AuditLogDirector auditLogDirector;
-
     @Inject
     private ProviderProxyFactory providerProxyFactory;
-
     @Inject
     protected NetworkHelper networkHelper;
-
     @Inject
     protected VmHandler vmHandler;
-
     @Inject
     private ClusterDao clusterDao;
-
     @Inject
     private NetworkDao networkDao;
-
     @Inject
     private NetworkClusterDao networkClusterDao;
-
     @Inject
     private ProviderDao providerDao;
-
     @Inject
     private VmDao vmDao;
-
     @Inject
     private VnicProfileDao vnicProfileDao;
-
     @Inject
     private NetworkLocking networkLocking;
+    @Inject
+    private Instance<NetworkProviderValidator> networkProviderValidatorInstance;
 
     private Provider<?> provider;
 
@@ -124,7 +117,7 @@ public class SyncNetworkProviderCommand<P extends IdParameters> extends CommandB
 
     @Override
     protected boolean validate() {
-        NetworkProviderValidator validator = new NetworkProviderValidator(getProvider());
+        NetworkProviderValidator validator = networkProviderValidatorInstance.get().createInstance(getProvider());
         return validate(validator.providerIsSet())
                 && validate(validator.providerTypeIsNetwork())
                 && validate(validator.validateAuthentication());

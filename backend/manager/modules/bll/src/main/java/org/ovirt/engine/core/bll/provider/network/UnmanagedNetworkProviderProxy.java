@@ -6,6 +6,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import javax.enterprise.inject.Instance;
+import javax.inject.Inject;
+
 import org.apache.commons.lang.StringUtils;
 import org.ovirt.engine.core.bll.provider.ProviderValidator;
 import org.ovirt.engine.core.common.businessentities.OpenstackNetworkProviderProperties;
@@ -20,11 +23,15 @@ import org.ovirt.engine.core.common.errors.EngineError;
 import org.ovirt.engine.core.common.errors.EngineException;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dao.network.NetworkDao;
-import org.ovirt.engine.core.di.Injector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class UnmanagedNetworkProviderProxy implements NetworkProviderProxy {
+
+    @Inject
+    private NetworkDao networkDao;
+    @Inject
+    private Instance<ProviderValidator> providerValidatorInstance;
 
     private Provider<OpenstackNetworkProviderProperties> provider;
     private ProviderValidator providerValidator;
@@ -32,6 +39,14 @@ public class UnmanagedNetworkProviderProxy implements NetworkProviderProxy {
 
     public UnmanagedNetworkProviderProxy(Provider<OpenstackNetworkProviderProperties> provider) {
         this.provider = provider;
+    }
+
+    public UnmanagedNetworkProviderProxy() {
+    }
+
+    public UnmanagedNetworkProviderProxy init(Provider<OpenstackNetworkProviderProperties> provider) {
+        this.provider = provider;
+        return this;
     }
 
     @Override
@@ -44,7 +59,7 @@ public class UnmanagedNetworkProviderProxy implements NetworkProviderProxy {
 
     @Override
     public List<Network> getAll() {
-        return Injector.get(NetworkDao.class).getAllForProvider(provider.getId());
+        return networkDao.getAllForProvider(provider.getId());
     }
 
     @Override
@@ -93,7 +108,7 @@ public class UnmanagedNetworkProviderProxy implements NetworkProviderProxy {
     @Override
     public ProviderValidator getProviderValidator() {
         if (providerValidator == null) {
-            providerValidator = new ProviderValidator(provider);
+            providerValidator = providerValidatorInstance.get().init(provider);
         }
         return providerValidator;
     }

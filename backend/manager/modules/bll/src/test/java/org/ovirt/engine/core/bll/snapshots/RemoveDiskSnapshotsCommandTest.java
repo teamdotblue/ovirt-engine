@@ -9,6 +9,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -19,7 +21,9 @@ import org.ovirt.engine.core.bll.ValidateTestUtils;
 import org.ovirt.engine.core.bll.ValidationResult;
 import org.ovirt.engine.core.bll.validator.VmValidator;
 import org.ovirt.engine.core.bll.validator.storage.DiskImagesValidator;
+import org.ovirt.engine.core.bll.validator.storage.DiskSnapshotsValidator;
 import org.ovirt.engine.core.bll.validator.storage.StorageDomainValidator;
+import org.ovirt.engine.core.bll.validator.storage.StoragePoolValidator;
 import org.ovirt.engine.core.common.action.RemoveDiskSnapshotsParameters;
 import org.ovirt.engine.core.common.businessentities.StorageDomain;
 import org.ovirt.engine.core.common.businessentities.StoragePool;
@@ -54,6 +58,12 @@ public class RemoveDiskSnapshotsCommandTest extends BaseCommandTest {
     @Mock
     private SnapshotDao snapshotDao;
 
+    @Mock
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
+
+    @Mock
+    private Instance<DiskSnapshotsValidator> diskSnapshotsValidatorInstance;
+
     private VmValidator vmValidator;
 
     private static final Guid STORAGE_DOMAIN_ID = Guid.newGuid();
@@ -72,6 +82,8 @@ public class RemoveDiskSnapshotsCommandTest extends BaseCommandTest {
 
     @BeforeEach
     public void setUp() {
+        doReturn(new StoragePoolValidator()).when(storagePoolValidatorInstance).get();
+        doReturn(new DiskSnapshotsValidator()).when(diskSnapshotsValidatorInstance).get();
         mockStorageDomain();
 
         doReturn(storageDomainValidator).when(cmd).getStorageDomainValidator();

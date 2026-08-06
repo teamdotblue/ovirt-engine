@@ -75,6 +75,12 @@ public class RemoveDiskSnapshotsCommand<T extends RemoveDiskSnapshotsParameters>
     private StorageDomainValidator storageDomainValidator;
 
     @Inject
+    private Instance<DiskImagesValidator> diskImagesValidatorInstance;
+    @Inject
+    private Instance<DiskSnapshotsValidator> diskSnapshotsValidatorInstance;
+    @Inject
+    private Instance<VmValidator> vmValidatorInstance;
+    @Inject
     private OvfManager ovfManager;
     @Inject
     private ImageDao imageDao;
@@ -96,6 +102,10 @@ public class RemoveDiskSnapshotsCommand<T extends RemoveDiskSnapshotsParameters>
     @Inject
     @Typed(SerialChildCommandsExecutionCallback.class)
     private Instance<SerialChildCommandsExecutionCallback> serialCallbackProvider;
+    @Inject
+    private Instance<StorageDomainValidator> storageDomainValidatorInstance;
+    @Inject
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
 
     public RemoveDiskSnapshotsCommand(T parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -165,7 +175,7 @@ public class RemoveDiskSnapshotsCommand<T extends RemoveDiskSnapshotsParameters>
 
     protected StorageDomainValidator getStorageDomainValidator() {
         if (storageDomainValidator == null) {
-            storageDomainValidator = new StorageDomainValidator(getStorageDomain());
+            storageDomainValidator = storageDomainValidatorInstance.get().createInstance(getStorageDomain());
         }
         return storageDomainValidator;
     }
@@ -204,7 +214,7 @@ public class RemoveDiskSnapshotsCommand<T extends RemoveDiskSnapshotsParameters>
             }
         }
 
-        if (!validate(new StoragePoolValidator(getStoragePool()).existsAndUp()) ||
+        if (!validate(storagePoolValidatorInstance.get().init(getStoragePool()).existsAndUp()) ||
                 !validateVmNotDuringSnapshot() ||
                 !validateVmNotInPreview() ||
                 !validateSnapshotExists() ||
@@ -515,7 +525,7 @@ public class RemoveDiskSnapshotsCommand<T extends RemoveDiskSnapshotsParameters>
 
     protected boolean validateAllDiskImages() {
         List<DiskImage> images = diskImageDao.getAllSnapshotsForImageGroup(getDiskImage().getId());
-        DiskImagesValidator diskImagesValidator = new DiskImagesValidator(images);
+        DiskImagesValidator diskImagesValidator = diskImagesValidatorInstance.get().init(images);
 
         return validate(diskImagesValidator.diskImagesNotLocked()) &&
                 validate(diskImagesValidator.diskImagesNotIllegal());
@@ -535,15 +545,15 @@ public class RemoveDiskSnapshotsCommand<T extends RemoveDiskSnapshotsParameters>
     }
 
     protected DiskImagesValidator createDiskImageValidator(List<DiskImage> disksList) {
-        return new DiskImagesValidator(disksList);
+        return diskImagesValidatorInstance.get().init(disksList);
     }
 
     protected DiskSnapshotsValidator createDiskSnapshotsValidator(List<DiskImage> images) {
-        return new DiskSnapshotsValidator(images);
+        return diskSnapshotsValidatorInstance.get().init(images);
     }
 
     protected VmValidator createVmValidator(VM vm) {
-        return new VmValidator(vm);
+        return vmValidatorInstance.get().init(vm);
     }
 
     private Optional<DiskImage> getRepresentativeImage() {

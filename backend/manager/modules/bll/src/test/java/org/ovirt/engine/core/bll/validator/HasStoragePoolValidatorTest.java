@@ -3,18 +3,21 @@ package org.ovirt.engine.core.bll.validator;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 import static org.ovirt.engine.core.bll.validator.ValidationResultMatchers.failsWith;
 import static org.ovirt.engine.core.bll.validator.ValidationResultMatchers.isValid;
 
+import javax.enterprise.inject.Instance;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.ovirt.engine.core.bll.validator.storage.StoragePoolValidator;
 import org.ovirt.engine.core.common.businessentities.Cluster;
 import org.ovirt.engine.core.common.businessentities.HasStoragePool;
 import org.ovirt.engine.core.common.businessentities.StoragePool;
@@ -28,14 +31,16 @@ public class HasStoragePoolValidatorTest {
     @Mock
     private StoragePoolDao storagePoolDao;
 
-    private HasStoragePool hsp;
-    private HasStoragePoolValidator validator;
+    @Mock
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
+
+    private HasStoragePool hsp = new Cluster();
+    @InjectMocks
+    private HasStoragePoolValidator validator = new HasStoragePoolValidator(hsp);
 
     @BeforeEach
     public void setUp() {
-        hsp = new Cluster();
-        validator = spy(new HasStoragePoolValidator(hsp));
-        doReturn(storagePoolDao).when(validator).getStoragePoolDao();
+        doReturn(new StoragePoolValidator()).when(storagePoolValidatorInstance).get();
     }
 
     @Test

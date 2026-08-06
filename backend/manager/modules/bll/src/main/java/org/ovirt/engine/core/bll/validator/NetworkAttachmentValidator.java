@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import javax.enterprise.inject.Instance;
+
 import org.ovirt.engine.core.bll.ValidationResult;
 import org.ovirt.engine.core.common.businessentities.VDS;
 import org.ovirt.engine.core.common.businessentities.network.Network;
@@ -18,6 +20,8 @@ import org.ovirt.engine.core.dao.network.NetworkDao;
 import org.ovirt.engine.core.utils.ReplacementUtils;
 
 public class NetworkAttachmentValidator {
+
+    private Instance<NetworkValidator> networkValidatorInstance;
 
     public static final String VAR_ACTION_TYPE_FAILED_ROLE_NETWORK_HAS_NO_BOOT_PROTOCOL_ENTITY = "ACTION_TYPE_FAILED_ROLE_NETWORK_HAS_NO_BOOT_PROTOCOL_ENTITY";
     public static final String VAR_NETWORK_ATTACHMENT_ID = "networkAttachmentID";
@@ -38,13 +42,15 @@ public class NetworkAttachmentValidator {
             VDS host,
             NetworkClusterDao networkClusterDao,
             NetworkDao networkDao,
-            VdsDao vdsDao) {
+            VdsDao vdsDao,
+            Instance<NetworkValidator> networkValidatorInstance) {
 
         this.attachment = attachment;
         this.host = host;
         this.networkClusterDao = networkClusterDao;
         this.networkDao = networkDao;
         this.vdsDao = vdsDao;
+        this.networkValidatorInstance = networkValidatorInstance;
     }
 
     public ValidationResult networkAttachmentIsSet() {
@@ -172,7 +178,7 @@ public class NetworkAttachmentValidator {
 
     NetworkValidator getNetworkValidator() {
         if (networkValidator == null) {
-            networkValidator = new NetworkValidator(getNetwork());
+            networkValidator = networkValidatorInstance.get().init(getNetwork());
         }
 
         return networkValidator;

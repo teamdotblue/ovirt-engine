@@ -3,6 +3,7 @@ package org.ovirt.engine.core.bll.hostdeploy;
 import java.util.Collections;
 import java.util.Map;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.LockMessagesMatchUtil;
@@ -34,6 +35,8 @@ public class HostEnrollCertificateInternalCommand extends VdsCommand<VdsActionPa
 
     @Inject
     private AnsibleExecutor ansibleExecutor;
+    @Inject
+    private Instance<HostValidator> hostValidatorInstance;
 
     private EngineLocalConfig config = EngineLocalConfig.getInstance();
 
@@ -44,7 +47,7 @@ public class HostEnrollCertificateInternalCommand extends VdsCommand<VdsActionPa
 
     @Override
     public boolean validate() {
-        HostValidator hostValidator = HostValidator.createInstance(getVds());
+        HostValidator hostValidator = hostValidatorInstance.get().createInstance(getVds());
         return validate(hostValidator.hostExists())
                 && validate(hostValidator.validateStatusForEnrollCertificate());
     }

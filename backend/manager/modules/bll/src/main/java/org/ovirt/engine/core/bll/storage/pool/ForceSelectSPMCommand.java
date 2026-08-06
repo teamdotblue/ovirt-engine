@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.CommandBase;
@@ -33,11 +34,12 @@ public class ForceSelectSPMCommand<T extends ForceSelectSPMParameters> extends C
 
     @Inject
     private AuditLogDirector auditLogDirector;
-
     @Inject
     private AsyncTaskDao asyncTaskDao;
     @Inject
     private StoragePoolDao storagePoolDao;
+    @Inject
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
 
     private StoragePool storagePoolForVds;
 
@@ -72,7 +74,7 @@ public class ForceSelectSPMCommand<T extends ForceSelectSPMParameters> extends C
             return failValidation(EngineMessage.CANNOT_FORCE_SELECT_SPM_VDS_MARKED_AS_NEVER_SPM);
         }
 
-        if (!validate(new StoragePoolValidator(getStoragePoolForVds()).existsAndUp())) {
+        if (!validate(storagePoolValidatorInstance.get().init(getStoragePoolForVds()).existsAndUp())) {
             return false;
         }
 

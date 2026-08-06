@@ -24,6 +24,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
@@ -47,7 +48,6 @@ import org.ovirt.engine.core.compat.Version;
 import org.ovirt.engine.core.dao.DiskVmElementDao;
 import org.ovirt.engine.core.dao.network.VmNetworkInterfaceDao;
 import org.ovirt.engine.core.dao.network.VnicProfileDao;
-import org.ovirt.engine.core.utils.InjectedMock;
 import org.ovirt.engine.core.utils.MockConfigDescriptor;
 import org.ovirt.engine.core.utils.MockConfigExtension;
 import org.ovirt.engine.core.utils.RandomUtils;
@@ -56,9 +56,10 @@ import org.ovirt.engine.core.utils.RandomUtils;
 @MockitoSettings(strictness = Strictness.LENIENT)
 public class VmValidatorTest extends BaseCommandTest {
 
-    private VmValidator validator;
+    private VM vm = createVm();
 
-    private VM vm;
+    @Spy
+    private VmValidator validator = new VmValidator(vm);
 
     private static final Version COMPAT_VERSION_FOR_CPU_SOCKET_TEST = Version.v4_6;
     private static final int MAX_NUM_CPUS = 16;
@@ -94,19 +95,15 @@ public class VmValidatorTest extends BaseCommandTest {
     }
 
     @Mock
-    @InjectedMock
     public VmNetworkInterfaceDao vmNetworkInterfaceDao;
 
     @Mock
-    @InjectedMock
     public DiskVmElementDao diskVmElementDao;
 
     @Mock
-    @InjectedMock
     public VnicProfileDao vnicProfileDao;
 
     @Mock
-    @InjectedMock
     private VmDeviceUtils vmDeviceUtils;
 
     @Mock
@@ -114,8 +111,9 @@ public class VmValidatorTest extends BaseCommandTest {
 
     @BeforeEach
     public void setUp() throws InitializationException {
-        vm = createVm();
-        validator = spy(new VmValidator(vm));
+        doReturn(diskVmElementDao).when(validator).getDiskVmElementDao();
+        doReturn(vnicProfileDao).when(validator).getVnicProfileDao();
+        doReturn(vmNetworkInterfaceDao).when(validator).getVmNetworkInterfaceDao();
         mockVmPropertiesUtils();
         when(osRepository.getMinimumCpus(anyInt())).thenReturn(2);
     }

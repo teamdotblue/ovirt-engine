@@ -14,6 +14,7 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.ovirt.engine.core.bll.BaseCommandTest;
 import org.ovirt.engine.core.bll.ValidateTestUtils;
+import org.ovirt.engine.core.bll.validator.storage.StorageDomainValidator;
 import org.ovirt.engine.core.bll.validator.storage.StoragePoolValidator;
 import org.ovirt.engine.core.common.action.ReconstructMasterParameters;
 import org.ovirt.engine.core.common.businessentities.StorageDomain;
@@ -60,6 +61,7 @@ public class ReconstructMasterDomainCommandTest extends BaseCommandTest {
         StorageDomain masterStorageDomain = new StorageDomain();
         masterStorageDomain.setStoragePoolIsoMapData(masterDomainIsoMap);
         doReturn(masterStorageDomain).when(cmd).getStorageDomain();
+        doReturn(new StorageDomainValidator(masterStorageDomain)).when(cmd).createStorageDomainValidator();
     }
 
     private void initializeStoragePool() {

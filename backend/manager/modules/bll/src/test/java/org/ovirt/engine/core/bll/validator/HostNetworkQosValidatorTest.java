@@ -9,6 +9,7 @@ import org.hamcrest.Matcher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -28,8 +29,10 @@ public class HostNetworkQosValidatorTest {
     @Mock
     private HostNetworkQos qos;
 
-    private HostNetworkQosValidator validator;
-    private HostNetworkQosValidator nullValidator;
+    @InjectMocks
+    private HostNetworkQosValidator validator = new HostNetworkQosValidator(qos);;
+    @InjectMocks
+    private HostNetworkQosValidator nullValidator = new HostNetworkQosValidator(null);
 
     @BeforeEach
     public void setup() {

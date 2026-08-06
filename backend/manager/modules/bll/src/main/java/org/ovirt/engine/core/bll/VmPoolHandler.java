@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -42,7 +43,6 @@ import org.ovirt.engine.core.dao.StoragePoolDao;
 import org.ovirt.engine.core.dao.VmDao;
 import org.ovirt.engine.core.dao.VmDynamicDao;
 import org.ovirt.engine.core.dao.VmPoolDao;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.utils.lock.EngineLock;
 import org.ovirt.engine.core.utils.lock.LockManager;
 import org.slf4j.Logger;
@@ -50,6 +50,9 @@ import org.slf4j.LoggerFactory;
 
 @Singleton
 public class VmPoolHandler implements BackendService {
+
+    @Inject
+    private Instance<DiskImagesValidator> diskImagesValidatorInstance;
 
     @FunctionalInterface
     public interface ErrorProcessor {
@@ -86,6 +89,14 @@ public class VmPoolHandler implements BackendService {
     private VmHandler vmHandler;
     @Inject
     private SnapshotsValidator snapshotsValidator;
+    @Inject
+    private Instance<RunVmValidator> runVmValidatorInstance;
+    @Inject
+    private Instance<StorageDomainValidator> storageDomainValidatorProvider;
+    @Inject
+    private Instance<VmValidator> vmValidatorInstance;
+    @Inject
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
 
     public EngineLock createLock(Guid vmId) {
         return new EngineLock(
@@ -225,7 +236,7 @@ public class VmPoolHandler implements BackendService {
         List<DiskImage> vmImages = DisksFilter.filterImageDisks(disks, ONLY_NOT_SHAREABLE, ONLY_SNAPABLE);
 
         StoragePool sp = storagePoolDao.get(vm.getStoragePoolId());
-        ValidationResult spUpResult = new StoragePoolValidator(sp).existsAndUp();
+        ValidationResult spUpResult = storagePoolValidatorInstance.get().init(sp).existsAndUp();
         if (!spUpResult.isValid()) {
             return failVmFree(errorProcessor, vmId, spUpResult.getMessagesAsStrings());
         }
@@ -233,7 +244,7 @@ public class VmPoolHandler implements BackendService {
         Guid storageDomainId = vmImages.size() > 0 ? vmImages.get(0).getStorageIds().get(0) : Guid.Empty;
         if (!Guid.Empty.equals(storageDomainId)) {
             StorageDomainValidator storageDomainValidator =
-                    new StorageDomainValidator(storageDomainDao
+                    storageDomainValidatorProvider.get().createInstance(storageDomainDao
                             .getForStoragePool(storageDomainId, sp.getId()));
             ValidationResult domainActiveResult = storageDomainValidator.isDomainExistAndActive();
             if (!domainActiveResult.isValid()) {
@@ -241,7 +252,7 @@ public class VmPoolHandler implements BackendService {
             }
         }
 
-        DiskImagesValidator diskImagesValidator = new DiskImagesValidator(vmImages);
+        DiskImagesValidator diskImagesValidator = diskImagesValidatorInstance.get().init(vmImages);
         ValidationResult disksNotLockedResult = diskImagesValidator.diskImagesNotLocked();
         if (!disksNotLockedResult.isValid()) {
             messages.addAll(disksNotLockedResult.getMessagesAsStrings());
@@ -249,7 +260,7 @@ public class VmPoolHandler implements BackendService {
             return failVmFree(errorProcessor, vmId, messages);
         }
 
-        ValidationResult vmNotLockResult = new VmValidator(vm).vmNotLocked();
+        ValidationResult vmNotLockResult = vmValidatorInstance.get().init(vm).vmNotLocked();
         if (!vmNotLockResult.isValid()) {
             return failVmFree(errorProcessor, vmId, vmNotLockResult.getMessagesAsStrings());
         }
@@ -297,8 +308,8 @@ public class VmPoolHandler implements BackendService {
         vmHandler.updateNetworkInterfacesFromDb(vm);
 
         RunVmParams runVmParams = new RunVmParams(vm.getId());
-
-        return Injector.injectMembers(new RunVmValidator(vm, runVmParams, false, findActiveISODomain(vm.getStoragePoolId())))
+        return runVmValidatorInstance.get()
+                .init(vm, runVmParams, false, findActiveISODomain(vm.getStoragePoolId()))
                 .canRunVm(
                         messages,
                         fetchStoragePool(vm.getStoragePoolId()),

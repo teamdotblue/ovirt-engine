@@ -4,6 +4,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.LockMessagesMatchUtil;
@@ -63,6 +64,8 @@ public class AddStoragePoolWithStoragesCommand<T extends StoragePoolWithStorages
     private StorageDomainStaticDao storageDomainStaticDao;
     @Inject
     private UnregisteredOVFDataDao unregisteredOVFDataDao;
+    @Inject
+    private Instance<StorageDomainToPoolRelationValidator> storageDomainToPoolRelationValidatorInstance;
 
     public AddStoragePoolWithStoragesCommand(T parameters, CommandContext commandContext) {
         super(parameters, commandContext);
@@ -292,7 +295,7 @@ public class AddStoragePoolWithStoragesCommand<T extends StoragePoolWithStorages
             for (Guid storageDomainId : getParameters().getStorages()) {
                 StorageDomain domain = storageDomainDao.get(storageDomainId);
                 StorageDomainToPoolRelationValidator
-                        storageDomainToPoolRelationValidator = new StorageDomainToPoolRelationValidator(domain.getStorageStaticData(), getStoragePool());
+                        storageDomainToPoolRelationValidator = storageDomainToPoolRelationValidatorInstance.get().createInstance(domain.getStorageStaticData(), getStoragePool());
                 if (isStorageDomainNotNull(domain) && validate(storageDomainToPoolRelationValidator.validateDomainCanBeAttachedToPool())) {
                     if (domain.getStorageDomainType() == StorageDomainType.Data) {
                         hasData = true;

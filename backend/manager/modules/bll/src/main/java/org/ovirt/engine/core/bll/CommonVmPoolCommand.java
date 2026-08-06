@@ -82,7 +82,6 @@ public abstract class CommonVmPoolCommand<T extends AddVmPoolParameters> extends
 
     @Inject
     private AuditLogDirector auditLogDirector;
-
     @Inject
     private MacPoolPerCluster macPoolPerCluster;
     @Inject
@@ -108,12 +107,14 @@ public abstract class CommonVmPoolCommand<T extends AddVmPoolParameters> extends
     @Inject
     @Typed(ConcurrentChildCommandsExecutionCallback.class)
     private Instance<ConcurrentChildCommandsExecutionCallback> callbackProvider;
-
     @Inject
     private ImagesHandler imagesHandler;
-
     @Inject
     private IconUtils iconUtils;
+    @Inject
+    private Instance<MultipleStorageDomainsValidator> multipleStorageDomainsValidator;
+    @Inject
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
 
     private Map<Guid, DiskImage> diskInfoDestinationMap;
     private Map<Guid, List<DiskImage>> storageToDisksMap;
@@ -381,7 +382,7 @@ public abstract class CommonVmPoolCommand<T extends AddVmPoolParameters> extends
         }
 
         setStoragePoolId(getCluster().getStoragePoolId());
-        if (!validate(new StoragePoolValidator(getStoragePool()).existsAndUp())) {
+        if (!validate(storagePoolValidatorInstance.get().init(getStoragePool()).existsAndUp())) {
             return false;
         }
 
@@ -623,7 +624,7 @@ public abstract class CommonVmPoolCommand<T extends AddVmPoolParameters> extends
     }
 
     protected MultipleStorageDomainsValidator getStorageDomainsValidator(Guid spId, Set<Guid> sdIds) {
-        return new MultipleStorageDomainsValidator(spId, sdIds);
+        return multipleStorageDomainsValidator.get().init(spId, sdIds);
     }
 
     @Override

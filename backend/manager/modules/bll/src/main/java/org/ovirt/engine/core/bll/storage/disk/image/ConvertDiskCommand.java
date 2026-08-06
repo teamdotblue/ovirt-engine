@@ -57,28 +57,23 @@ public class ConvertDiskCommand<T extends ConvertDiskCommandParameters> extends 
 
     @Inject
     private DiskImageDao diskImageDao;
-
     @Inject
     private ImageDao imageDao;
-
     @Inject
     private VmDao vmDao;
-
     @Inject
     private BaseDiskDao baseDiskDao;
-
     @Inject
     private ImagesHandler imagesHandler;
-
     @Inject
     private StorageDomainDao storageDomainDao;
-
     @Inject
     private VdsCommandsHelper vdsCommandsHelper;
-
     @Inject
     @Typed(SerialChildCommandsExecutionCallback.class)
     private Instance<SerialChildCommandsExecutionCallback> callbackProvider;
+    @Inject
+    private Instance<StorageDomainValidator> storageDomainValidatorInstance;
 
     public ConvertDiskCommand(T parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -109,7 +104,7 @@ public class ConvertDiskCommand<T extends ConvertDiskCommandParameters> extends 
             return failValidation(EngineMessage.ACTION_TYPE_FAILED_DISK_WITH_CHAIN);
         }
 
-        StorageDomainValidator storageDomainValidator = new StorageDomainValidator(storageDomain);
+        StorageDomainValidator storageDomainValidator = storageDomainValidatorInstance.get().createInstance(storageDomain);
         if (!validate(storageDomainValidator.hasSpaceForNewDisk(getDiskImage()))) {
             return false;
         }

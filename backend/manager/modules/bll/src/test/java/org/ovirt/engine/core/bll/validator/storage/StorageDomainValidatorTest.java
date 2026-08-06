@@ -5,8 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 import static org.ovirt.engine.core.bll.validator.ValidationResultMatchers.failsWith;
 import static org.ovirt.engine.core.bll.validator.ValidationResultMatchers.isValid;
@@ -17,15 +15,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.ovirt.engine.core.bll.ValidationResult;
 import org.ovirt.engine.core.bll.VmHandler;
+import org.ovirt.engine.core.bll.interfaces.BackendInternal;
 import org.ovirt.engine.core.bll.storage.utils.BlockStorageDiscardFunctionalityHelper;
 import org.ovirt.engine.core.common.businessentities.StorageDomain;
 import org.ovirt.engine.core.common.businessentities.StorageDomainStatus;
@@ -41,8 +40,6 @@ import org.ovirt.engine.core.common.queries.QueryReturnValue;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dao.VmDao;
 import org.ovirt.engine.core.dao.VmDynamicDao;
-import org.ovirt.engine.core.utils.InjectedMock;
-import org.ovirt.engine.core.utils.InjectorExtension;
 import org.ovirt.engine.core.utils.MockConfigExtension;
 
 /**
@@ -50,11 +47,12 @@ import org.ovirt.engine.core.utils.MockConfigExtension;
  * The hasSpaceForClonedDisk() and hasSpaceForNewDisk() methods are covered separately in
  * {@link StorageDomainValidatorFreeSpaceTest}.
  */
-@ExtendWith({MockitoExtension.class, MockConfigExtension.class, InjectorExtension.class })
+@ExtendWith({MockitoExtension.class, MockConfigExtension.class })
 @MockitoSettings(strictness = Strictness.LENIENT)
 public class StorageDomainValidatorTest {
-    private StorageDomain domain;
-    private StorageDomainValidator validator;
+    private StorageDomain domain = new StorageDomain();
+    @InjectMocks
+    private StorageDomainValidator validator = new StorageDomainValidator(domain);
     private static final int CRITICAL_SPACE_THRESHOLD = 5;
 
     @Mock
@@ -67,16 +65,10 @@ public class StorageDomainValidatorTest {
     private VmDynamicDao vmDynamicDao;
 
     @Mock
-    @InjectedMock
     public BlockStorageDiscardFunctionalityHelper discardFunctionalityHelper;
 
-    @BeforeEach
-    public void setUp() {
-        domain = new StorageDomain();
-        validator = spy(new StorageDomainValidator(domain));
-        doReturn(vmDao).when(validator).getVmDao();
-        doReturn(vmDynamicDao).when(validator).getVmDynamicDao();
-    }
+    @Mock
+    private BackendInternal backend;
 
     @Test
     public void testIsDomainExistAndActiveDomainNotExists() {
@@ -199,7 +191,7 @@ public class StorageDomainValidatorTest {
         QueryReturnValue ret = new QueryReturnValue();
         ret.setReturnValue(new ArrayList<VmBase>());
         ret.setSucceeded(true);
-        doReturn(ret).when(validator).getEntitiesWithLeaseIdForStorageDomain(any());
+        when(backend.runInternalQuery(any(), any())).thenReturn(ret);
         assertThat(validator.isRunningVmsOrVmLeasesForBackupDomain(vmHandler), isValid());
     }
 
@@ -237,7 +229,7 @@ public class StorageDomainValidatorTest {
         runningVMs.add(vm1);
         runningVMs.add(vm2);
         when(vmDao.getAllActiveForStorageDomain(any())).thenReturn(runningVMs);
-        doReturn(ret).when(validator).getEntitiesWithLeaseIdForStorageDomain(any());
+        when(backend.runInternalQuery(any(), any())).thenReturn(ret);
         assertThat(validator.isRunningVmsOrVmLeasesForBackupDomain(vmHandler),
                 failsWith(EngineMessage.ACTION_TYPE_FAILED_RUNNING_VM_OR_VM_LEASES_PRESENT_ON_STORAGE_DOMAIN));
     }
@@ -246,7 +238,7 @@ public class StorageDomainValidatorTest {
     public void invalidVmLeasesQueryForBackupDomain() {
         QueryReturnValue ret = new QueryReturnValue();
         ret.setSucceeded(false);
-        doReturn(ret).when(validator).getEntitiesWithLeaseIdForStorageDomain(any());
+        when(backend.runInternalQuery(any(), any())).thenReturn(ret);
         assertThat(validator.isRunningVmsOrVmLeasesForBackupDomain(vmHandler),
                 failsWith(EngineMessage.ACTION_TYPE_FAILED_RETRIEVE_VMS_FOR_WITH_LEASES));
     }
@@ -261,7 +253,7 @@ public class StorageDomainValidatorTest {
         vmLeases.add(vm1.getStaticData());
         ret.setReturnValue(vmLeases);
         ret.setSucceeded(true);
-        doReturn(ret).when(validator).getEntitiesWithLeaseIdForStorageDomain(any());
+        when(backend.runInternalQuery(any(), any())).thenReturn(ret);
         when(vmDynamicDao.get(vm1.getId())).thenReturn(vm1.getDynamicData());
         assertThat(validator.isRunningVmsOrVmLeasesForBackupDomain(vmHandler),
                 failsWith(EngineMessage.ACTION_TYPE_FAILED_RUNNING_VM_OR_VM_LEASES_PRESENT_ON_STORAGE_DOMAIN));
@@ -277,7 +269,7 @@ public class StorageDomainValidatorTest {
         vmLeases.add(vm1.getStaticData());
         ret.setReturnValue(vmLeases);
         ret.setSucceeded(true);
-        doReturn(ret).when(validator).getEntitiesWithLeaseIdForStorageDomain(any());
+        when(backend.runInternalQuery(any(), any())).thenReturn(ret);
         assertThat(validator.isRunningVmsOrVmLeasesForBackupDomain(vmHandler), isValid());
     }
 
@@ -310,7 +302,7 @@ public class StorageDomainValidatorTest {
         QueryReturnValue ret = new QueryReturnValue();
         ret.setReturnValue(new ArrayList<VmBase>());
         ret.setSucceeded(true);
-        doReturn(ret).when(validator).getEntitiesWithLeaseIdForStorageDomain(any());
+        when(backend.runInternalQuery(any(), any())).thenReturn(ret);
         assertThat(validator.isRunningVmsOrVmLeasesForBackupDomain(vmHandler),
                 failsWith(EngineMessage.ACTION_TYPE_FAILED_RUNNING_VM_OR_VM_LEASES_PRESENT_ON_STORAGE_DOMAIN));
     }
@@ -333,7 +325,7 @@ public class StorageDomainValidatorTest {
         QueryReturnValue ret = new QueryReturnValue();
         ret.setReturnValue(new ArrayList<VmBase>());
         ret.setSucceeded(true);
-        doReturn(ret).when(validator).getEntitiesWithLeaseIdForStorageDomain(any());
+        when(backend.runInternalQuery(any(), any())).thenReturn(ret);
         assertThat(validator.isRunningVmsOrVmLeasesForBackupDomain(vmHandler), isValid());
     }
 

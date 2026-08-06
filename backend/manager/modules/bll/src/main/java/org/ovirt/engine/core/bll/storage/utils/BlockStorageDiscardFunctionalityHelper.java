@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -33,18 +34,16 @@ public class BlockStorageDiscardFunctionalityHelper {
 
     @Inject
     private DiskDao diskDao;
-
     @Inject
     private DiskImageDao diskImageDao;
-
     @Inject
     private DiskVmElementDao diskVmElementDao;
-
     @Inject
     private AuditLogDirector auditLogDirector;
-
     @Inject
     private DiskHandler diskHandler;
+    @Inject
+    private Instance<MultipleDiskVmElementValidator> multipleDiskVmElementValidatorInstance;
 
     public ValidationResult isExistingDiscardFunctionalityPreserved(Collection<LUNs> lunsToAdd,
             StorageDomain storageDomain) {
@@ -128,7 +127,7 @@ public class BlockStorageDiscardFunctionalityHelper {
         Map<Guid, Guid> diskIdToDestSdId = disks.stream()
                 .collect(Collectors.toMap(DiskImage::getId, diskImage -> diskImage.getStorageIds().get(0)));
         MultipleDiskVmElementValidator multipleDiskVmElementValidator =
-                new MultipleDiskVmElementValidator(diskToDiskVmElement);
+                multipleDiskVmElementValidatorInstance.get().init(diskToDiskVmElement);
 
         Collection<Guid> disksWithoutSupportForPassDiscard = multipleDiskVmElementValidator
                 .getDisksWithoutSupportForPassDiscard(diskIdToDestSdId);

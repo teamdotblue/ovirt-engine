@@ -3,6 +3,7 @@ package org.ovirt.engine.core.bll.profiles;
 import java.util.Collections;
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.context.CommandContext;
@@ -14,12 +15,13 @@ import org.ovirt.engine.core.common.businessentities.profiles.DiskProfile;
 import org.ovirt.engine.core.common.errors.EngineMessage;
 import org.ovirt.engine.core.dao.profiles.DiskProfileDao;
 import org.ovirt.engine.core.dao.profiles.ProfilesDao;
-import org.ovirt.engine.core.di.Injector;
 
 public class RemoveDiskProfileCommand extends RemoveProfileCommandBase<DiskProfileParameters, DiskProfile, DiskProfileValidator> {
 
     @Inject
     private DiskProfileDao diskProfileDao;
+    @Inject
+    private Instance<DiskProfileValidator> diskProfileValidatorInstance;
 
     public RemoveDiskProfileCommand(DiskProfileParameters parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -27,7 +29,7 @@ public class RemoveDiskProfileCommand extends RemoveProfileCommandBase<DiskProfi
 
     @Override
     protected DiskProfileValidator getProfileValidator() {
-        return Injector.injectMembers(new DiskProfileValidator(getProfile()));
+        return diskProfileValidatorInstance.get().createWithProfile(getProfile());
     }
 
     @Override

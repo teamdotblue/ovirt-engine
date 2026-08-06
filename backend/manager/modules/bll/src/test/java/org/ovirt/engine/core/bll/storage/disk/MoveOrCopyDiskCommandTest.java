@@ -16,6 +16,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -85,6 +88,8 @@ public class MoveOrCopyDiskCommandTest extends BaseCommandTest {
     @Mock
     private StorageDomainValidator storageDomainValidator;
     @Mock
+    private Instance<StorageDomainValidator> storageDomainValidatorInstance;
+    @Mock
     private DiskValidator diskValidator;
     @Mock
     private QuotaValidator quotaValidator;
@@ -104,6 +109,13 @@ public class MoveOrCopyDiskCommandTest extends BaseCommandTest {
                     destStorageId,
                     ImageOperation.Move),
                     null);
+
+    @BeforeEach
+    public void setUp() {
+        doReturn(storageDomainValidator).when(storageDomainValidatorInstance).get();
+        doReturn(storageDomainValidator).when(storageDomainValidator).createInstance(any());
+        doReturn(ValidationResult.VALID).when(storageDomainValidator).isDomainExistAndActive();
+    }
 
     @Test
     public void validateImageNotFound() {

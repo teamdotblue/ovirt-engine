@@ -16,6 +16,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
+import javax.enterprise.inject.Instance;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,6 +27,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.ovirt.engine.core.bll.ValidateTestUtils;
 import org.ovirt.engine.core.bll.ValidationResult;
 import org.ovirt.engine.core.bll.validator.HostValidator;
+import org.ovirt.engine.core.bll.validator.storage.StoragePoolValidator;
 import org.ovirt.engine.core.common.action.SyncLunsParameters;
 import org.ovirt.engine.core.common.businessentities.StoragePool;
 import org.ovirt.engine.core.common.businessentities.StoragePoolStatus;
@@ -42,6 +45,9 @@ public class AbstractSyncLunsCommandTest {
     @Mock
     private HostValidator hostValidator;
 
+    @Mock
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
+
     private SyncLunsParameters parameters = new SyncLunsParameters();
 
     @InjectMocks
@@ -57,6 +63,7 @@ public class AbstractSyncLunsCommandTest {
 
     @Test
     public void testValidateStoragePoolSucceeds() {
+        doReturn(new StoragePoolValidator()).when(storagePoolValidatorInstance).get();
         StoragePool storagePool = new StoragePool();
         storagePool.setId(Guid.newGuid());
         storagePool.setStatus(StoragePoolStatus.Up);
@@ -67,6 +74,7 @@ public class AbstractSyncLunsCommandTest {
 
     @Test
     public void testValidateStoragePoolNoStoragePoolId() {
+        doReturn(new StoragePoolValidator()).when(storagePoolValidatorInstance).get();
         assertFalse(command.validate());
         ValidateTestUtils.assertValidationMessages("", command,
                 EngineMessage.ACTION_TYPE_FAILED_STORAGE_POOL_NOT_EXIST);
@@ -74,6 +82,7 @@ public class AbstractSyncLunsCommandTest {
 
     @Test
     public void testValidateStoragePoolRandomStoragePoolId() {
+        doReturn(new StoragePoolValidator()).when(storagePoolValidatorInstance).get();
         command.setStoragePoolId(Guid.newGuid());
         assertFalse(command.validate());
         ValidateTestUtils.assertValidationMessages("", command,
@@ -82,6 +91,7 @@ public class AbstractSyncLunsCommandTest {
 
     @Test
     public void testValidateStoragePoolStoragePoolNotUp() {
+        doReturn(new StoragePoolValidator()).when(storagePoolValidatorInstance).get();
         StoragePool storagePool = new StoragePool();
         storagePool.setId(Guid.newGuid());
         when(storagePoolDao.get(storagePool.getId())).thenReturn(storagePool);

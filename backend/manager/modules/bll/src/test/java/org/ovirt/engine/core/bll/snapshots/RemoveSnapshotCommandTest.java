@@ -14,6 +14,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import javax.enterprise.inject.Instance;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -26,6 +28,7 @@ import org.ovirt.engine.core.bll.ValidateTestUtils;
 import org.ovirt.engine.core.bll.ValidationResult;
 import org.ovirt.engine.core.bll.validator.VmValidator;
 import org.ovirt.engine.core.bll.validator.storage.MultipleStorageDomainsValidator;
+import org.ovirt.engine.core.bll.validator.storage.StoragePoolValidator;
 import org.ovirt.engine.core.common.action.ActionType;
 import org.ovirt.engine.core.common.action.RemoveSnapshotParameters;
 import org.ovirt.engine.core.common.businessentities.Cluster;
@@ -76,6 +79,9 @@ public class RemoveSnapshotCommandTest extends BaseCommandTest {
     @Mock
     private VmBackupDao vmBackupDao;
 
+    @Mock
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
+
     @Spy
     private SnapshotsValidator snapshotValidator;
 
@@ -86,6 +92,7 @@ public class RemoveSnapshotCommandTest extends BaseCommandTest {
 
     @BeforeEach
     public void setUp() {
+        doReturn(new StoragePoolValidator()).when(storagePoolValidatorInstance).get();
         mockVm();
         mockStorageDomain();
         VmValidator vmValidator = spy(new VmValidator(cmd.getVm()));

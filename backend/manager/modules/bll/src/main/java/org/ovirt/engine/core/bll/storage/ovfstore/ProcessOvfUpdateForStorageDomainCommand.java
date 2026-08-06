@@ -76,7 +76,6 @@ public class ProcessOvfUpdateForStorageDomainCommand<T extends ProcessOvfUpdateP
 
     @Inject
     private AuditLogDirector auditLogDirector;
-
     @Inject
     private VmAndTemplatesGenerationsDao vmAndTemplatesGenerationsDao;
     @Inject
@@ -100,6 +99,8 @@ public class ProcessOvfUpdateForStorageDomainCommand<T extends ProcessOvfUpdateP
     @Inject
     @Typed(SerialChildCommandsExecutionCallback.class)
     private Instance<SerialChildCommandsExecutionCallback> callbackProvider;
+    @Inject
+    private Instance<StorageDomainValidator> storageDomainValidatorInstance;
 
     private LinkedList<Pair<StorageDomainOvfInfo, DiskImage>> domainOvfStoresInfoForUpdate = new LinkedList<>();
     private int ovfDiskCount;
@@ -147,7 +148,7 @@ public class ProcessOvfUpdateForStorageDomainCommand<T extends ProcessOvfUpdateP
     @Override
     protected boolean validate() {
         if (!getParameters().isSkipDomainChecks()) {
-            StorageDomainValidator storageDomainValidator = new StorageDomainValidator(getStorageDomain());
+            StorageDomainValidator storageDomainValidator = storageDomainValidatorInstance.get().createInstance(getStorageDomain());
             return validate(storageDomainValidator.isDomainExistAndActive()) &&
                     validate(storageDomainValidator.isDataDomain());
         }

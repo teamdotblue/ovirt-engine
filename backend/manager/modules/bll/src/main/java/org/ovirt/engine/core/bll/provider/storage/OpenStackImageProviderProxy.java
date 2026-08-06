@@ -8,6 +8,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.enterprise.inject.Instance;
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.bll.provider.ProviderProxyFactory;
 import org.ovirt.engine.core.bll.provider.network.openstack.CustomizedRESTEasyConnector;
 import org.ovirt.engine.core.common.FeatureSupported;
@@ -25,7 +28,6 @@ import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.compat.Version;
 import org.ovirt.engine.core.dao.StorageDomainStaticDao;
 import org.ovirt.engine.core.dao.provider.ProviderDao;
-import org.ovirt.engine.core.di.Injector;
 
 import com.woorea.openstack.base.client.OpenStackRequest;
 import com.woorea.openstack.base.client.OpenStackResponseException;
@@ -35,6 +37,9 @@ import com.woorea.openstack.glance.model.v2.Images;
 import com.woorea.openstack.glance.v2.Glance;
 
 public class OpenStackImageProviderProxy extends AbstractOpenStackStorageProviderProxy<Glance, OpenStackImageProviderProperties, GlanceProviderValidator> {
+
+    @Inject
+    private Instance<GlanceProviderValidator> glanceProviderValidatorInstance;
 
     enum GlanceImageFormat {
         RAW("raw"),
@@ -80,6 +85,14 @@ public class OpenStackImageProviderProxy extends AbstractOpenStackStorageProvide
         this.provider = provider;
     }
 
+    public OpenStackImageProviderProxy() {
+    }
+
+    public OpenStackImageProviderProxy init(Provider<OpenStackImageProviderProperties> provider) {
+        this.provider = provider;
+        return this;
+    }
+
     @Override
     protected String getTestUrlPath() {
         return "/images";
@@ -91,10 +104,10 @@ public class OpenStackImageProviderProxy extends AbstractOpenStackStorageProvide
     }
 
     public static OpenStackImageProviderProxy getFromStorageDomainId(Guid storageDomainId,
-            ProviderProxyFactory providerProxyFactory) {
-        StorageDomainStatic storageDomainStatic = Injector.get(StorageDomainStaticDao.class).get(storageDomainId);
+            ProviderProxyFactory providerProxyFactory, StorageDomainStaticDao storageDomainStaticDao, ProviderDao providerDao) {
+        StorageDomainStatic storageDomainStatic = storageDomainStaticDao.get(storageDomainId);
         if (storageDomainStatic != null) {
-            Provider<?> provider = Injector.get(ProviderDao.class).get(new Guid(storageDomainStatic.getStorage()));
+            Provider<?> provider = providerDao.get(new Guid(storageDomainStatic.getStorage()));
             return providerProxyFactory.create(provider);
         }
         return null;
@@ -337,7 +350,7 @@ public class OpenStackImageProviderProxy extends AbstractOpenStackStorageProvide
     @Override
     public GlanceProviderValidator getProviderValidator() {
         if (providerValidator == null) {
-            providerValidator = Injector.injectMembers(new GlanceProviderValidator(provider));
+            providerValidator = glanceProviderValidatorInstance.get().createWithProvider(provider);
         }
         return providerValidator;
     }

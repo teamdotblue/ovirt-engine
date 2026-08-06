@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.CommandBase;
@@ -24,12 +25,12 @@ public class ChangeQuotaForDiskCommand extends CommandBase<ChangeQuotaParameters
 
     @Inject
     private DiskDao diskDao;
-
     @Inject
     private ImageStorageDomainMapDao imageStorageDomainMapDao;
-
     @Inject
     private QuotaDao quotaDao;
+    @Inject
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
 
     private DiskImage disk;
 
@@ -52,7 +53,7 @@ public class ChangeQuotaForDiskCommand extends CommandBase<ChangeQuotaParameters
         this.disk = (DiskImage) disk;
 
         // check if SP exist
-        StoragePoolValidator spValidator = new StoragePoolValidator(getStoragePool());
+        StoragePoolValidator spValidator = storagePoolValidatorInstance.get().init(getStoragePool());
         if (!validate(spValidator.exists())) {
             return false;
         }

@@ -1,6 +1,7 @@
 package org.ovirt.engine.core.bll.storage.disk.image;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -96,6 +97,7 @@ import org.ovirt.engine.core.vdsbroker.vdsbroker.PrepareImageReturn;
 
 @NonTransactiveCommandAttribute
 public class TransferDiskImageCommand<T extends TransferDiskImageParameters> extends BaseImagesCommand<T> implements QuotaStorageDependent {
+
     private static final boolean LEGAL_IMAGE = true;
     private static final boolean ILLEGAL_IMAGE = false;
     private static final int PROXY_DATA_PORT = 54323;
@@ -105,6 +107,8 @@ public class TransferDiskImageCommand<T extends TransferDiskImageParameters> ext
     private static final String FILE_URL_SCHEME = "file://";
     private static final String IMAGE_TYPE = "disk";
 
+    @Inject
+    private Instance<DiskImagesValidator> diskImagesValidatorInstance;
     @Inject
     private ImageTransferDao imageTransferDao;
     @Inject
@@ -133,7 +137,11 @@ public class TransferDiskImageCommand<T extends TransferDiskImageParameters> ext
     @Inject
     private VdsCommandsHelper vdsCommandsHelper;
     @Inject
-    private ResourceManager resourceManager;
+    private Instance<ResourceManager> resourceManagerInstance;
+    @Inject
+    private Instance<DiskValidator> diskValidatorInstance;
+    @Inject
+    private Instance<StorageDomainValidator> storageDomainValidatorInstance;
 
     private ImageioClient proxyClient;
     private VmBackup backup;
@@ -240,15 +248,15 @@ public class TransferDiskImageCommand<T extends TransferDiskImageParameters> ext
     }
 
     protected DiskImagesValidator getDiskImagesValidator(DiskImage diskImage) {
-        return new DiskImagesValidator(diskImage);
+        return diskImagesValidatorInstance.get().init(Collections.singletonList(diskImage));
     }
 
     protected DiskValidator getDiskValidator(DiskImage diskImage) {
-        return new DiskValidator(diskImage);
+        return diskValidatorInstance.get().init(diskImage);
     }
 
     protected StorageDomainValidator getStorageDomainValidator(StorageDomain storageDomain) {
-        return new StorageDomainValidator(storageDomain);
+        return storageDomainValidatorInstance.get().createInstance(storageDomain);
     }
 
     private PrepareImageVDSCommandParameters getPrepareParameters(Guid vdsId) {
@@ -1136,7 +1144,7 @@ public class TransferDiskImageCommand<T extends TransferDiskImageParameters> ext
     @Override
     protected VDS checkForActiveVds() {
         Guid hostForExecution = vdsCommandsHelper.getHostForExecution(getStoragePoolId(), host -> {
-            var domainsData = resourceManager.getVdsManager(host.getId()).getDomains();
+            var domainsData = resourceManagerInstance.get().getVdsManager(host.getId()).getDomains();
             if (domainsData == null) {
                 return false;
             }

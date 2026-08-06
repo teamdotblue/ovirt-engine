@@ -3,6 +3,7 @@ package org.ovirt.engine.core.bll.network.dc;
 import java.util.Collections;
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.CommandBase;
@@ -25,6 +26,8 @@ public class LabelNetworkCommand<T extends LabelNetworkParameters> extends Comma
 
     @Inject
     private NetworkDao networkDao;
+    @Inject
+    private Instance<NetworkValidator> networkValidatorInstance;
 
     private Network network;
 
@@ -60,7 +63,7 @@ public class LabelNetworkCommand<T extends LabelNetworkParameters> extends Comma
 
     @Override
     protected boolean validate() {
-        NetworkValidator validator = new NetworkValidator(getNetwork());
+        NetworkValidator validator = networkValidatorInstance.get().init(getNetwork());
         return validate(validator.networkIsSet(getParameters().getNetworkId()))
                 && validate(validator.notLabeled())
                 && validate(validator.notExternalNetwork());

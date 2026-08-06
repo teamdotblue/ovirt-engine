@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import javax.inject.Inject;
+
 import org.apache.commons.lang.StringUtils;
 import org.ovirt.engine.core.bll.ValidationResult;
 import org.ovirt.engine.core.bll.storage.disk.image.ImagesHandler;
@@ -13,14 +15,26 @@ import org.ovirt.engine.core.common.errors.EngineMessage;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dao.DiskImageDao;
 import org.ovirt.engine.core.dao.SnapshotDao;
-import org.ovirt.engine.core.di.Injector;
 
 public class DiskSnapshotsValidator {
+
+    @Inject
+    private SnapshotDao snapshotDao;
+    @Inject
+    private DiskImageDao diskImageDao;
 
     private List<DiskImage> images;
 
     public DiskSnapshotsValidator(List<DiskImage> images) {
         this.images = images;
+    }
+
+    public DiskSnapshotsValidator() {
+    }
+
+    public DiskSnapshotsValidator init(List<DiskImage> images) {
+        this.images = images;
+        return this;
     }
 
     /**
@@ -91,11 +105,11 @@ public class DiskSnapshotsValidator {
      * @return A {@link ValidationResult} with the validation information.
      */
     public ValidationResult canDiskSnapshotsBePreviewed(Guid dstSnapshotId) {
-        Snapshot dstSnapshot = getSnapshotDao().get(dstSnapshotId);
+        Snapshot dstSnapshot = snapshotDao.get(dstSnapshotId);
         if (dstSnapshot.getType() == Snapshot.SnapshotType.ACTIVE) {
             if (images != null && !images.isEmpty()) {
                 for (DiskImage diskImage : images) {
-                    if (getDiskImageDao().get(diskImage.getImageId()) == null) {
+                    if (diskImageDao.get(diskImage.getImageId()) == null) {
                         return ValidationResult.VALID;
                     }
                 }
@@ -105,13 +119,5 @@ public class DiskSnapshotsValidator {
         }
 
         return ValidationResult.VALID;
-    }
-
-    protected SnapshotDao getSnapshotDao() {
-        return Injector.get(SnapshotDao.class);
-    }
-
-    protected DiskImageDao getDiskImageDao() {
-        return Injector.get(DiskImageDao.class);
     }
 }

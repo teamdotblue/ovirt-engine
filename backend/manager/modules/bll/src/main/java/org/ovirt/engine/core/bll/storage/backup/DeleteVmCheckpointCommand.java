@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.DisableInPrepareMode;
@@ -45,7 +46,6 @@ import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dao.DiskImageDao;
 import org.ovirt.engine.core.dao.VmBackupDao;
 import org.ovirt.engine.core.dao.VmCheckpointDao;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.utils.transaction.TransactionSupport;
 
 @DisableInPrepareMode
@@ -60,6 +60,10 @@ public class DeleteVmCheckpointCommand<T extends VmCheckpointParameters> extends
     private DiskImageDao diskImageDao;
     @Inject
     private VdsCommandsHelper vdsCommandsHelper;
+    @Inject
+    private Instance<DiskExistenceValidator> diskExistenceValidatorInstance;
+    @Inject
+    private Instance<DiskImagesValidator> diskImagesValidatorInstance;
 
     private VmCheckpoint vmCheckpoint;
 
@@ -222,11 +226,11 @@ public class DeleteVmCheckpointCommand<T extends VmCheckpointParameters> extends
     }
 
     protected DiskExistenceValidator createDiskExistenceValidator(Set<Guid> disksGuids) {
-        return Injector.injectMembers(new DiskExistenceValidator(disksGuids));
+        return diskExistenceValidatorInstance.get().init(disksGuids);
     }
 
     protected DiskImagesValidator createDiskImagesValidator(List<DiskImage> disks) {
-        return Injector.injectMembers(new DiskImagesValidator(disks));
+        return diskImagesValidatorInstance.get().init(disks);
     }
 
     public Set<Guid> getDiskIds() {

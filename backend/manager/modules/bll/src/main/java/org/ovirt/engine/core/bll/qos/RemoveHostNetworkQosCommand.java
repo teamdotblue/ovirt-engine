@@ -2,6 +2,7 @@ package org.ovirt.engine.core.bll.qos;
 
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.context.CommandContext;
@@ -17,6 +18,8 @@ public class RemoveHostNetworkQosCommand extends RemoveQosCommandBase<HostNetwor
     private RefreshNetworksParametersFactory refreshNetworksParametersFactory;
     @Inject
     private NetworkDao networkDao;
+    @Inject
+    private Instance<HostNetworkQosValidator> hostNetworkQosValidatorInstance;
 
     public RemoveHostNetworkQosCommand(QosParametersBase<HostNetworkQos> parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -30,7 +33,7 @@ public class RemoveHostNetworkQosCommand extends RemoveQosCommandBase<HostNetwor
 
     @Override
     protected HostNetworkQosValidator getQosValidator(HostNetworkQos qos) {
-        return new HostNetworkQosValidator(qos);
+        return hostNetworkQosValidatorInstance.get().init(qos);
     }
 
     @Override

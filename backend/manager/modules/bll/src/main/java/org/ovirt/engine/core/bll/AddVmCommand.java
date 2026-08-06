@@ -136,6 +136,7 @@ import org.ovirt.engine.core.dao.StorageDomainDao;
 import org.ovirt.engine.core.dao.VdsDao;
 import org.ovirt.engine.core.dao.VmDeviceDao;
 import org.ovirt.engine.core.dao.VmDynamicDao;
+import org.ovirt.engine.core.dao.VmIconDao;
 import org.ovirt.engine.core.dao.VmInitDao;
 import org.ovirt.engine.core.dao.VmStaticDao;
 import org.ovirt.engine.core.dao.VmStatisticsDao;
@@ -159,25 +160,18 @@ public class AddVmCommand<T extends AddVmParameters> extends VmManagementCommand
 
     @Inject
     private AuditLogDirector auditLogDirector;
-
     @Inject
     private DiskProfileHelper diskProfileHelper;
-
     @Inject
     private BlockStorageDiscardFunctionalityHelper discardHelper;
-
     @Inject
     private NetworkHelper networkHelper;
-
     @Inject
     private MultiLevelAdministrationHandler multiLevelAdministrationHandler;
-
     @Inject
     private VmValidationUtils vmValidationUtils;
-
     @Inject
     private CloudInitHandler cloudInitHandler;
-
     @Inject
     private AffinityValidator affinityValidator;
 
@@ -235,8 +229,26 @@ public class AddVmCommand<T extends AddVmParameters> extends VmManagementCommand
     private IconUtils iconUtils;
 
     @Inject
+    private VmIconDao vmIconDao;
+
+    @Inject
     @Typed(SerialChildCommandsExecutionCallback.class)
     private Instance<SerialChildCommandsExecutionCallback> callbackProvider;
+
+    @Inject
+    private Instance<StorageDomainValidator> storageDomainValidatorProvider;
+
+    @Inject
+    private Instance<VmValidator> vmValidatorInstance;
+
+    @Inject
+    private Instance<VmInterfaceManager> vmInterfaceManagerInstance;
+
+    @Inject
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
+
+    @Inject
+    private Instance<CinderDisksValidator> cinderDisksValidatorInstance;
 
     private BiConsumer<AuditLogable, AuditLogDirector> affinityGroupLoggingMethod = (a, b) -> {
     };
@@ -418,6 +430,10 @@ public class AddVmCommand<T extends AddVmParameters> extends VmManagementCommand
         return _vmInterfaces;
     }
 
+    protected int getMaxPciSlots(int osId, Version clusterVersion) {
+        return osRepository.getMaxPciDevices(osId, clusterVersion);
+    }
+
     protected Map<Guid, VmDevice> getVmInterfaceDevices() {
         List<VmDevice> vmInterfaceDevicesList =
                 vmDeviceDao.getVmDeviceByVmIdAndType(vmInterfacesSourceId, VmDeviceGeneralType.INTERFACE);
@@ -454,7 +470,7 @@ public class AddVmCommand<T extends AddVmParameters> extends VmManagementCommand
                 return failValidation(EngineMessage.ACTION_TYPE_FAILED_STORAGE_POOL_NOT_MATCH);
             }
             for (StorageDomain domain : destStorages) {
-                StorageDomainValidator storageDomainValidator = new StorageDomainValidator(domain);
+                StorageDomainValidator storageDomainValidator = storageDomainValidatorProvider.get().createInstance(domain);
                 if (!validate(storageDomainValidator.isDomainExistAndActive())) {
                     return false;
                 }
@@ -494,8 +510,8 @@ public class AddVmCommand<T extends AddVmParameters> extends VmManagementCommand
     protected boolean validateAddVmCommand() {
         return areParametersLegal()
                 && checkNumberOfMonitors()
-                && validate(VmValidator.checkPciAndIdeLimit(getParameters().getVm().getOs(),
-                        getEffectiveCompatibilityVersion(),
+                && validate(VmValidator.checkPciAndIdeLimit(getMaxPciSlots(getParameters().getVm().getOs(),
+                        getEffectiveCompatibilityVersion()),
                         getParameters().getVmStaticData().getNumOfMonitors(),
                         getVmInterfaces(),
                         getDiskVmElements(),
@@ -523,7 +539,7 @@ public class AddVmCommand<T extends AddVmParameters> extends VmManagementCommand
     }
 
     protected StorageDomainValidator createStorageDomainValidator(StorageDomain storageDomain) {
-        return new StorageDomainValidator(storageDomain);
+        return storageDomainValidatorProvider.get().createInstance(storageDomain);
     }
 
     protected boolean validateDomainsThreshold(StorageDomainValidator storageDomainValidator) {
@@ -578,7 +594,7 @@ public class AddVmCommand<T extends AddVmParameters> extends VmManagementCommand
             return failValidation(EngineMessage.ACTION_TYPE_FAILED_TEMPLATE_IS_DISABLED);
         }
 
-        StoragePoolValidator spValidator = new StoragePoolValidator(getStoragePool());
+        StoragePoolValidator spValidator = storagePoolValidatorInstance.get().init(getStoragePool());
         if (!validate(spValidator.exists())) {
             return false;
         }
@@ -772,7 +788,7 @@ public class AddVmCommand<T extends AddVmParameters> extends VmManagementCommand
         }
 
         List<CinderDisk> cinderDisks = DisksFilter.filterCinderDisks(diskInfoDestinationMap.values());
-        CinderDisksValidator cinderDisksValidator = new CinderDisksValidator(cinderDisks);
+        CinderDisksValidator cinderDisksValidator = cinderDisksValidatorInstance.get().init(cinderDisks);
         if (!validate(cinderDisksValidator.validateCinderDiskLimits())) {
             return false;
         }
@@ -785,13 +801,13 @@ public class AddVmCommand<T extends AddVmParameters> extends VmManagementCommand
 
         if (getSmallIconId() != null
                 && getParameters().getVmLargeIcon() == null // icon id is ignored if large icon is sent
-                && !validate(IconValidator.validateIconId(getSmallIconId(), "Small"))) {
+                && !validate(IconValidator.validateIconId(getSmallIconId(), "Small", vmIconDao))) {
             return false;
         }
 
         if (getLargeIconId() != null
                 && getParameters().getVmLargeIcon() == null // icon id is ignored if large icon is sent
-                && !validate(IconValidator.validateIconId(getLargeIconId(), "Large"))) {
+                && !validate(IconValidator.validateIconId(getLargeIconId(), "Large", vmIconDao))) {
             return false;
         }
 
@@ -827,7 +843,7 @@ public class AddVmCommand<T extends AddVmParameters> extends VmManagementCommand
             return failValidation(EngineMessage.CLUSTER_BIOS_TYPE_NOT_SET);
         }
 
-        VmValidator vmValidator = new VmValidator(vmFromParams);
+        VmValidator vmValidator = vmValidatorInstance.get().init(vmFromParams);
 
         if (!validate(vmValidator.isBiosTypeSupported(getCluster(), osRepository))) {
             return false;
@@ -955,7 +971,7 @@ public class AddVmCommand<T extends AddVmParameters> extends VmManagementCommand
             if (destStorages.get(storageDomainId) == null) {
                 StorageDomain storage = storageDomainDao.getForStoragePool(storageDomainId, getStoragePoolId());
                 StorageDomainValidator validator =
-                        new StorageDomainValidator(storage);
+                        storageDomainValidatorProvider.get().createInstance(storage);
                 if (!validate(validator.isDomainExistAndActive()) || !validate(validator.domainIsValidDestination())) {
                     return false;
                 }
@@ -1270,7 +1286,7 @@ public class AddVmCommand<T extends AddVmParameters> extends VmManagementCommand
 
     protected void addVmNetwork() {
         List<? extends VmNic> nics = getVmInterfaces();
-        VmInterfaceManager vmInterfaceManager = new VmInterfaceManager(getMacPool());
+        VmInterfaceManager vmInterfaceManager = vmInterfaceManagerInstance.get().init(getMacPool());
         vmInterfaceManager.sortVmNics(nics, getVmInterfaceDevices());
 
         List<String> macAddresses = getMacPool().allocateMacAddresses(nics.size());

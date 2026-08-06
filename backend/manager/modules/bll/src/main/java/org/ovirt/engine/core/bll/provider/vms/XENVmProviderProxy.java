@@ -11,6 +11,14 @@ public class XENVmProviderProxy extends AbstractVmProviderProxy<XENVmProviderPro
         super(provider);
     }
 
+    public XENVmProviderProxy() {
+    }
+
+    public XENVmProviderProxy init(Provider<XENVmProviderProperties> provider) {
+        setProvider(provider);
+        return this;
+    }
+
     @Override
     protected GetVmsFromExternalProviderQueryParameters buildGetVmsFromExternalProviderQueryParameters() {
         return new GetVmsFromExternalProviderQueryParameters(

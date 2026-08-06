@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+import javax.inject.Inject;
+
 import org.apache.commons.lang.StringUtils;
 import org.ovirt.engine.core.common.AuditLogType;
 import org.ovirt.engine.core.common.businessentities.Entities;
@@ -23,9 +25,20 @@ import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogableImpl;
 import org.ovirt.engine.core.dao.network.NetworkDao;
 import org.ovirt.engine.core.dao.network.VnicProfileDao;
 import org.ovirt.engine.core.dao.network.VnicProfileViewDao;
-import org.ovirt.engine.core.di.Injector;
 
 public class VnicProfileHelper {
+
+    @Inject
+    private NetworkDao networkDao;
+    @Inject
+    private VnicProfileViewDao vnicProfileViewDao;
+    @Inject
+    private VnicProfileDao vnicProfileDao;
+    @Inject
+    private AuditLogDirector auditLogDirector;
+    @Inject
+    private BackwardCompatibilityVnicHelper backwardCompatibilityVnicHelper;
+
     private Set<String> invalidNetworkNames = new HashSet<>();
     private List<String> invalidIfaceNames = new ArrayList<>();
     private Map<String, Network> networksInClusterByName;
@@ -38,6 +51,16 @@ public class VnicProfileHelper {
         this.clusterId = clusterId;
         this.dataCenterId = dataCenterId;
         this.logType = logType;
+    }
+
+    public VnicProfileHelper() {
+    }
+
+    public VnicProfileHelper init(Guid clusterId, Guid dataCenterId, AuditLogType logType) {
+        this.clusterId = clusterId;
+        this.dataCenterId = dataCenterId;
+        this.logType = logType;
+        return this;
     }
 
     /**
@@ -89,21 +112,17 @@ public class VnicProfileHelper {
     }
 
     private VnicProfile findVnicProfileForUser(DbUser user, Network network) {
-        List<VnicProfile> networkProfiles = getVnicProfileDao().getAllForNetwork(network.getId());
+        List<VnicProfile> networkProfiles = vnicProfileDao.getAllForNetwork(network.getId());
 
         for (VnicProfile profile : networkProfiles) {
             if (user == null && !profile.isPortMirroring()
                     || user != null
-                            && getBackwardCompatibilityVnicHelper().isVnicProfilePermitted(user, profile, false)) {
+                            && backwardCompatibilityVnicHelper.isVnicProfilePermitted(user, profile, false)) {
                 return profile;
             }
         }
 
         return null;
-    }
-
-    BackwardCompatibilityVnicHelper getBackwardCompatibilityVnicHelper() {
-        return Injector.get(BackwardCompatibilityVnicHelper.class);
     }
 
     private VnicProfile getVnicProfileForNetwork(Network network, String vnicProfileName) {
@@ -134,14 +153,14 @@ public class VnicProfileHelper {
             logable.addCustomValue("EntityName", entityName);
             logable.addCustomValue("Networks", StringUtils.join(invalidNetworkNames, ','));
             logable.addCustomValue("Interfaces", StringUtils.join(invalidIfaceNames, ','));
-            createAuditLogDirector().log(logable, logType);
+            auditLogDirector.log(logable, logType);
         }
     }
 
     private Map<String, Network> getNetworksInCluster() {
         if (networksInClusterByName == null) {
             if (clusterId != null) {
-                networksInClusterByName = Entities.entitiesByName(getNetworkDao().getAllForCluster(clusterId));
+                networksInClusterByName = Entities.entitiesByName(networkDao.getAllForCluster(clusterId));
             } else {
                 networksInClusterByName = new HashMap<>();
             }
@@ -152,25 +171,9 @@ public class VnicProfileHelper {
 
     private List<VnicProfileView> getVnicProfilesInDc() {
         if (vnicProfilesInDc == null) {
-            vnicProfilesInDc = getVnicProfileViewDao().getAllForDataCenter(dataCenterId);
+            vnicProfilesInDc = vnicProfileViewDao.getAllForDataCenter(dataCenterId);
         }
 
         return vnicProfilesInDc;
-    }
-
-    NetworkDao getNetworkDao() {
-        return Injector.get(NetworkDao.class);
-    }
-
-    private VnicProfileViewDao getVnicProfileViewDao() {
-        return Injector.get(VnicProfileViewDao.class);
-    }
-
-    private VnicProfileDao getVnicProfileDao() {
-        return Injector.get(VnicProfileDao.class);
-    }
-
-    AuditLogDirector createAuditLogDirector() {
-        return Injector.get(AuditLogDirector.class);
     }
 }

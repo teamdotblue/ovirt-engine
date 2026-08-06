@@ -108,6 +108,8 @@ public class ImportVmFromExternalProviderCommand<T extends ImportVmFromExternalP
     @Inject
     @Typed(SerialChildCommandsExecutionCallback.class)
     private Instance<SerialChildCommandsExecutionCallback> callbackProvider;
+    @Inject
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
 
     private StorageDomainType virtioIsoStorageDomainType;
 
@@ -155,7 +157,7 @@ public class ImportVmFromExternalProviderCommand<T extends ImportVmFromExternalP
             return failValidation(EngineMessage.ACTION_TYPE_FAILED_STORAGE_DOMAIN_AND_CLUSTER_IN_DIFFERENT_POOL);
         }
 
-        if (!validate(new StoragePoolValidator(getStoragePool()).isInStatus(StoragePoolStatus.Up))) {
+        if (!validate(storagePoolValidatorInstance.get().init(getStoragePool()).isInStatus(StoragePoolStatus.Up))) {
             return false;
         }
 

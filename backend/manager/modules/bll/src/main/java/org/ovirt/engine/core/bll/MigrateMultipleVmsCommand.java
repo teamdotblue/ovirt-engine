@@ -10,6 +10,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.context.CommandContext;
@@ -45,6 +46,8 @@ public class MigrateMultipleVmsCommand<T extends MigrateMultipleVmsParameters> e
     private PermissionDao permissionDao;
     @Inject
     private SchedulingManager schedulingManager;
+    @Inject
+    private Instance<VmValidator> vmValidatorInstance;
 
     private List<VM> vms;
     private List<Guid> hostBlackList;
@@ -287,7 +290,7 @@ public class MigrateMultipleVmsCommand<T extends MigrateMultipleVmsParameters> e
     }
 
     protected VmValidator getVmValidator(VM vm) {
-        return new VmValidator(vm);
+        return vmValidatorInstance.get().init(vm);
     }
 
     private boolean hasPermissionToMigrateVms(List<VM> vms) {

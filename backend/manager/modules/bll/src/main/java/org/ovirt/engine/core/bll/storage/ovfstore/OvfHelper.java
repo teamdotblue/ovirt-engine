@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -53,35 +54,27 @@ import org.ovirt.engine.core.utils.ovf.OvfReaderException;
 public class OvfHelper {
 
     @Inject
+    private Instance<DiskImagesValidator> diskImagesValidatorInstance;
+    @Inject
     private VmNetworkInterfaceDao vmNetworkInterfaceDao;
-
     @Inject
     private VmTemplateDao vmTemplateDao;
-
     @Inject
     private VmStaticDao vmStaticDao;
-
     @Inject
     private DiskImageDao diskImageDao;
-
     @Inject
     private VmHandler vmHandler;
-
     @Inject
     private OvfManager ovfManager;
-
     @Inject
     private ClusterUtils clusterUtils;
-
     @Inject
     private AffinityGroupDao affinityGroupDao;
-
     @Inject
     private DbUserDao dbUserDao;
-
     @Inject
     private PermissionDao permissionDao;
-
     @Inject
     private LabelDao labelDao;
 
@@ -176,7 +169,7 @@ public class OvfHelper {
     public String generateOvfConfigurationForVm(VM vm, boolean asOva) {
         if (VMStatus.ImageLocked != vm.getStatus()) {
             vmHandler.updateDisksFromDb(vm);
-            DiskImagesValidator validator = new DiskImagesValidator(vm.getDiskList());
+            DiskImagesValidator validator = diskImagesValidatorInstance.get().init(vm.getDiskList());
             if (validator.diskImagesNotLocked().isValid()) {
                 loadVmData(vm);
                 Long currentDbGeneration = vmStaticDao.getDbGeneration(vm.getId());

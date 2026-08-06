@@ -16,6 +16,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.enterprise.inject.Instance;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -23,6 +25,7 @@ import org.mockito.Mock;
 import org.mockito.Spy;
 import org.ovirt.engine.core.bll.network.macpool.MacPoolPerCluster;
 import org.ovirt.engine.core.bll.validator.storage.MultipleStorageDomainsValidator;
+import org.ovirt.engine.core.bll.validator.storage.StoragePoolValidator;
 import org.ovirt.engine.core.common.action.AddVmPoolParameters;
 import org.ovirt.engine.core.common.businessentities.ArchitectureType;
 import org.ovirt.engine.core.common.businessentities.Cluster;
@@ -103,6 +106,9 @@ public abstract class CommonVmPoolCommandTestAbstract extends BaseCommandTest {
     @Mock
     private VmHandler vmHandler;
 
+    @Mock
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
+
     public static Stream<MockConfigDescriptor<?>> mockConfiguration() {
         return Stream.of(
                 MockConfigDescriptor.of(ConfigValues.PropagateDiskErrors, false)
@@ -167,6 +173,7 @@ public abstract class CommonVmPoolCommandTestAbstract extends BaseCommandTest {
     }
 
     protected void setUpCommand() {
+        doReturn(new StoragePoolValidator()).when(storagePoolValidatorInstance).get();
         doNothing().when(command).initTemplate();
         doReturn(true).when(command).areTemplateImagesInStorageReady(any());
         doReturn(true).when(command).setAndValidateDiskProfiles();

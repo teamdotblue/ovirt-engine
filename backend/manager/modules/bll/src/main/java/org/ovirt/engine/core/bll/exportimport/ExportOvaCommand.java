@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.apache.commons.lang.StringUtils;
@@ -39,6 +40,10 @@ public abstract class ExportOvaCommand<T extends ExportOvaParameters> extends Co
     private AnsibleExecutor ansibleExecutor;
     @Inject
     private VmDeviceDao vmDeviceDao;
+    @Inject
+    private Instance<HostValidator> hostValidatorInstance;
+    @Inject
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
 
     public ExportOvaCommand(T parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -65,7 +70,7 @@ public abstract class ExportOvaCommand<T extends ExportOvaParameters> extends Co
             return failValidation(EngineMessage.ACTION_TYPE_FAILED_PROXY_HOST_MUST_BE_SPECIFIED);
         }
 
-        HostValidator hostValidator = HostValidator.createInstance(getVds());
+        HostValidator hostValidator = hostValidatorInstance.get().createInstance(getVds());
         if (!validate(hostValidator.hostExists())) {
             return false;
         }
@@ -74,7 +79,7 @@ public abstract class ExportOvaCommand<T extends ExportOvaParameters> extends Co
             return false;
         }
 
-        StoragePoolValidator spValidator = new StoragePoolValidator(getStoragePool());
+        StoragePoolValidator spValidator = storagePoolValidatorInstance.get().init(getStoragePool());
         if (!validate(spValidator.exists())) {
             return false;
         }

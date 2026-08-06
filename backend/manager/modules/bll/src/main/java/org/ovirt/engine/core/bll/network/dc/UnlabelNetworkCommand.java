@@ -3,6 +3,7 @@ package org.ovirt.engine.core.bll.network.dc;
 import java.util.Collections;
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.CommandBase;
@@ -24,6 +25,8 @@ public class UnlabelNetworkCommand<T extends UnlabelNetworkParameters> extends C
 
     @Inject
     private NetworkDao networkDao;
+    @Inject
+    private Instance<NetworkValidator> networkValidatorInstance;
 
     private Network network;
 
@@ -58,7 +61,7 @@ public class UnlabelNetworkCommand<T extends UnlabelNetworkParameters> extends C
 
     @Override
     protected boolean validate() {
-        NetworkValidator validatorNew = new NetworkValidator(getNetwork());
+        NetworkValidator validatorNew = networkValidatorInstance.get().init(getNetwork());
         return validate(validatorNew.networkIsSet(getParameters().getNetworkId()));
     }
 

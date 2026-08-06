@@ -25,6 +25,14 @@ public class DiskExistenceValidator {
         this.diskGuids = guids;
     }
 
+    public DiskExistenceValidator() {
+    }
+
+    public DiskExistenceValidator init(Collection<Guid> guids) {
+        this.diskGuids = guids;
+        return this;
+    }
+
     /**
      * Validates that the disks exists
      *

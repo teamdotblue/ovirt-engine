@@ -4,6 +4,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import javax.enterprise.inject.Instance;
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.bll.LockMessagesMatchUtil;
 import org.ovirt.engine.core.bll.VdsCommand;
 import org.ovirt.engine.core.bll.context.CommandContext;
@@ -20,9 +23,13 @@ import org.ovirt.engine.core.common.utils.Pair;
 import org.ovirt.engine.core.common.vdscommands.VDSCommandType;
 import org.ovirt.engine.core.common.vdscommands.VDSReturnValue;
 import org.ovirt.engine.core.common.vdscommands.VdsIdVDSCommandParametersBase;
-import org.ovirt.engine.core.di.Injector;
 
 public class SyncStorageDevicesCommand<T extends SyncGlusterStorageDevicesParameter> extends VdsCommand<T> {
+
+    @Inject
+    private StorageDeviceSyncJob storageDeviceSyncJob;
+    @Inject
+    private Instance<HostValidator> hostValidatorInstance;
 
     public SyncStorageDevicesCommand(T parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -43,7 +50,7 @@ public class SyncStorageDevicesCommand<T extends SyncGlusterStorageDevicesParame
         //Host status will not checked in case of force. Storage devices will be synced as part of host install/activation
         //and host status will not be up during host activation. So BLL will be called with force in this case.
         if (!getParameters().isForceAction()) {
-            HostValidator validator = HostValidator.createInstance(getVds());
+            HostValidator validator = hostValidatorInstance.get().createInstance(getVds());
             return validate(validator.isUp());
         }
 
@@ -64,17 +71,13 @@ public class SyncStorageDevicesCommand<T extends SyncGlusterStorageDevicesParame
                 runVdsCommand(VDSCommandType.GetStorageDeviceList, new VdsIdVDSCommandParametersBase(getVds().getId()));
         if (returnValue.getSucceeded()) {
             List<StorageDevice> storageDevices = (List<StorageDevice>) returnValue.getReturnValue();
-            getStorageDeviceSyncJobInstance().updateStorageDevices(getVds(), storageDevices);
+            storageDeviceSyncJob.updateStorageDevices(getVds(), storageDevices);
             setSucceeded(true);
         } else {
             handleVdsError(returnValue);
             setSucceeded(false);
         }
 
-    }
-
-    private StorageDeviceSyncJob getStorageDeviceSyncJobInstance() {
-        return Injector.get(StorageDeviceSyncJob.class);
     }
 
     @Override

@@ -102,6 +102,14 @@ public class MoveOrCopyDiskCommand<T extends MoveOrCopyImageGroupParameters> ext
     @Inject
     @Typed(ConcurrentChildCommandsExecutionCallback.class)
     private Instance<ConcurrentChildCommandsExecutionCallback> callbackProvider;
+    @Inject
+    private Instance<MultipleStorageDomainsValidator> multipleStorageDomainsValidator;
+    @Inject
+    private Instance<QuotaValidator> quotaValidatorInstance;
+    @Inject
+    private Instance<StorageDomainValidator> storageDomainValidatorInstance;
+    @Inject
+    private Instance<MultipleDiskVmElementValidator> multipleDiskVmElementValidatorInstance;
 
     private List<PermissionSubject> cachedPermsList;
     private List<Pair<VM, VmDevice>> cachedVmsDeviceInfo;
@@ -229,7 +237,7 @@ public class MoveOrCopyDiskCommand<T extends MoveOrCopyImageGroupParameters> ext
     }
 
     protected boolean validateDestStorage() {
-        StorageDomainValidator validator = new StorageDomainValidator(getStorageDomain());
+        StorageDomainValidator validator = storageDomainValidatorInstance.get().createInstance(getStorageDomain());
         if (!validate(validator.isDomainExistAndActive()) || !validate(validator.domainIsValidDestination())) {
             return false;
         }
@@ -319,7 +327,7 @@ public class MoveOrCopyDiskCommand<T extends MoveOrCopyImageGroupParameters> ext
             }
         }
         StorageDomain storageDomain = storageDomainDao.getForStoragePool(sourceDomainId, getImage().getStoragePoolId());
-        StorageDomainValidator validator = new StorageDomainValidator(storageDomain);
+        StorageDomainValidator validator = storageDomainValidatorInstance.get().createInstance(storageDomain);
         return validate(validator.isDomainExistAndActive()) && isSupportedByManagedBlockStorageDomain(storageDomain);
     }
 
@@ -709,8 +717,8 @@ public class MoveOrCopyDiskCommand<T extends MoveOrCopyImageGroupParameters> ext
         return jobProperties;
     }
 
-    protected MultipleDiskVmElementValidator createMultipleDiskVmElementValidator() {
-        return new MultipleDiskVmElementValidator(getImage(),
+    public MultipleDiskVmElementValidator createMultipleDiskVmElementValidator() {
+        return multipleDiskVmElementValidatorInstance.get().init(getImage(),
                 diskVmElementDao.getAllDiskVmElementsByDiskId(getParameters().getImageGroupID()));
     }
 
@@ -718,7 +726,7 @@ public class MoveOrCopyDiskCommand<T extends MoveOrCopyImageGroupParameters> ext
         List<Guid> sdsToValidate = new ArrayList<>();
         sdsToValidate.add(getStorageDomainId());
 
-        return new MultipleStorageDomainsValidator(getStoragePoolId(), sdsToValidate);
+        return multipleStorageDomainsValidator.get().init(getStoragePoolId(), sdsToValidate);
     }
 
     private boolean isMoveOperation() {
@@ -734,6 +742,6 @@ public class MoveOrCopyDiskCommand<T extends MoveOrCopyImageGroupParameters> ext
     }
 
     protected QuotaValidator createQuotaValidator(Guid quotaId) {
-        return QuotaValidator.createInstance(quotaId, false);
+        return quotaValidatorInstance.get().createInstance(quotaId, false);
     }
 }

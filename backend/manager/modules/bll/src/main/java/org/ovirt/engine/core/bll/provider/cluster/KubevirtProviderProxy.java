@@ -62,34 +62,24 @@ public class KubevirtProviderProxy implements ProviderProxy<ProviderValidator<Ku
 
     @Inject
     private BackendInternal backend;
-
     @Inject
     private VdsStaticDao vdsStaticDao;
-
     @Inject
     private Instance<KubevirtMonitoring> monitoring;
-
     @Inject
     private StoragePoolDao storagePoolDao;
-
     @Inject
-    private ResourceManager resourceManager;
-
+    private Instance<ResourceManager> resourceManagerInstance;
     @Inject
     private ProviderDao providerDao;
-
     @Inject
     private NetworkDao networkDao;
-
     @Inject
     private NetworkClusterDao networkClusterDao;
-
     @Inject
     private ManagementNetworkUtil managementNetworkUtil;
-
     @Inject
     private AuditLogDirector auditLogDirector;
-
     @Inject
     private ClusterDao clusterDao;
 
@@ -101,6 +91,14 @@ public class KubevirtProviderProxy implements ProviderProxy<ProviderValidator<Ku
 
     public KubevirtProviderProxy(Provider<KubevirtProviderProperties> provider) {
         this.provider = provider;
+    }
+
+    public KubevirtProviderProxy() {
+    }
+
+    public KubevirtProviderProxy init(Provider<KubevirtProviderProperties> provider) {
+        this.provider = provider;
+        return this;
     }
 
     @Override
@@ -243,7 +241,7 @@ public class KubevirtProviderProxy implements ProviderProxy<ProviderValidator<Ku
         monitoring.get().unregister(provider.getId());
 
         // remove all hosts that represents kubevirt nodes and cancel their monitoring resources
-        vdsStaticDao.getAllForCluster(provider.getId()).forEach(h -> resourceManager.removeVds(h.getId()));
+        vdsStaticDao.getAllForCluster(provider.getId()).forEach(h -> resourceManagerInstance.get().removeVds(h.getId()));
 
         // register the cluster based on the updated provider's details
         monitoring.get().register(provider);
@@ -251,8 +249,8 @@ public class KubevirtProviderProxy implements ProviderProxy<ProviderValidator<Ku
         // after the sync, registered hosts that were existed before need to reschedule
         vdsStaticDao.getAllForCluster(provider.getId())
                 .stream()
-                .filter(h -> resourceManager.getVdsManager(h.getId()) == null)
-                .forEach(h -> resourceManager.runVdsCommand(VDSCommandType.AddVds,
+                .filter(h -> resourceManagerInstance.get().getVdsManager(h.getId()) == null)
+                .forEach(h -> resourceManagerInstance.get().runVdsCommand(VDSCommandType.AddVds,
                         new AddVdsVDSCommandParameters(h.getId())));
     }
 

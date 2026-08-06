@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
@@ -14,6 +15,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
+
+import javax.enterprise.inject.Instance;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,6 +31,7 @@ import org.ovirt.engine.core.bll.ValidateTestUtils;
 import org.ovirt.engine.core.bll.ValidationResult;
 import org.ovirt.engine.core.bll.network.cluster.ManagementNetworkUtil;
 import org.ovirt.engine.core.bll.utils.VersionSupport;
+import org.ovirt.engine.core.bll.validator.NetworkValidator;
 import org.ovirt.engine.core.bll.validator.storage.StoragePoolValidator;
 import org.ovirt.engine.core.common.action.StoragePoolManagementParameter;
 import org.ovirt.engine.core.common.businessentities.Cluster;
@@ -88,6 +92,8 @@ public class UpdateStoragePoolCommandTest extends BaseCommandTest {
     private ManagementNetworkUtil managementNetworkUtil;
     @Mock
     private StoragePoolValidator poolValidator;
+    @Mock
+    private Instance<NetworkValidator> networkValidatorInstance;
 
     @BeforeEach
     public void setUp() {
@@ -291,6 +297,8 @@ public class UpdateStoragePoolCommandTest extends BaseCommandTest {
 
     private Network createNetwork(Guid networkId) {
         Network network = new Network();
+        NetworkValidator networkValidator = spy(new NetworkValidator(network));
+        doReturn(networkValidator).when(networkValidatorInstance).get();
         network.setId(networkId);
         return network;
     }

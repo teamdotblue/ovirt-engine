@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.CommandBase;
@@ -43,11 +44,15 @@ import org.ovirt.engine.core.common.vdscommands.VDSReturnValue;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dao.DiskDao;
 import org.ovirt.engine.core.dao.StorageDomainDao;
+import org.ovirt.engine.core.dao.StorageDomainStaticDao;
 import org.ovirt.engine.core.dao.VmDao;
+import org.ovirt.engine.core.dao.provider.ProviderDao;
 
 @SuppressWarnings("unused")
 public class ExportRepoImageCommand<T extends ExportRepoImageParameters> extends CommandBase<T> {
 
+    @Inject
+    private Instance<DiskImagesValidator> diskImagesValidatorInstance;
     @Inject
     private DiskDao diskDao;
     @Inject
@@ -56,13 +61,19 @@ public class ExportRepoImageCommand<T extends ExportRepoImageParameters> extends
     private VmDao vmDao;
     @Inject
     private ProviderProxyFactory providerProxyFactory;
-
-    private DiskImage diskImage;
-
-    private OpenStackImageProviderProxy providerProxy;
-
+    @Inject
+    private StorageDomainStaticDao storageDomainStaticDao;
+    @Inject
+    private ProviderDao providerDao;
+    @Inject
+    private Instance<DiskValidator> diskValidatorInstance;
+    @Inject
+    private Instance<StorageDomainValidator> storageDomainValidatorInstance;
     @Inject
     private ImagesHandler imagesHandler;
+
+    private DiskImage diskImage;
+    private OpenStackImageProviderProxy providerProxy;
 
     public ExportRepoImageCommand(T parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -77,7 +88,7 @@ public class ExportRepoImageCommand<T extends ExportRepoImageParameters> extends
     protected OpenStackImageProviderProxy getProviderProxy() {
         if (providerProxy == null) {
             providerProxy = OpenStackImageProviderProxy
-                    .getFromStorageDomainId(getParameters().getDestinationDomainId(), providerProxyFactory);
+                    .getFromStorageDomainId(getParameters().getDestinationDomainId(), providerProxyFactory, storageDomainStaticDao, providerDao);
         }
         return providerProxy;
     }
@@ -224,7 +235,7 @@ public class ExportRepoImageCommand<T extends ExportRepoImageParameters> extends
 
     private boolean validateDiskImage() {
         Disk disk = diskDao.get(getParameters().getImageGroupID());
-        if (disk != null && !validate(new DiskValidator(disk).validateUnsupportedDiskStorageType(
+        if (disk != null && !validate(diskValidatorInstance.get().init(disk).validateUnsupportedDiskStorageType(
                 DiskStorageType.LUN, DiskStorageType.CINDER))) {
             return false;
         }
@@ -248,7 +259,7 @@ public class ExportRepoImageCommand<T extends ExportRepoImageParameters> extends
             return false;
         }
 
-        if (!validate(new StorageDomainValidator(getStorageDomain()).isDomainExistAndActive())) {
+        if (!validate(storageDomainValidatorInstance.get().createInstance(getStorageDomain()).isDomainExistAndActive())) {
             return false;
         }
 
@@ -264,7 +275,7 @@ public class ExportRepoImageCommand<T extends ExportRepoImageParameters> extends
             }
         }
 
-        DiskImagesValidator diskImagesValidator = new DiskImagesValidator(getDiskImage());
+        DiskImagesValidator diskImagesValidator = diskImagesValidatorInstance.get().init(Collections.singletonList(getDiskImage()));
         if (!validate(diskImagesValidator.diskImagesNotIllegal())
                 || !validate(diskImagesValidator.diskImagesNotLocked())) {
             return false;

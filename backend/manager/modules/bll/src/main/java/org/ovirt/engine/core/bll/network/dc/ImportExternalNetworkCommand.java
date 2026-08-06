@@ -4,6 +4,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.CommandBase;
@@ -35,15 +36,16 @@ public class ImportExternalNetworkCommand<P extends ImportExternalNetworkParamet
 
     @Inject
     private ProviderProxyFactory providerProxyFactory;
-
     @Inject
     private ProviderDao providerDao;
-
     @Inject
     private NetworkLocking networkLocking;
-
     @Inject
     private NetworkHelper networkHelper;
+    @Inject
+    private Instance<NetworkValidator> networkValidatorInstance;
+    @Inject
+    private Instance<NetworkProviderValidator> networkProviderValidatorInstance;
 
     private Provider<?> provider;
     private Network network;
@@ -83,8 +85,8 @@ public class ImportExternalNetworkCommand<P extends ImportExternalNetworkParamet
 
     @Override
     protected boolean validate() {
-        NetworkProviderValidator providerValidator = new NetworkProviderValidator(getProvider());
-        NetworkValidator networkValidator = new NetworkValidator(getNetwork());
+        NetworkProviderValidator providerValidator = networkProviderValidatorInstance.get().createInstance(getProvider());
+        NetworkValidator networkValidator = networkValidatorInstance.get().init(getNetwork());
 
         return validate(providerValidator.providerIsSet())
                 && validate(providerValidator.providerTypeIsNetwork())

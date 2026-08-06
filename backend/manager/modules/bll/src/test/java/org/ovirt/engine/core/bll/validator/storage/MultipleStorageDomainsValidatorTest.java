@@ -3,6 +3,7 @@ package org.ovirt.engine.core.bll.validator.storage;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -16,6 +17,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -83,6 +85,11 @@ public class MultipleStorageDomainsValidatorTest {
 
         validator = spy(new MultipleStorageDomainsValidator(spId, Arrays.asList(sdId1, sdId2, sdId3)));
         doReturn(dao).when(validator).getStorageDomainDao();
+        doAnswer(invocation -> {
+            Map.Entry<Guid, StorageDomainValidator> entry = invocation.getArgument(0);
+            StorageDomain domain = dao.getForStoragePool(entry.getKey(), spId);
+            return new StorageDomainValidator(domain);
+        }).when(validator).getStorageDomainValidator(any());
     }
 
     @Test

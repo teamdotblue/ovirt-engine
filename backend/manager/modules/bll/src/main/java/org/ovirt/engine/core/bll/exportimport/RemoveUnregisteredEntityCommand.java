@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.CommandBase;
@@ -37,6 +38,8 @@ public abstract class RemoveUnregisteredEntityCommand<T extends RemoveUnregister
     private UnregisteredOVFDataDao unregisteredOVFDataDao;
     @Inject
     private UnregisteredDisksDao unregisteredDisksDao;
+    @Inject
+    private Instance<StorageDomainValidator> storageDomainValidatorInstance;
 
     protected OvfEntityData ovfEntityData;
     protected List<DiskImage> images;
@@ -80,7 +83,7 @@ public abstract class RemoveUnregisteredEntityCommand<T extends RemoveUnregister
             return false;
         }
 
-        StorageDomainValidator validator = new StorageDomainValidator(getStorageDomain());
+        StorageDomainValidator validator = storageDomainValidatorInstance.get().createInstance(getStorageDomain());
         if (!validate(validator.isDomainExistAndActive())) {
             return false;
         }

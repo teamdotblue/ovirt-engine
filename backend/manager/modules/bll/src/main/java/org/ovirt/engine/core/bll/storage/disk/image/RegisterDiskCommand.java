@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.LockMessagesMatchUtil;
@@ -53,7 +54,6 @@ public class RegisterDiskCommand <T extends RegisterDiskParameters> extends Base
 
     @Inject
     private AuditLogDirector auditLogDirector;
-
     @Inject
     private DiskProfileHelper diskProfileHelper;
     @Inject
@@ -62,6 +62,10 @@ public class RegisterDiskCommand <T extends RegisterDiskParameters> extends Base
     private UnregisteredDisksDao unregisteredDisksDao;
     @Inject
     private ImageDao imageDao;
+    @Inject
+    private Instance<StorageDomainValidator> storageDomainValidatorInstance;
+    @Inject
+    private Instance<DiskImagesValidator> diskImagesValidatorInstance;
 
     public RegisterDiskCommand(T parameters, CommandContext commandContext) {
         super(parameters, commandContext);
@@ -100,7 +104,7 @@ public class RegisterDiskCommand <T extends RegisterDiskParameters> extends Base
             return false;
         }
 
-        if (!validate(new StorageDomainValidator(getStorageDomain()).isDomainExist())) {
+        if (!validate(storageDomainValidatorInstance.get().createInstance(getStorageDomain()).isDomainExist())) {
             addValidationMessageVariable("diskId", getDiskImage().getId());
             addValidationMessageVariable("domainId", getStorageDomainId());
             addValidationMessage(EngineMessage.ACTION_TYPE_FAILED_STORAGE_DOMAIN_UNAVAILABLE);
@@ -220,7 +224,7 @@ public class RegisterDiskCommand <T extends RegisterDiskParameters> extends Base
     }
 
     protected DiskImagesValidator createDiskImagesValidator(DiskImage diskImage) {
-        return new DiskImagesValidator(Collections.singletonList(diskImage));
+        return diskImagesValidatorInstance.get().init(Collections.singletonList(diskImage));
     }
 
     @Override

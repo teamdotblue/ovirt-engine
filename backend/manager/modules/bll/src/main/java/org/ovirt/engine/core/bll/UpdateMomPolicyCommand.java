@@ -3,6 +3,9 @@ package org.ovirt.engine.core.bll;
 import java.util.Collections;
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.bll.context.CommandContext;
 import org.ovirt.engine.core.bll.utils.PermissionSubject;
 import org.ovirt.engine.core.bll.validator.HostValidator;
@@ -16,6 +19,9 @@ import org.ovirt.engine.core.common.vdscommands.VDSCommandType;
 
 @NonTransactiveCommandAttribute
 public class UpdateMomPolicyCommand extends VdsCommand<VdsActionParameters> {
+
+    @Inject
+    private Instance<HostValidator> hostValidatorInstance;
 
     public UpdateMomPolicyCommand(VdsActionParameters parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -40,7 +46,7 @@ public class UpdateMomPolicyCommand extends VdsCommand<VdsActionParameters> {
 
     @Override
     protected boolean validate() {
-        HostValidator hostValidator = HostValidator.createInstance(getVds());
+        HostValidator hostValidator = hostValidatorInstance.get().createInstance(getVds());
 
         return validate(hostValidator.hostExists()) && validate(hostValidator.isUp());
     }

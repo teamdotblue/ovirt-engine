@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.List;
 
 import javax.annotation.PostConstruct;
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -50,18 +51,16 @@ public class VmTemplateHandler implements BackendService {
 
     @Inject
     private VmTemplateDao vmTemplateDao;
-
     @Inject
     private DiskDao diskDao;
-
     @Inject
     private DiskVmElementDao diskVmElementDao;
-
     @Inject
     private StorageDomainDao storageDomainDao;
-
     @Inject
     private ImagesHandler imagesHandler;
+    @Inject
+    private Instance<StorageDomainValidator> storageDomainValidatorProvider;
 
     private ObjectIdentityChecker updateVmTemplate;
 
@@ -175,7 +174,7 @@ public class VmTemplateHandler implements BackendService {
         List<DiskImage> vmtImages = providedVmtImages;
         if (checkStorageDomain) {
             StorageDomainValidator storageDomainValidator =
-                    new StorageDomainValidator(storageDomainDao.getForStoragePool(
+                    storageDomainValidatorProvider.get().createInstance(storageDomainDao.getForStoragePool(
                             storageDomainId, vmTemplate.getStoragePoolId()));
             ValidationResult returnValue = storageDomainValidator.isDomainExistAndActive();
             if (!returnValue.isValid()) {

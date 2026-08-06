@@ -9,6 +9,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.NonTransactiveCommandAttribute;
@@ -43,6 +44,8 @@ public class RefreshLunsSizeCommand<T extends ExtendSANStorageDomainParameters> 
     private StorageDomainDynamicDao storageDomainDynamicDao;
     @Inject
     private LunDao lunDao;
+    @Inject
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
 
     private boolean deviceSizeVisibilityError = false;
 
@@ -56,7 +59,7 @@ public class RefreshLunsSizeCommand<T extends ExtendSANStorageDomainParameters> 
 
     @Override
     protected boolean validate() {
-        if (!validate(new StoragePoolValidator(getStoragePool()).existsAndUp())) {
+        if (!validate(storagePoolValidatorInstance.get().init(getStoragePool()).existsAndUp())) {
             return false;
         }
 

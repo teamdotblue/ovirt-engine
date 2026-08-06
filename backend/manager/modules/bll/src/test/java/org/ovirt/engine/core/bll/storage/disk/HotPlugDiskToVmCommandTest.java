@@ -11,6 +11,8 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -22,6 +24,7 @@ import org.ovirt.engine.core.bll.BaseCommandTest;
 import org.ovirt.engine.core.bll.ValidateTestUtils;
 import org.ovirt.engine.core.bll.ValidationResult;
 import org.ovirt.engine.core.bll.snapshots.SnapshotsValidator;
+import org.ovirt.engine.core.bll.validator.VmValidator;
 import org.ovirt.engine.core.bll.validator.storage.DiskValidator;
 import org.ovirt.engine.core.bll.validator.storage.DiskVmElementValidator;
 import org.ovirt.engine.core.bll.validator.storage.StorageDomainValidator;
@@ -81,6 +84,12 @@ public class HotPlugDiskToVmCommandTest extends BaseCommandTest {
     private DiskValidator diskValidator;
 
     @Mock
+    private Instance<DiskValidator> diskValidatorInstance;
+
+    @Mock
+    private Instance<VmValidator> vmValidatorInstance;
+
+    @Mock
     private DiskVmElementValidator diskVmElementValidator;
 
     @Mock
@@ -103,9 +112,11 @@ public class HotPlugDiskToVmCommandTest extends BaseCommandTest {
     public void setUp() {
         mockVds();
         mockVmDevice(false);
-
+        when(diskValidatorInstance.get()).thenReturn(diskValidator);
+        when(diskValidator.init(any())).thenReturn(diskValidator);
+        when(diskValidator.isDiskExists()).thenReturn(ValidationResult.VALID);
+        when(vmValidatorInstance.get()).thenReturn(new VmValidator());
         doReturn(storageDomainValidator).when(command).getStorageDomainValidator(any());
-        doReturn(diskValidator).when(command).getDiskValidator(disk);
         doReturn(diskVmElementValidator).when(command).getDiskVmElementValidator(any(), any());
 
         when(osRepository.getDiskHotpluggableInterfaces(anyInt(), any()))
@@ -122,6 +133,8 @@ public class HotPlugDiskToVmCommandTest extends BaseCommandTest {
     @Test
     public void validateFailedVMHasNotDisk() {
         mockVmStatusUp();
+        when(diskValidator.isDiskExists()).thenReturn(
+                new ValidationResult(EngineMessage.ACTION_TYPE_FAILED_DISK_NOT_EXIST));
         ValidateTestUtils.runAndAssertValidateFailure(command, EngineMessage.ACTION_TYPE_FAILED_DISK_NOT_EXIST);
     }
 

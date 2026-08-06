@@ -23,6 +23,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 import javax.validation.groups.Default;
 
@@ -38,6 +39,8 @@ import org.ovirt.engine.core.bll.network.FindActiveVmsUsingNetwork;
 import org.ovirt.engine.core.bll.network.cluster.ManageNetworkClustersCommand;
 import org.ovirt.engine.core.bll.network.cluster.ManagementNetworkUtil;
 import org.ovirt.engine.core.bll.network.cluster.NetworkClusterHelper;
+import org.ovirt.engine.core.bll.validator.HostNetworkQosValidator;
+import org.ovirt.engine.core.bll.validator.NetworkValidator;
 import org.ovirt.engine.core.bll.validator.network.NetworkAttachmentIpConfigurationValidator;
 import org.ovirt.engine.core.bll.validator.network.NetworkExclusivenessValidatorResolver;
 import org.ovirt.engine.core.common.AuditLogType;
@@ -125,48 +128,34 @@ public class HostSetupNetworksCommand<T extends HostSetupNetworksParameters> ext
     private List<NetworkAttachment> existingAttachments;
     private BusinessEntityMap<VdsNetworkInterface> existingNicsBusinessEntityMap;
     private List<Network> clusterNetworks;
-
-    @Inject
-    private HostNetworkTopologyPersister hostNetworkTopologyPersister;
-
-    @Inject
-    private FindActiveVmsUsingNetwork findActiveVmsUsingNetwork;
-
     private List<Network> modifiedNetworks;
 
     @Inject
+    private HostNetworkTopologyPersister hostNetworkTopologyPersister;
+    @Inject
+    private FindActiveVmsUsingNetwork findActiveVmsUsingNetwork;
+    @Inject
     private NetworkAttachmentDao networkAttachmentDao;
-
     @Inject
     private IpConfigurationCompleter ipConfigurationCompleter;
-
     @Inject
     private NetworkIdNetworkNameCompleter networkIdNetworkNameCompleter;
-
     @Inject
     HostSetupNetworksValidatorHelper hostSetupNetworksValidatorHelper;
-
     @Inject
     private EffectiveHostNetworkQos effectiveHostNetworkQos;
-
     @Inject
     private NetworkImplementationDetailsUtils networkImplementationDetailsUtils;
-
     @Inject
     private NetworkExclusivenessValidatorResolver networkExclusivenessValidatorResolver;
-
     @Inject
     private NetworkAttachmentIpConfigurationValidator networkAttachmentIpConfigurationValidator;
-
     @Inject
     private UnmanagedNetworkValidator unmanagedNetworkValidator;
-
     @Inject
     private ManagementNetworkUtil managementNetworkUtil;
-
     @Inject
     private HostLocking hostLocking;
-
     @Inject
     private NetworkClusterHelper networkClusterHelper;
     @Inject
@@ -179,6 +168,10 @@ public class HostSetupNetworksCommand<T extends HostSetupNetworksParameters> ext
     private InterfaceDao interfaceDao;
     @Inject
     private VdsDynamicDao vdsDynamicDao;
+    @Inject
+    private Instance<NetworkValidator> networkValidatorInstance;
+    @Inject
+    private Instance<HostNetworkQosValidator> hostNetworkQosValidatorInstance;
 
     @Inject
     private ReportedConfigurationsFiller reportedConfigurationsFiller;
@@ -307,7 +300,9 @@ public class HostSetupNetworksCommand<T extends HostSetupNetworksParameters> ext
                 networkExclusivenessValidatorResolver,
                 networkAttachmentIpConfigurationValidator,
                 unmanagedNetworkValidator,
-                backend);
+                backend,
+                networkValidatorInstance,
+                hostNetworkQosValidatorInstance);
 
         return validator.validate();
     }

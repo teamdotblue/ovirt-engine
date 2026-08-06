@@ -8,6 +8,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.enterprise.inject.Instance;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -16,6 +19,7 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.ovirt.engine.core.bll.BaseCommandTest;
 import org.ovirt.engine.core.bll.ValidateTestUtils;
+import org.ovirt.engine.core.bll.validator.storage.StorageDomainValidator;
 import org.ovirt.engine.core.common.action.ConvertDiskCommandParameters;
 import org.ovirt.engine.core.common.businessentities.StorageDomain;
 import org.ovirt.engine.core.common.businessentities.VM;
@@ -43,6 +47,12 @@ public class ConvertDiskCommandTest extends BaseCommandTest {
     @Mock
     private VmDao vmDao;
 
+    @Mock
+    private StorageDomainValidator storageDomainValidator;
+
+    @Mock
+    private Instance<StorageDomainValidator> storageDomainValidatorInstance;
+
     private final Guid storageDomainId = Guid.newGuid();
     private DiskImage diskImage = createDiskImage();
     private StorageDomain storageDomain = createStorageDomain();
@@ -50,6 +60,13 @@ public class ConvertDiskCommandTest extends BaseCommandTest {
     @Spy
     @InjectMocks
     private ConvertDiskCommand<ConvertDiskCommandParameters> command = createCommand();
+
+    @BeforeEach
+    public void setUp() {
+        doReturn(storageDomainValidator).when(storageDomainValidatorInstance).get();
+        doReturn(storageDomainValidator).when(storageDomainValidator).createInstance(any());
+    }
+
 
     @Test
     public void validateStorageDomainMissing() {

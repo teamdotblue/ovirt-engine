@@ -13,6 +13,7 @@ import java.security.GeneralSecurityException;
 import java.security.cert.Certificate;
 import java.util.List;
 
+import javax.inject.Inject;
 import javax.net.ssl.SSLException;
 
 import org.apache.commons.codec.binary.Base64;
@@ -29,6 +30,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public abstract class BaseProviderProxy implements ProviderProxy {
+
+    @Inject
+    private ProviderValidatorFactory providerValidatorFactory;
 
     protected final Logger log = LoggerFactory.getLogger(getClass());
 
@@ -47,6 +51,18 @@ public abstract class BaseProviderProxy implements ProviderProxy {
         try {
             url = new URL(provider.getUrl());
             this.hostProvider = provider;
+        } catch (MalformedURLException e) {
+            handleException(e);
+        }
+    }
+
+    public BaseProviderProxy() {
+    }
+
+    protected void setProvider(Provider<?> provider) {
+        this.hostProvider = provider;
+        try {
+            url = new URL(provider.getUrl());
         } catch (MalformedURLException e) {
             handleException(e);
         }
@@ -193,7 +209,7 @@ public abstract class BaseProviderProxy implements ProviderProxy {
     @Override
     public ProviderValidator getProviderValidator() {
         if (providerValidator == null) {
-            providerValidator = new ProviderValidator(hostProvider);
+            providerValidator = providerValidatorFactory.createValidator(hostProvider);
         }
         return providerValidator;
     }

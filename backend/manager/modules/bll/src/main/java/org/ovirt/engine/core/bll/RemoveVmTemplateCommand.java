@@ -63,6 +63,8 @@ public class RemoveVmTemplateCommand<T extends VmTemplateManagementParameters> e
         implements QuotaStorageDependent {
 
     @Inject
+    private Instance<DiskImagesValidator> diskImagesValidatorInstance;
+    @Inject
     private VmTemplateDao vmTemplateDao;
     @Inject
     private DiskDao diskDao;
@@ -75,6 +77,8 @@ public class RemoveVmTemplateCommand<T extends VmTemplateManagementParameters> e
     @Inject
     @Typed(ConcurrentChildCommandsExecutionCallback.class)
     private Instance<ConcurrentChildCommandsExecutionCallback> callbackProvider;
+    @Inject
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
 
     private List<DiskImage> imageTemplates;
     private final Map<Guid, List<DiskImage>> storageToDisksMap = new HashMap<>();
@@ -142,7 +146,7 @@ public class RemoveVmTemplateCommand<T extends VmTemplateManagementParameters> e
         }
 
         // check storage pool valid
-        if (!isInstanceType && !validate(new StoragePoolValidator(getStoragePool()).existsAndUp())) {
+        if (!isInstanceType && !validate(storagePoolValidatorInstance.get().init(getStoragePool()).existsAndUp())) {
             return false;
         }
 
@@ -247,7 +251,7 @@ public class RemoveVmTemplateCommand<T extends VmTemplateManagementParameters> e
     }
 
     private ValidationResult checkNoDisksBasedOnTemplateDisks() {
-        return new DiskImagesValidator(imageTemplates).diskImagesHaveNoDerivedDisks(null);
+        return diskImagesValidatorInstance.get().init(imageTemplates).diskImagesHaveNoDerivedDisks(null);
     }
 
     private List<DiskImage> getImageTemplates() {

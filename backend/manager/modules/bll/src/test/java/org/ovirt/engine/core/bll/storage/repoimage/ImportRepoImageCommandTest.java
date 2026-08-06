@@ -4,6 +4,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
 
+import javax.enterprise.inject.Instance;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -15,6 +17,7 @@ import org.ovirt.engine.core.bll.ValidateTestUtils;
 import org.ovirt.engine.core.bll.ValidationResult;
 import org.ovirt.engine.core.bll.provider.storage.OpenStackImageProviderProxy;
 import org.ovirt.engine.core.bll.validator.storage.DiskImagesValidator;
+import org.ovirt.engine.core.bll.validator.storage.StoragePoolValidator;
 import org.ovirt.engine.core.common.action.ImportRepoImageParameters;
 import org.ovirt.engine.core.common.businessentities.Cluster;
 import org.ovirt.engine.core.common.businessentities.StoragePoolStatus;
@@ -45,6 +48,9 @@ public class ImportRepoImageCommandTest extends ImportExportRepoImageCommandTest
     @Mock
     private ClusterDao clusterDao;
 
+    @Mock
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
+
     @Spy
     @InjectMocks
     protected ImportRepoImageCommand<ImportRepoImageParameters> cmd =
@@ -65,6 +71,7 @@ public class ImportRepoImageCommandTest extends ImportExportRepoImageCommandTest
     public void setUp() {
         super.setUp();
 
+        doReturn(new StoragePoolValidator()).when(storagePoolValidatorInstance).get();
         when(storagePoolDao.get(storagePoolId)).thenReturn(storagePool);
         when(providerProxy.getImageAsDiskImage(repoImageId)).thenReturn(diskImage);
         when(clusterDao.get(clusterId)).thenReturn(cluster);

@@ -33,6 +33,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.enterprise.inject.Instance;
+
 import org.hamcrest.Matcher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -49,6 +51,7 @@ import org.ovirt.engine.core.bll.interfaces.BackendInternal;
 import org.ovirt.engine.core.bll.network.FindActiveVmsUsingNetwork;
 import org.ovirt.engine.core.bll.validator.HostInterfaceValidator;
 import org.ovirt.engine.core.bll.validator.HostNetworkQosValidator;
+import org.ovirt.engine.core.bll.validator.NetworkValidator;
 import org.ovirt.engine.core.bll.validator.ValidationResultMatchers;
 import org.ovirt.engine.core.bll.validator.network.NetworkAttachmentIpConfigurationValidator;
 import org.ovirt.engine.core.bll.validator.network.NetworkExclusivenessValidator;
@@ -114,6 +117,10 @@ public class HostSetupNetworksValidatorTest {
     private NetworkAttachmentIpConfigurationValidator mockNetworkAttachmentIpConfigurationValidator;
     @Mock
     private BackendInternal backendInternal;
+    @Mock
+    private Instance<NetworkValidator> mockNetworkValidatorInstance;
+    @Mock
+    private Instance<HostNetworkQosValidator> mockHostNetworkQosValidatorInstance;
 
     @Captor
     private ArgumentCaptor<Collection<String>> collectionArgumentCaptor;
@@ -1928,7 +1935,9 @@ public class HostSetupNetworksValidatorTest {
                 mockNetworkExclusivenessValidatorResolver,
                 mockNetworkAttachmentIpConfigurationValidator,
                 new UnmanagedNetworkValidator(),
-                backendInternal);
+                backendInternal,
+                mockNetworkValidatorInstance,
+                mockHostNetworkQosValidatorInstance);
         }
     }
 }

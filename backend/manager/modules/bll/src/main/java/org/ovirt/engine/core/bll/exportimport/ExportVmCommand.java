@@ -93,17 +93,13 @@ import org.ovirt.engine.core.utils.transaction.TransactionSupport;
 public class ExportVmCommand<T extends MoveOrCopyParameters> extends MoveOrCopyTemplateCommand<T> {
 
     @Inject
+    private Instance<DiskImagesValidator> diskImagesValidatorInstance;
+    @Inject
     private AuditLogDirector auditLogDirector;
-
     @Inject
     private OvfUpdateProcessHelper ovfUpdateProcessHelper;
-
-    private List<DiskImage> disksImages;
-    private Collection<Snapshot> snapshotsWithMemory;
-
     @Inject
     private VmOverheadCalculator vmOverheadCalculator;
-
     @Inject
     private OvfManager ovfManager;
     @Inject
@@ -124,13 +120,22 @@ public class ExportVmCommand<T extends MoveOrCopyParameters> extends MoveOrCopyT
     private DiskImageDao diskImageDao;
     @Inject
     private DiskDao diskDao;
-
     @Inject
     private ClusterUtils clusterUtils;
-
     @Inject
     @Typed(ConcurrentChildCommandsExecutionCallback.class)
     private Instance<ConcurrentChildCommandsExecutionCallback> callbackProvider;
+    @Inject
+    private Instance<MultipleStorageDomainsValidator> multipleStorageDomainsValidator;
+    @Inject
+    private Instance<StorageDomainValidator> storageDomainValidatorProvider;
+    @Inject
+    private Instance<VmValidator> vmValidatorInstance;
+    @Inject
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
+
+    private List<DiskImage> disksImages;
+    private Collection<Snapshot> snapshotsWithMemory;
 
     /**
      * Constructor for command creation when compensation is applied on startup
@@ -159,7 +164,7 @@ public class ExportVmCommand<T extends MoveOrCopyParameters> extends MoveOrCopyT
         setStoragePoolId(getVm().getStoragePoolId());
 
         // check that target domain exists
-        StorageDomainValidator targetstorageDomainValidator = new StorageDomainValidator(getStorageDomain());
+        StorageDomainValidator targetstorageDomainValidator = storageDomainValidatorProvider.get().createInstance(getStorageDomain());
         if (!validate(targetstorageDomainValidator.isDomainExistAndActive())) {
             return false;
         }
@@ -167,7 +172,7 @@ public class ExportVmCommand<T extends MoveOrCopyParameters> extends MoveOrCopyT
         // load the disks of vm from database
         vmHandler.updateDisksFromDb(getVm());
         List<DiskImage> disksForExport = getDisksBasedOnImage();
-        DiskImagesValidator diskImagesValidator = new DiskImagesValidator(disksForExport);
+        DiskImagesValidator diskImagesValidator = diskImagesValidatorInstance.get().init(disksForExport);
         if (!validate(diskImagesValidator.diskImagesNotIllegal()) ||
                 !validate(diskImagesValidator.diskImagesNotLocked())) {
             return false;
@@ -216,13 +221,13 @@ public class ExportVmCommand<T extends MoveOrCopyParameters> extends MoveOrCopyT
         if (!handleDestStorageDomain(disksForExport)) {
             return false;
         }
-        MultipleStorageDomainsValidator storageDomainsValidator = new MultipleStorageDomainsValidator(getVm().getStoragePoolId(),
+        MultipleStorageDomainsValidator storageDomainsValidator = multipleStorageDomainsValidator.get().init(getVm().getStoragePoolId(),
                 ImagesHandler.getAllStorageIdsForImageIds(disksForExport));
         if (!(checkVmInStorageDomain()
-                && validate(new StoragePoolValidator(getStoragePool()).existsAndUp())
+                && validate(storagePoolValidatorInstance.get().init(getStoragePool()).existsAndUp())
                 && validate(snapshotsValidator.vmNotDuringSnapshot(getVmId()))
                 && validate(snapshotsValidator.vmNotInPreview(getVmId()))
-                && validate(new VmValidator(getVm()).vmDown())
+                && validate(vmValidatorInstance.get().init(getVm()).vmDown())
                 && validate(storageDomainsValidator.allDomainsExistAndActive())
                 && validate(storageDomainsValidator.isSupportedByManagedBlockStorageDomains(getActionType())))) {
             return false;

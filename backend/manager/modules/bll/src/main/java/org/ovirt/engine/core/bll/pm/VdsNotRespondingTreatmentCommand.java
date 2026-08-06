@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.HostLocking;
@@ -57,13 +58,10 @@ public class VdsNotRespondingTreatmentCommand<T extends FenceVdsActionParameters
 
     @Inject
     private AuditLogDirector auditLogDirector;
-
     @Inject
-    private ResourceManager resourceManager;
-
+    private Instance<ResourceManager> resourceManagerInstance;
     @Inject
     private PreviousHostedEngineHost previousHostedEngineHost;
-
     @Inject
     private MonitoringStrategyFactory monitoringStrategyFactory;
     @Inject
@@ -74,6 +72,8 @@ public class VdsNotRespondingTreatmentCommand<T extends FenceVdsActionParameters
     private HostLocking hostLocking;
     @Inject
     private VdsDynamicDaoImpl vdsDynamicDao;
+    @Inject
+    private Instance<HostValidator> hostValidatorInstance;
 
 
     public VdsNotRespondingTreatmentCommand(T parameters, CommandContext commandContext) {
@@ -116,7 +116,7 @@ public class VdsNotRespondingTreatmentCommand<T extends FenceVdsActionParameters
 
     @Override
     protected boolean validate() {
-        HostValidator validator = HostValidator.createInstance(getVds());
+        HostValidator validator = hostValidatorInstance.get().createInstance(getVds());
         return validate(validator.hostExists());
     }
 
@@ -283,7 +283,7 @@ public class VdsNotRespondingTreatmentCommand<T extends FenceVdsActionParameters
     }
 
     public ResourceManager getResourceManager() {
-        return resourceManager;
+        return resourceManagerInstance.get();
     }
 
     private void waitUntilSkipFencingIfSDActiveAllowed(boolean skipFencingIfSDActive) {

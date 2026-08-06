@@ -18,10 +18,12 @@ import static org.mockito.Mockito.when;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 import javax.enterprise.inject.Instance;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -40,6 +42,8 @@ import org.ovirt.engine.core.bll.quota.QuotaStorageConsumptionParameter;
 import org.ovirt.engine.core.bll.snapshots.SnapshotsValidator;
 import org.ovirt.engine.core.bll.tasks.CommandCoordinatorUtil;
 import org.ovirt.engine.core.bll.validator.QuotaValidator;
+import org.ovirt.engine.core.bll.validator.VmValidator;
+import org.ovirt.engine.core.bll.validator.storage.DiskImagesValidator;
 import org.ovirt.engine.core.bll.validator.storage.DiskValidator;
 import org.ovirt.engine.core.bll.validator.storage.DiskVmElementValidator;
 import org.ovirt.engine.core.bll.validator.storage.StorageDomainValidator;
@@ -142,6 +146,15 @@ public class UpdateDiskCommandTest extends BaseCommandTest {
     @Mock
     private CommandCoordinatorUtil commandCoordinatorUtil;
 
+    @Mock
+    private Instance<DiskImagesValidator> diskImagesValidatorInstance;
+
+    @Mock
+    private DiskImagesValidator diskImagesValidator;
+
+    @Mock
+    private Instance<VmValidator> vmValidatorInstance;
+
     public static Stream<MockConfigDescriptor<?>> mockConfiguration() {
         return Stream.of(
                 MockConfigDescriptor.of(ConfigValues.MaxBlockDiskSizeInGibiBytes, 8),
@@ -156,6 +169,21 @@ public class UpdateDiskCommandTest extends BaseCommandTest {
     @InjectMocks
     private UpdateDiskCommand<UpdateDiskParameters> command =
             new UpdateDiskCommand<>(createParameters(), CommandContext.createContext(""));
+
+    @BeforeEach
+    public void setUpDiskImagesValidator() {
+        AtomicReference<List<DiskImage>> validatedImages = new AtomicReference<>(Collections.emptyList());
+        when(diskImagesValidatorInstance.get()).thenReturn(diskImagesValidator);
+        when(diskImagesValidator.init(any())).thenAnswer(invocation -> {
+            validatedImages.set(invocation.getArgument(0));
+            return diskImagesValidator;
+        });
+        when(diskImagesValidator.diskImagesNotLocked()).thenAnswer(invocation -> validatedImages.get().stream()
+                .anyMatch(diskImage -> diskImage.getImageStatus() == ImageStatus.LOCKED)
+                ? new ValidationResult(EngineMessage.ACTION_TYPE_FAILED_DISKS_LOCKED)
+                : ValidationResult.VALID);
+        when(vmValidatorInstance.get()).thenReturn(new VmValidator());
+    }
 
     @Test
     @MockedConfig("mockConfiguration")

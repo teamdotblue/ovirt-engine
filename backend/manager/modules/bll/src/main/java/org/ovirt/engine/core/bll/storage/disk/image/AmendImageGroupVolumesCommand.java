@@ -42,6 +42,8 @@ public class AmendImageGroupVolumesCommand<T extends AmendImageGroupVolumesComma
         extends CommandBase<T> implements SerialChildExecutingCommand {
 
     @Inject
+    private Instance<DiskImagesValidator> diskImagesValidatorInstance;
+    @Inject
     private DiskDao diskDao;
     @Inject
     private DiskImageDao diskImageDao;
@@ -50,11 +52,16 @@ public class AmendImageGroupVolumesCommand<T extends AmendImageGroupVolumesComma
     @Inject
     @Typed(SerialChildCommandsExecutionCallback.class)
     private Instance<SerialChildCommandsExecutionCallback> callbackProvider;
-
-    private DiskImage diskImage;
-
+    @Inject
+    private Instance<DiskValidator> diskValidatorInstance;
     @Inject
     private ImagesHandler imagesHandler;
+    @Inject
+    private Instance<StorageDomainValidator> storageDomainValidatorInstance;
+    @Inject
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
+
+    private DiskImage diskImage;
 
     public AmendImageGroupVolumesCommand(T parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -77,7 +84,7 @@ public class AmendImageGroupVolumesCommand<T extends AmendImageGroupVolumesComma
             return false;
         }
         setStoragePoolId(getDiskImage().getStoragePoolId());
-        if (!validate(new StoragePoolValidator(getStoragePool()).existsAndUp())) {
+        if (!validate(storagePoolValidatorInstance.get().init(getStoragePool()).existsAndUp())) {
             return false;
         }
         VmEntityType vmEntityType = getDiskImage().getVmEntityType();
@@ -85,11 +92,11 @@ public class AmendImageGroupVolumesCommand<T extends AmendImageGroupVolumesComma
             return failValidation(EngineMessage.ACTION_TYPE_FAILED_CANT_AMEND_TEMPLATE_DISK);
         }
         setStorageDomainId(getDiskImage().getStorageIds().get(0));
-        StorageDomainValidator storageDomainValidator = new StorageDomainValidator(getStorageDomain());
+        StorageDomainValidator storageDomainValidator = storageDomainValidatorInstance.get().createInstance(getStorageDomain());
         if (!validate(storageDomainValidator.isDomainExistAndActive())) {
             return false;
         }
-        DiskImagesValidator diskImagesValidator = new DiskImagesValidator(Collections.singletonList(getDiskImage()));
+        DiskImagesValidator diskImagesValidator = diskImagesValidatorInstance.get().init(Collections.singletonList(getDiskImage()));
         if (!isInternalExecution() && !validate(diskImagesValidator.diskImagesNotLocked())) {
             return false;
         }
@@ -97,7 +104,7 @@ public class AmendImageGroupVolumesCommand<T extends AmendImageGroupVolumesComma
     }
 
     protected DiskValidator createDiskValidator() {
-        return new DiskValidator(getDiskImage());
+        return diskValidatorInstance.get().init(getDiskImage());
     }
 
     @Override

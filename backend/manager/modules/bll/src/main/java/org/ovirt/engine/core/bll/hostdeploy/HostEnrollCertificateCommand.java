@@ -1,5 +1,6 @@
 package org.ovirt.engine.core.bll.hostdeploy;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.NonTransactiveCommandAttribute;
@@ -17,6 +18,8 @@ public class HostEnrollCertificateCommand extends VdsCommand<VdsActionParameters
 
     @Inject
     private CommandCoordinatorUtil commandCoordinatorUtil;
+    @Inject
+    private Instance<HostValidator> hostValidatorInstance;
 
     public HostEnrollCertificateCommand(VdsActionParameters parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -24,7 +27,7 @@ public class HostEnrollCertificateCommand extends VdsCommand<VdsActionParameters
 
     @Override
     public boolean validate() {
-        HostValidator hostValidator = HostValidator.createInstance(getVds());
+        HostValidator hostValidator = hostValidatorInstance.get().createInstance(getVds());
         return validate(hostValidator.hostExists())
                 && validate(hostValidator.validateStatusForEnrollCertificate());
     }

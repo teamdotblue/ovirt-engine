@@ -3,6 +3,8 @@ package org.ovirt.engine.core.bll.profiles;
 import java.util.Collections;
 import java.util.List;
 
+
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.MultiLevelAdministrationHandler;
@@ -17,15 +19,15 @@ import org.ovirt.engine.core.common.businessentities.profiles.DiskProfile;
 import org.ovirt.engine.core.common.errors.EngineMessage;
 import org.ovirt.engine.core.dao.profiles.DiskProfileDao;
 import org.ovirt.engine.core.dao.profiles.ProfilesDao;
-import org.ovirt.engine.core.di.Injector;
 
 public class AddDiskProfileCommand extends AddProfileCommandBase<DiskProfileParameters, DiskProfile, DiskProfileValidator> {
 
     @Inject
     private DiskProfileDao diskProfileDao;
-
     @Inject
     private MultiLevelAdministrationHandler multiLevelAdministrationHandler;
+    @Inject
+    private Instance<DiskProfileValidator> diskProfileValidatorInstance;
 
     public AddDiskProfileCommand(DiskProfileParameters parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -33,7 +35,7 @@ public class AddDiskProfileCommand extends AddProfileCommandBase<DiskProfilePara
 
     @Override
     protected DiskProfileValidator getProfileValidator() {
-        return Injector.injectMembers(new DiskProfileValidator(getProfile()));
+        return diskProfileValidatorInstance.get().createWithProfile(getProfile());
     }
 
     @Override

@@ -42,6 +42,15 @@ public class ForemanHostProviderProxy extends BaseProviderProxy implements HostP
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }
 
+    public ForemanHostProviderProxy() {
+    }
+
+    public ForemanHostProviderProxy init(Provider<?> hostProvider) {
+        setProvider(hostProvider);
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        return this;
+    }
+
     byte[] runHttpGetMethod(String relativeUrl) {
         return runHttpMethod(
                 HttpMethodType.GET,

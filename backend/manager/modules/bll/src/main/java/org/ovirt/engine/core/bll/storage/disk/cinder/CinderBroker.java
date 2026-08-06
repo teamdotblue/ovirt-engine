@@ -7,6 +7,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
 
+import javax.inject.Inject;
+
 import org.apache.http.HttpStatus;
 import org.ovirt.engine.core.bll.provider.ProviderProxyFactory;
 import org.ovirt.engine.core.bll.provider.storage.OpenStackVolumeProviderProxy;
@@ -23,7 +25,8 @@ import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogDirector;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogable;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogableImpl;
-import org.ovirt.engine.core.di.Injector;
+import org.ovirt.engine.core.dao.StorageDomainStaticDao;
+import org.ovirt.engine.core.dao.provider.ProviderDao;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,6 +40,15 @@ import com.woorea.openstack.cinder.model.VolumeForUpdate;
 
 public class CinderBroker {
 
+    @Inject
+    private AuditLogDirector auditLogDirector;
+    @Inject
+    private ProviderProxyFactory providerProxyFactory;
+    @Inject
+    private StorageDomainStaticDao storageDomainStaticDao;
+    @Inject
+    private ProviderDao providerDao;
+
     private static final Logger log = LoggerFactory.getLogger(CinderBroker.class);
     public static final String DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSS";
 
@@ -46,6 +58,15 @@ public class CinderBroker {
     public CinderBroker(Guid storageDomainId, ArrayList<String> executeFailedMessages) {
         this.proxy = getVolumeProviderProxy(storageDomainId);
         this.executeFailedMessages = executeFailedMessages;
+    }
+
+    public CinderBroker() {
+    }
+
+    public CinderBroker init(Guid storageDomainId, ArrayList<String> executeFailedMessages) {
+        this.proxy = getVolumeProviderProxy(storageDomainId);
+        this.executeFailedMessages = executeFailedMessages;
+        return this;
     }
 
     private <T> T execute(Callable<T> callable) {
@@ -210,7 +231,7 @@ public class CinderBroker {
     private void logDiskEvent(CinderDisk cinderDisk, AuditLogType cinderDiskConnectionFailure) {
         AuditLogable logable = new AuditLogableImpl();
         logable.addCustomValue("DiskAlias", cinderDisk.getDiskAlias());
-        Injector.get(AuditLogDirector.class).log(logable, cinderDiskConnectionFailure);
+        auditLogDirector.log(logable, cinderDiskConnectionFailure);
     }
 
     public boolean isDiskExist(final Guid id) {
@@ -310,7 +331,7 @@ public class CinderBroker {
     private OpenStackVolumeProviderProxy getVolumeProviderProxy(Guid storageDomainId) {
         if (proxy == null) {
             proxy = OpenStackVolumeProviderProxy.getFromStorageDomainId(storageDomainId,
-                    Injector.get(ProviderProxyFactory.class));
+                    providerProxyFactory, storageDomainStaticDao, providerDao);
         }
         return proxy;
     }

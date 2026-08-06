@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.locks.Lock;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.LockMessagesMatchUtil;
@@ -56,6 +57,10 @@ public class HotPlugDiskToVmCommand<T extends VmDiskOperationParameterBase> exte
     private VmStaticDao vmStaticDao;
     @Inject
     private DiskVmElementDao diskVmElementDao;
+    @Inject
+    private Instance<StorageDomainValidator> storageDomainValidatorInstance;
+    @Inject
+    private Instance<VmValidator> vmValidatorInstance;
 
     public HotPlugDiskToVmCommand(T parameters, CommandContext commandContext) {
         super(parameters, commandContext);
@@ -75,7 +80,7 @@ public class HotPlugDiskToVmCommand<T extends VmDiskOperationParameterBase> exte
     @Override
     protected boolean validate() {
         performDbLoads();
-        VmValidator vmValidator = new VmValidator(getVm());
+        VmValidator vmValidator = vmValidatorInstance.get().init(getVm());
         return validate(vmValidator.isVmExists()) &&
                 validate(vmValidator.isVmStatusIn(VMStatus.Up, VMStatus.Paused, VMStatus.Down)) &&
                 canRunActionOnNonManagedVm() &&
@@ -126,7 +131,7 @@ public class HotPlugDiskToVmCommand<T extends VmDiskOperationParameterBase> exte
     }
 
     protected StorageDomainValidator getStorageDomainValidator(StorageDomain storageDomain) {
-        return new StorageDomainValidator(storageDomain);
+        return storageDomainValidatorInstance.get().createInstance(storageDomain);
     }
 
     private void performDbLoads() {

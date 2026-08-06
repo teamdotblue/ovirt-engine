@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.VmHandler;
@@ -44,6 +45,8 @@ public abstract class MoveOrCopyTemplateCommand<T extends MoveOrCopyParameters> 
     protected VmTemplateHandler vmTemplateHandler;
     @Inject
     private VmStaticDao vmStaticDao;
+    @Inject
+    private Instance<MultipleStorageDomainsValidator> multipleStorageDomainsValidator;
 
     protected Map<Guid, Guid> imageToDestinationDomainMap;
     protected Map<Guid, DiskImage> imageFromSourceDomainMap;
@@ -170,7 +173,7 @@ public abstract class MoveOrCopyTemplateCommand<T extends MoveOrCopyParameters> 
     }
 
     protected MultipleStorageDomainsValidator createMultipleStorageDomainsValidator(Collection<DiskImage> diskImages) {
-        return new MultipleStorageDomainsValidator(getStoragePoolId(),
+        return multipleStorageDomainsValidator.get().init(getStoragePoolId(),
                 ImagesHandler.getAllStorageIdsForImageIds(diskImages));
     }
 

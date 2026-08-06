@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -16,6 +17,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import javax.enterprise.inject.Instance;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,8 +32,11 @@ import org.ovirt.engine.core.bll.storage.disk.image.ImagesHandler;
 import org.ovirt.engine.core.bll.utils.PermissionSubject;
 import org.ovirt.engine.core.bll.utils.VmDeviceUtils;
 import org.ovirt.engine.core.bll.validator.ValidationResultMatchers;
+import org.ovirt.engine.core.bll.validator.storage.CinderDisksValidator;
+import org.ovirt.engine.core.bll.validator.storage.DiskImagesValidator;
 import org.ovirt.engine.core.bll.validator.storage.MultipleDiskVmElementValidator;
 import org.ovirt.engine.core.bll.validator.storage.MultipleStorageDomainsValidator;
+import org.ovirt.engine.core.bll.validator.storage.StoragePoolValidator;
 import org.ovirt.engine.core.common.VdcObjectType;
 import org.ovirt.engine.core.common.action.AddVmTemplateParameters;
 import org.ovirt.engine.core.common.businessentities.ActionGroup;
@@ -78,6 +84,18 @@ public class AddVmTemplateCommandTest extends BaseCommandTest {
     private VmHandler vmHandler;
     @Mock
     private VmDeviceUtils vmDeviceUtils;
+    @Mock
+    private Instance<DiskImagesValidator> diskImagesValidatorInstance;
+    @Mock
+    private DiskImagesValidator diskImagesValidator;
+    @Mock
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
+    @Mock
+    private Instance<CinderDisksValidator> cinderDisksValidatorInstance;
+    @Mock
+    private CinderDisksValidator cinderDisksValidator;
+    @Mock
+    private Instance<MultipleDiskVmElementValidator> multipleDiskVmElementValidatorInstance;
 
     private VM createVM() {
         Guid vmId = Guid.newGuid();
@@ -97,6 +115,8 @@ public class AddVmTemplateCommandTest extends BaseCommandTest {
     public void setUp() {
         when(vmDao.get(vm.getId())).thenReturn(vm);
 
+        doReturn(new StoragePoolValidator()).when(storagePoolValidatorInstance).get();
+
         // The cluster to use
         Cluster cluster = new Cluster();
         cluster.setCpuName("Intel Conroe Family");
@@ -108,6 +128,16 @@ public class AddVmTemplateCommandTest extends BaseCommandTest {
 
         doNothing().when(cmd).separateCustomProperties(any());
         doReturn(getDisksList(vm.getStoragePoolId())).when(cmd).getVmDisksFromDB();
+        when(diskImagesValidatorInstance.get()).thenReturn(diskImagesValidator);
+        when(diskImagesValidator.init(any())).thenReturn(diskImagesValidator);
+        doReturn(ValidationResult.VALID).when(diskImagesValidator).diskImagesNotIllegal();
+        doReturn(ValidationResult.VALID).when(diskImagesValidator).diskImagesNotLocked();
+
+        when(cinderDisksValidatorInstance.get()).thenReturn(cinderDisksValidator);
+        when(cinderDisksValidator.init(anyList())).thenReturn(cinderDisksValidator);
+        doReturn(ValidationResult.VALID).when(cinderDisksValidator).validateCinderDiskLimits();
+
+        doReturn(new MultipleDiskVmElementValidator()).when(multipleDiskVmElementValidatorInstance).get();
 
         cmd.init();
     }

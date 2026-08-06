@@ -15,6 +15,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.apache.commons.lang.StringUtils;
@@ -100,61 +101,58 @@ public class RunVmValidator {
     private Map<Disk, DiskVmElement> cachedVmDveMap;
 
     @Inject
+    private Instance<DiskImagesValidator> diskImagesValidatorInstance;
+    @Inject
     private SnapshotsValidator snapshotsValidator;
-
     @Inject
     private VmDeviceUtils vmDeviceUtils;
-
     @Inject
     private VmValidationUtils vmValidationUtils;
-
     @Inject
     private DiskHandler diskHandler;
-
     @Inject
     private SchedulingManager schedulingManager;
-
     @Inject
     private StoragePoolIsoMapDao storagePoolIsoMapDao;
-
     @Inject
     private DiskDao diskDao;
-
     @Inject
     private VmDeviceDao vmDeviceDao;
-
     @Inject
     private HostDeviceDao hostDeviceDao;
-
     @Inject
     private NetworkDao networkDao;
-
     @Inject
     private VmNicDao vmNicDao;
-
     @Inject
     private VdsDynamicDao vdsDynamicDao;
-
     @Inject
     private SnapshotDao snapshotDao;
-
     @Inject
     private BackendInternal backend;
-
     @Inject
     private VDSBrokerFrontend resourceManager;
-
-    public RunVmValidator(VM vm, RunVmParams rumVmParam, boolean isInternalExecution, Guid activeIsoDomainId) {
-        this.vm = vm;
-        this.runVmParam = rumVmParam;
-        this.isInternalExecution = isInternalExecution;
-        this.activeIsoDomainId = activeIsoDomainId;
-    }
+    @Inject
+    private Instance<MultipleStorageDomainsValidator> multipleStorageDomainsValidator;
+    @Inject
+    private Instance<VmValidator> vmValidatorInstance;
+    @Inject
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
+    @Inject
+    private Instance<MultipleDiskVmElementValidator> multipleDiskVmElementValidatorInstance;
 
     /**
      * Used for testings
      */
     protected RunVmValidator() {
+    }
+
+    public RunVmValidator init(VM vm, RunVmParams rumVmParam, boolean isInternalExecution, Guid activeIsoDomainId) {
+        this.vm = vm;
+        this.runVmParam = rumVmParam;
+        this.isInternalExecution = isInternalExecution;
+        this.activeIsoDomainId = activeIsoDomainId;
+        return this;
     }
 
     /**
@@ -182,7 +180,7 @@ public class RunVmValidator {
         }
 
         if (vm.getStatus() == VMStatus.Suspended) {
-            return validate(new VmValidator(vm).vmNotLocked(), messages) &&
+            return validate(vmValidatorInstance.get().init(vm).vmNotLocked(), messages) &&
                    validate(snapshotsValidator.vmNotDuringSnapshot(vm.getId()), messages) &&
                    validate(validateVmStatusUsingMatrix(vm), messages) &&
                    validate(validateStoragePoolUp(vm, storagePool, getVmImageDisks()), messages) &&
@@ -202,7 +200,7 @@ public class RunVmValidator {
                 validateVmProperties(vm, messages) &&
                 validate(validateBootSequence(vm, getVmDisks()), messages) &&
                 validate(validateDisplayType(), messages) &&
-                validate(new VmValidator(vm).vmNotLocked(), messages) &&
+                validate(vmValidatorInstance.get().init(vm).vmNotLocked(), messages) &&
                 validate(snapshotsValidator.vmNotDuringSnapshot(vm.getId()), messages) &&
                 (runInUnknownStatus && vm.getStatus() == VMStatus.Unknown || validate(validateVmStatusUsingMatrix(vm), messages)) &&
                 validate(validateStoragePoolUp(vm, storagePool, getVmImageDisks()), messages) &&
@@ -358,7 +356,7 @@ public class RunVmValidator {
             // In order to check the storage domains statuses we need a set of all the VM images
             Set<Guid> storageDomainIds = ImagesHandler.getAllStorageIdsForImageIds(vmImages);
             MultipleStorageDomainsValidator storageDomainValidator =
-                    new MultipleStorageDomainsValidator(vm.getStoragePoolId(), storageDomainIds);
+                    multipleStorageDomainsValidator.get().init(vm.getStoragePoolId(), storageDomainIds);
 
             ValidationResult result = storageDomainValidator.allDomainsExistAndActive();
             if (!result.isValid()) {
@@ -371,7 +369,7 @@ public class RunVmValidator {
                 Set<Guid> filteredStorageDomainIds =
                         ImagesHandler.getAllStorageIdsForImageIds(filterReadOnlyAndPreallocatedDisks(vmImages));
                 MultipleStorageDomainsValidator filteredStorageDomainValidator =
-                        new MultipleStorageDomainsValidator(vm.getStoragePoolId(), filteredStorageDomainIds);
+                        multipleStorageDomainsValidator.get().init(vm.getStoragePoolId(), filteredStorageDomainIds);
 
                 result = !vm.isAutoStartup() ? filteredStorageDomainValidator.allDomainsWithinThresholds()
                         : ValidationResult.VALID;
@@ -391,7 +389,7 @@ public class RunVmValidator {
         if (vmDisks.isEmpty() || vm.isAutoStartup() && isInternalExecution) {
             return ValidationResult.VALID;
         }
-        return new DiskImagesValidator(vmDisks).diskImagesNotLocked();
+        return diskImagesValidatorInstance.get().init(vmDisks).diskImagesNotLocked();
     }
 
     protected ValidationResult validateDisksPassDiscard(VM vm) {
@@ -405,9 +403,9 @@ public class RunVmValidator {
         return multipleDiskVmElementValidator.isPassDiscardSupportedForDestSds(diskIdToDestSdId);
     }
 
-    protected MultipleDiskVmElementValidator createMultipleDiskVmElementValidator(
+    public MultipleDiskVmElementValidator createMultipleDiskVmElementValidator(
             Map<Disk, DiskVmElement> diskToDiskVmElement) {
-        return new MultipleDiskVmElementValidator(diskToDiskVmElement);
+        return multipleDiskVmElementValidatorInstance.get().init(diskToDiskVmElement);
     }
 
     protected ValidationResult validateIsoPath(VM vm, String diskPath, String floppyPath, Guid activeIsoDomainId) {
@@ -530,14 +528,14 @@ public class RunVmValidator {
 
     private MultipleStorageDomainsValidator getStorageDomainsValidator(Collection<Guid> sdIds) {
         Guid spId = vm.getStoragePoolId();
-        return new MultipleStorageDomainsValidator(spId, sdIds);
+        return multipleStorageDomainsValidator.get().init(spId, sdIds);
     }
 
     private ValidationResult validateStoragePoolUp(VM vm, StoragePool storagePool, List<DiskImage> vmImages) {
         if (vmImages.isEmpty() || vm.isAutoStartup() && isInternalExecution) {
             return ValidationResult.VALID;
         }
-        return new StoragePoolValidator(storagePool).existsAndUp();
+        return storagePoolValidatorInstance.get().init(storagePool).existsAndUp();
     }
 
     /**

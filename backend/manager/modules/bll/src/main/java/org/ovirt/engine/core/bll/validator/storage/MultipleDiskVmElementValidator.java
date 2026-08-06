@@ -6,6 +6,9 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import javax.enterprise.inject.Instance;
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.bll.ValidationResult;
 import org.ovirt.engine.core.common.businessentities.storage.Disk;
 import org.ovirt.engine.core.common.businessentities.storage.DiskVmElement;
@@ -14,6 +17,9 @@ import org.ovirt.engine.core.compat.Guid;
 public class MultipleDiskVmElementValidator {
 
     protected Map<Disk, Collection<DiskVmElement>> diskToDiskVmElements;
+
+    @Inject
+    private Instance<DiskVmElementValidator> diskVmElementValidatorInstance;
 
     /**
      * For a single disk with one or more disk vm elements.
@@ -34,7 +40,19 @@ public class MultipleDiskVmElementValidator {
     /**
      * For testing purposes.
      */
-    protected MultipleDiskVmElementValidator() {
+    public MultipleDiskVmElementValidator() {
+    }
+
+    public MultipleDiskVmElementValidator init(Disk disk, Collection<DiskVmElement> diskVmElements) {
+        diskToDiskVmElements = Collections.singletonMap(disk, diskVmElements);
+        return this;
+    }
+
+    public MultipleDiskVmElementValidator init(Map<Disk, DiskVmElement> diskToDiskVmElement) {
+        diskToDiskVmElements = diskToDiskVmElement.entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, diskImageDiskVmElementEntry ->
+                        Collections.singleton(diskImageDiskVmElementEntry.getValue())));
+        return this;
     }
 
     public ValidationResult isPassDiscardSupportedForDestSd(Guid destSdId) {
@@ -59,7 +77,7 @@ public class MultipleDiskVmElementValidator {
     }
 
     protected DiskVmElementValidator createDiskVmElementValidator(Disk disk, DiskVmElement diskVmElement) {
-        return new DiskVmElementValidator(disk, diskVmElement);
+        return diskVmElementValidatorInstance.get().init(disk, diskVmElement);
     }
 
     private Collection<DiskVmElementValidator> getDisksValidators() {

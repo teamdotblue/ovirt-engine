@@ -11,6 +11,8 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import javax.inject.Inject;
+
 import org.apache.commons.lang.StringUtils;
 import org.ovirt.engine.core.bll.ValidationResult;
 import org.ovirt.engine.core.common.businessentities.Snapshot;
@@ -35,7 +37,6 @@ import org.ovirt.engine.core.dao.StorageDomainStaticDao;
 import org.ovirt.engine.core.dao.StoragePoolDao;
 import org.ovirt.engine.core.dao.VmDao;
 import org.ovirt.engine.core.dao.VmDeviceDao;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.utils.ReplacementUtils;
 
 /**
@@ -45,6 +46,23 @@ import org.ovirt.engine.core.utils.ReplacementUtils;
  */
 public class DiskImagesValidator {
 
+    @Inject
+    private VmDeviceDao vmDeviceDao;
+    @Inject
+    private VmDao vmDao;
+    @Inject
+    private SnapshotDao snapshotDao;
+    @Inject
+    private DiskImageDao diskImageDao;
+    @Inject
+    private StoragePoolDao storagePoolDao;
+    @Inject
+    private StorageDomainStaticDao storageDomainStaticDao;
+    @Inject
+    private DiskDao diskDao;
+    @Inject
+    private VDSBrokerFrontend vdsBrokerFrontend;
+
     private Collection<DiskImage> diskImages;
 
     public DiskImagesValidator(Collection<DiskImage> disks) {
@@ -53,6 +71,14 @@ public class DiskImagesValidator {
 
     public DiskImagesValidator(DiskImage... disks) {
         this.diskImages = Arrays.asList(disks);
+    }
+
+    public DiskImagesValidator() {
+    }
+
+    public DiskImagesValidator init(Collection<DiskImage> disks) {
+        this.diskImages = disks;
+        return this;
     }
 
     /**
@@ -73,10 +99,6 @@ public class DiskImagesValidator {
         return diskImagesNotInStatus(ImageStatus.LOCKED, EngineMessage.ACTION_TYPE_FAILED_DISKS_LOCKED);
     }
 
-    protected Disk getExistingDisk(Guid id) {
-        return getDiskDao().get(id);
-    }
-
     /**
      * Validates that none of the new disks already exists in the database
      * or that both the existing and the new disks are shareable.
@@ -86,7 +108,7 @@ public class DiskImagesValidator {
     public ValidationResult disksNotExistOrShareable() {
         List<String> existingDisksAliases = new ArrayList<>();
         for (Disk newDisk : diskImages) {
-            Disk existingDisk = getExistingDisk(newDisk.getId());
+            Disk existingDisk = diskDao.get(newDisk.getId());
             if (!diskNotExistsOrBothShareable(existingDisk, newDisk)) {
                 existingDisksAliases.add(
                         newDisk.getDiskAlias().isEmpty() ? existingDisk.getDiskAlias() : newDisk.getDiskAlias());
@@ -136,11 +158,11 @@ public class DiskImagesValidator {
     public ValidationResult diskImagesSnapshotsNotAttachedToOtherVms(boolean onlyPlugged) {
         LinkedList<String> pluggedDiskSnapshotInfo = new LinkedList<>();
         for (DiskImage diskImage : diskImages) {
-            List<VmDevice> devices = getVmDeviceDao().getVmDevicesByDeviceId(diskImage.getId(), null);
+            List<VmDevice> devices = vmDeviceDao.getVmDevicesByDeviceId(diskImage.getId(), null);
             for (VmDevice device : devices) {
                 if (device.getSnapshotId() != null && (!onlyPlugged || device.isPlugged())) {
-                    VM vm = getVmDao().get(device.getVmId());
-                    Snapshot snapshot = getSnapshotDao().get(device.getSnapshotId());
+                    VM vm = vmDao.get(device.getVmId());
+                    Snapshot snapshot = snapshotDao.get(device.getSnapshotId());
                     pluggedDiskSnapshotInfo.add(String.format("%s ,%s, %s",
                         diskImage.getDiskAlias(), snapshot.getDescription(), vm.getName()));
                 }
@@ -160,13 +182,13 @@ public class DiskImagesValidator {
 
     public ValidationResult diskImagesSnapshotsAttachedToVm(Guid vmId) {
         LinkedList<String> diskSnapshotInfo = new LinkedList<>();
-        VM vm = getVmDao().get(vmId);
+        VM vm = vmDao.get(vmId);
         for (DiskImage diskImage : diskImages) {
-            List<VmDevice> devices = getVmDeviceDao().getVmDevicesByDeviceId(diskImage.getId(), vmId);
+            List<VmDevice> devices = vmDeviceDao.getVmDevicesByDeviceId(diskImage.getId(), vmId);
             if (devices.isEmpty()) {
                 // The specified disk image does not belong to the vm
-                Snapshot snapshot = getSnapshotDao().get(diskImage.getSnapshotId());
-                Disk disk = Injector.get(DiskDao.class).get(diskImage.getId());
+                Snapshot snapshot = snapshotDao.get(diskImage.getSnapshotId());
+                Disk disk = diskDao.get(diskImage.getId());
                 diskSnapshotInfo.add(String.format("%s ,%s",
                         disk.getDiskAlias(), snapshot.getDescription()));
             }
@@ -192,7 +214,7 @@ public class DiskImagesValidator {
         List<String> disksInfo = new LinkedList<>();
         for (DiskImage diskImage : diskImages) {
             if (diskImage.getVmEntityType() != null && diskImage.getVmEntityType().isTemplateType()) {
-                List<DiskImage> basedDisks = getDiskImageDao().getAllSnapshotsForParent(diskImage.getImageId());
+                List<DiskImage> basedDisks = diskImageDao.getAllSnapshotsForParent(diskImage.getImageId());
                 for (DiskImage basedDisk : basedDisks) {
                     if (storageDomainId == null || basedDisk.getStorageIds().contains(storageDomainId)) {
                         disksInfo.add(String.format("%s  (%s) ", basedDisk.getDiskAlias(), basedDisk.getId()));
@@ -222,7 +244,7 @@ public class DiskImagesValidator {
             List<Guid> imagesOnStorageDomain = domainImages.get(targetStorageDomainId);
 
             if (imagesOnStorageDomain == null) {
-                VDSReturnValue returnValue = Injector.get(VDSBrokerFrontend.class).runVdsCommand(
+                VDSReturnValue returnValue = vdsBrokerFrontend.runVdsCommand(
                         VDSCommandType.GetImagesList,
                         new GetImagesListVDSCommandParameters(targetStorageDomainId, storagePoolId)
                 );
@@ -232,7 +254,7 @@ public class DiskImagesValidator {
                     domainImages.put(targetStorageDomainId, imagesOnStorageDomain);
                 } else {
                     return new ValidationResult(EngineMessage.ERROR_GET_IMAGE_LIST,
-                            String.format("$sdName %1$s", getStorageDomainStaticDao().get(targetStorageDomainId).getName()));
+                            String.format("$sdName %1$s", storageDomainStaticDao.get(targetStorageDomainId).getName()));
                 }
             }
 
@@ -249,7 +271,7 @@ public class DiskImagesValidator {
         // then the engine should fail the operation.
         for (DiskImage diskImage : diskImages) {
             StorageFormatType storagePoolFormatType =
-                    getStoragePoolDao().get(diskImage.getStoragePoolId()).getStoragePoolFormatType();
+                    storagePoolDao.get(diskImage.getStoragePoolId()).getStoragePoolFormatType();
             if (storagePoolFormatType.compareTo(StorageFormatType.V4) < 0
                     && diskImage.getQcowCompat() == QcowCompat.QCOW2_V3) {
                 return new ValidationResult(EngineMessage.ACTION_TYPE_FAILED_QCOW_COMPAT_DOES_NOT_MATCH_DC_VERSION);
@@ -292,7 +314,7 @@ public class DiskImagesValidator {
 
     public ValidationResult snapshotAlreadyExists(Map<Guid, DiskImage> diskImagesMap) {
         Set<Guid> diskIds = diskImages.stream()
-                .flatMap(diskImage -> getDiskImageDao().getAllSnapshotsForImageGroup(diskImage.getId()).stream())
+                .flatMap(diskImage -> diskImageDao.getAllSnapshotsForImageGroup(diskImage.getId()).stream())
                 .map(DiskImage::getImageId)
                 .collect(Collectors.toSet());
         Set<Guid> providedImageIds = diskImagesMap.values().stream().map(DiskImage::getImageId).collect(Collectors.toSet());
@@ -320,33 +342,5 @@ public class DiskImagesValidator {
                     String.format("$ids %s", backupEnabled));
         }
         return ValidationResult.VALID;
-    }
-
-    protected VmDeviceDao getVmDeviceDao() {
-        return Injector.get(VmDeviceDao.class);
-    }
-
-    protected VmDao getVmDao() {
-        return Injector.get(VmDao.class);
-    }
-
-    protected SnapshotDao getSnapshotDao() {
-        return Injector.get(SnapshotDao.class);
-    }
-
-    protected DiskImageDao getDiskImageDao() {
-        return Injector.get(DiskImageDao.class);
-    }
-
-    protected StoragePoolDao getStoragePoolDao() {
-        return Injector.get(StoragePoolDao.class);
-    }
-
-    protected StorageDomainStaticDao getStorageDomainStaticDao() {
-        return Injector.get(StorageDomainStaticDao.class);
-    }
-
-    protected DiskDao getDiskDao() {
-        return Injector.get(DiskDao.class);
     }
 }

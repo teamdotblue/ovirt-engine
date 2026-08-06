@@ -1,5 +1,6 @@
 package org.ovirt.engine.core.bll.provider.network;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.NonTransactiveCommandAttribute;
@@ -24,6 +25,8 @@ public class AddNetworkOnProviderCommand<T extends AddNetworkStoragePoolParamete
     private NetworkDao networkDao;
     @Inject
     private ProviderProxyFactory providerProxyFactory;
+    @Inject
+    private Instance<ProviderValidator> providerValidatorInstance;
 
     private Provider<?> provider;
 
@@ -41,7 +44,7 @@ public class AddNetworkOnProviderCommand<T extends AddNetworkStoragePoolParamete
 
     @Override
     protected boolean validate() {
-        ProviderValidator validator = new ProviderValidator(getProvider());
+        ProviderValidator validator = providerValidatorInstance.get().init(getProvider());
 
         return validate(validator.providerIsSet()) && validate(validator.validateReadOnlyActions()) && super.validate();
     }

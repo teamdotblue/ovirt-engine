@@ -3,6 +3,9 @@ package org.ovirt.engine.core.bll.provider.storage;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.bll.provider.ProviderProxyFactory;
 import org.ovirt.engine.core.bll.provider.network.openstack.CustomizedRESTEasyConnector;
 import org.ovirt.engine.core.bll.storage.connection.CINDERStorageHelper;
@@ -18,7 +21,6 @@ import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dao.StorageDomainDao;
 import org.ovirt.engine.core.dao.StorageDomainStaticDao;
 import org.ovirt.engine.core.dao.provider.ProviderDao;
-import org.ovirt.engine.core.di.Injector;
 
 import com.woorea.openstack.base.client.OpenStackRequest;
 import com.woorea.openstack.cinder.Cinder;
@@ -35,10 +37,25 @@ import com.woorea.openstack.cinder.model.VolumeTypes;
 
 public class OpenStackVolumeProviderProxy extends AbstractOpenStackStorageProviderProxy<Cinder, OpenStackVolumeProviderProperties, CinderProviderValidator> {
 
+    @Inject
+    private CINDERStorageHelper cinderStorageHelper;
+    @Inject
+    private StorageDomainDao storageDomainDao;
+    @Inject
+    private Instance<CinderProviderValidator> cinderProviderValidatorInstance;
+
     private static final String API_VERSION = "/v2/";
 
     public OpenStackVolumeProviderProxy(Provider<OpenStackVolumeProviderProperties> provider) {
         this.provider = provider;
+    }
+
+    public OpenStackVolumeProviderProxy() {
+    }
+
+    public OpenStackVolumeProviderProxy init(Provider<OpenStackVolumeProviderProperties> provider) {
+        this.provider = provider;
+        return this;
     }
 
     @Override
@@ -56,7 +73,6 @@ public class OpenStackVolumeProviderProxy extends AbstractOpenStackStorageProvid
     }
 
     protected void attachStorageDomainToDataCenter(Guid storageDomainId, Guid storagePoolId) {
-        CINDERStorageHelper cinderStorageHelper = Injector.get(CINDERStorageHelper.class);
         cinderStorageHelper.attachCinderDomainToPool(storageDomainId, storagePoolId);
         cinderStorageHelper.activateCinderDomain(storageDomainId, storagePoolId);
     }
@@ -143,18 +159,18 @@ public class OpenStackVolumeProviderProxy extends AbstractOpenStackStorageProvid
     @Override
     public void onRemoval() {
         List<StorageDomain> storageDomains =
-                Injector.get(StorageDomainDao.class).getAllByConnectionId(provider.getId());
+                storageDomainDao.getAllByConnectionId(provider.getId());
 
         // Removing the static and dynamic storage domain entries
         StorageDomain storageDomainEntry = storageDomains.get(0);
-        Injector.get(StorageDomainDao.class).remove(storageDomainEntry.getId());
+        storageDomainDao.remove(storageDomainEntry.getId());
     }
 
     public static OpenStackVolumeProviderProxy getFromStorageDomainId(Guid storageDomainId,
-            ProviderProxyFactory providerProxyFactory) {
-        StorageDomainStatic storageDomainStatic = Injector.get(StorageDomainStaticDao.class).get(storageDomainId);
+            ProviderProxyFactory providerProxyFactory, StorageDomainStaticDao storageDomainStaticDao, ProviderDao providerDao) {
+        StorageDomainStatic storageDomainStatic = storageDomainStaticDao.get(storageDomainId);
         if (storageDomainStatic != null) {
-            return getProviderFromStorageDomainStatic(storageDomainStatic, providerProxyFactory);
+            return getProviderFromStorageDomainStatic(storageDomainStatic, providerProxyFactory, providerDao);
         }
         return null;
     }
@@ -162,25 +178,26 @@ public class OpenStackVolumeProviderProxy extends AbstractOpenStackStorageProvid
     public static OpenStackVolumeProviderProxy getFromStorageDomainId(Guid storageDomainId,
             Guid userID,
             boolean isFiltered,
-            ProviderProxyFactory providerProxyFactory) {
-        StorageDomain storageDomain = Injector.get(StorageDomainDao.class).get(storageDomainId, userID, isFiltered);
+            ProviderProxyFactory providerProxyFactory, StorageDomainDao storageDomainDao,
+            ProviderDao providerDao) {
+        StorageDomain storageDomain = storageDomainDao.get(storageDomainId, userID, isFiltered);
         if (storageDomain != null) {
-            Provider provider = Injector.get(ProviderDao.class).get(new Guid(storageDomain.getStorage()));
+            Provider provider = providerDao.get(new Guid(storageDomain.getStorage()));
             return providerProxyFactory.create(provider);
         }
         return null;
     }
 
     private static OpenStackVolumeProviderProxy getProviderFromStorageDomainStatic(
-            StorageDomainStatic storageDomainStatic, ProviderProxyFactory providerProxyFactory) {
-        Provider provider = Injector.get(ProviderDao.class).get(new Guid(storageDomainStatic.getStorage()));
+            StorageDomainStatic storageDomainStatic, ProviderProxyFactory providerProxyFactory, ProviderDao providerDao) {
+        Provider provider = providerDao.get(new Guid(storageDomainStatic.getStorage()));
         return providerProxyFactory.create(provider);
     }
 
     @Override
     public CinderProviderValidator getProviderValidator() {
         if (providerValidator == null) {
-            providerValidator = Injector.injectMembers(new CinderProviderValidator(provider));
+            providerValidator = cinderProviderValidatorInstance.get().createInstance(provider);
         }
         return providerValidator;
     }

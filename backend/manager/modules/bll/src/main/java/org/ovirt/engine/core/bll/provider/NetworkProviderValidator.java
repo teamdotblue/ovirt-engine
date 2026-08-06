@@ -1,5 +1,7 @@
 package org.ovirt.engine.core.bll.provider;
 
+import javax.enterprise.inject.Typed;
+
 import org.apache.commons.lang.StringUtils;
 import org.ovirt.engine.core.bll.ValidationResult;
 import org.ovirt.engine.core.common.businessentities.OpenstackNetworkProviderProperties;
@@ -7,10 +9,19 @@ import org.ovirt.engine.core.common.businessentities.Provider;
 import org.ovirt.engine.core.common.businessentities.ProviderType;
 import org.ovirt.engine.core.common.errors.EngineMessage;
 
+@Typed(NetworkProviderValidator.class)
 public class NetworkProviderValidator extends ProviderValidator {
 
     public NetworkProviderValidator(Provider<?> provider) {
         super(provider);
+    }
+
+    public NetworkProviderValidator() {
+    }
+
+    public NetworkProviderValidator createInstance(Provider<?> provider) {
+        init(provider);
+        return this;
     }
 
     @Override

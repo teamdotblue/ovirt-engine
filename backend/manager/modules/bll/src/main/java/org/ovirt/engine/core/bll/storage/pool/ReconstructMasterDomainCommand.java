@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.NonTransactiveCommandAttribute;
@@ -50,7 +51,9 @@ public class ReconstructMasterDomainCommand<T extends ReconstructMasterParameter
     @Inject
     private VdsDao vdsDao;
     @Inject
-    private ResourceManager resourceManager;
+    private Instance<ResourceManager> resourceManagerInstance;
+    @Inject
+    private Instance<StorageDomainValidator> storageDomainValidatorInstance;
 
     protected StorageDomain newMasterStorageDomain;
     protected Guid newMasterStorageDomainId;
@@ -94,7 +97,7 @@ public class ReconstructMasterDomainCommand<T extends ReconstructMasterParameter
     }
 
     protected StorageDomainValidator createStorageDomainValidator() {
-        return new StorageDomainValidator(getStorageDomain());
+        return storageDomainValidatorInstance.get().createInstance(getStorageDomain());
     }
 
     @Override
@@ -229,7 +232,7 @@ public class ReconstructMasterDomainCommand<T extends ReconstructMasterParameter
         // TODO improve this further by parallelizing (https://bugzilla.redhat.com/1905244)
         for (VDS vds : getAllRunningVdssInPool()) {
             try {
-                VDSReturnValue statusResult = resourceManager.runVdsCommand(VDSCommandType.SpmStatus,
+                VDSReturnValue statusResult = resourceManagerInstance.get().runVdsCommand(VDSCommandType.SpmStatus,
                         new SpmStatusVDSCommandParameters(vds.getId(), getStoragePoolId()));
                 if (statusResult != null && statusResult.getSucceeded() &&
                         ((SpmStatusResult) statusResult.getReturnValue()).getSpmStatus() == SpmStatus.SPM) {

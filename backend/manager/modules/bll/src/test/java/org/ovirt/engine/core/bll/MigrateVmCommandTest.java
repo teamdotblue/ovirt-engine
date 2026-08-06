@@ -4,6 +4,8 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
 
+import javax.enterprise.inject.Instance;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,6 +13,7 @@ import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.ovirt.engine.core.bll.validator.VmValidator;
+import org.ovirt.engine.core.bll.validator.storage.DiskImagesValidator;
 import org.ovirt.engine.core.common.action.MigrateVmParameters;
 import org.ovirt.engine.core.common.businessentities.VM;
 import org.ovirt.engine.core.common.errors.EngineMessage;
@@ -24,6 +27,12 @@ public class MigrateVmCommandTest {
     @Mock
     VmValidator vmValidator;
 
+    @Mock
+    private Instance<DiskImagesValidator> diskImagesValidatorInstance;
+
+    @Mock
+    private DiskImagesValidator diskImagesValidator;
+
     @Spy
     private MigrateVmCommand<MigrateVmParameters> command = new MigrateVmCommand<>(new MigrateVmParameters(false, vmId), null);
 
@@ -33,6 +42,8 @@ public class MigrateVmCommandTest {
         VM vm = new VM();
         vm.setId(vmId);
         command.setVm(vm);
+        // when(diskImagesValidatorInstance.get()).thenReturn(diskImagesValidator);
+        // when(diskImagesValidator.init(any())).thenReturn(diskImagesValidator);
     }
 
     @Test

@@ -5,6 +5,7 @@ import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
@@ -14,6 +15,8 @@ import static org.ovirt.engine.core.bll.validator.ValidationResultMatchers.repla
 
 import java.util.ArrayList;
 import java.util.List;
+
+import javax.enterprise.inject.Instance;
 
 import org.hamcrest.Matcher;
 import org.junit.jupiter.api.BeforeEach;
@@ -52,11 +55,14 @@ public class RemoveProviderValidatorTest {
     @Mock
     private ClusterDao clusterDao;
 
+    @Mock
+    private Instance<NetworkValidator> networkValidatorInstance;
+
     /* --- Set up for tests --- */
 
     @BeforeEach
     public void setUp() {
-        validator = spy(new RemoveProviderValidator(networkDao, clusterDao, provider));
+        validator = spy(new RemoveProviderValidator(networkDao, clusterDao, provider, networkValidatorInstance));
         when(networkDao.getAllForProvider(any())).thenReturn(networks);
         when(clusterDao.getAllClustersByDefaultNetworkProviderId(any())).thenReturn(clusters);
     }
@@ -70,6 +76,8 @@ public class RemoveProviderValidatorTest {
         Network net = mock(Network.class);
         when(net.getName()).thenReturn("net");
         networks.add(net);
+        NetworkValidator networkValidator = spy(new NetworkValidator(net));
+        doReturn(networkValidator).when(networkValidatorInstance).get();
         return net;
     }
 

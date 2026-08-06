@@ -3,6 +3,7 @@ package org.ovirt.engine.core.bll;
 import java.util.Arrays;
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.apache.commons.collections.CollectionUtils;
@@ -49,6 +50,8 @@ public class AddClusterCommand<T extends ClusterOperationParameters>
     private NetworkClusterDao networkClusterDao;
     @Inject
     private ClusterCpuFlagsManager clusterCpuFlagsManager;
+    @Inject
+    private Instance<HasStoragePoolValidator> hasStoragePoolValidatorInstance;
 
     public AddClusterCommand(T parameters, CommandContext commandContext) {
         super(parameters, commandContext);
@@ -153,7 +156,7 @@ public class AddClusterCommand<T extends ClusterOperationParameters>
 
     @Override
     protected boolean validate() {
-        HasStoragePoolValidator hspValidator = new HasStoragePoolValidator(getCluster());
+        HasStoragePoolValidator hspValidator = hasStoragePoolValidatorInstance.get().init(getCluster());
         final ClusterValidator validator = getClusterValidator(getCluster());
 
         return validate(validator.nameNotUsed())

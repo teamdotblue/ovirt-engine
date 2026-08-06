@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import javax.enterprise.inject.Instance;
+import javax.enterprise.inject.Typed;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.CommandBase;
@@ -47,18 +49,17 @@ public class AutodefineExternalNetworkCommand<T extends IdParameters> extends Co
 
     @Inject
     private NetworkDao networkDao;
-
     @Inject
     private ClusterDao clusterDao;
-
     @Inject
     private NetworkClusterDao networkClusterDao;
-
     @Inject
     private NetworkHelper networkHelper;
-
     @Inject
     private NetworkLocking networkLocking;
+    @Inject
+    @Typed(NetworkValidator.class)
+    private Instance<NetworkValidator> networkValidatorInstance;
 
     private Network network;
 
@@ -84,7 +85,7 @@ public class AutodefineExternalNetworkCommand<T extends IdParameters> extends Co
 
     @Override
     protected boolean validate() {
-        NetworkValidator validator = new NetworkValidator(getNetwork());
+        NetworkValidator validator = (NetworkValidator) networkValidatorInstance.get().init(getNetwork());
         return validate(validator.networkIsSet(getParameters().getId()))
                 && validate(validator.isVmNetwork())
                 && validate(validator.notExternalNetwork());

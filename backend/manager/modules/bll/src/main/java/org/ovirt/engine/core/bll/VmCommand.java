@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.apache.commons.collections.CollectionUtils;
@@ -92,7 +93,7 @@ public abstract class VmCommand<T extends VmOperationParameterBase> extends Comm
     @Inject
     protected VmTemplateHandler vmTemplateHandler;
     @Inject
-    private ResourceManager resourceManager;
+    private Instance<ResourceManager> resourceManagerInstance;
     @Inject
     private VmStaticDao vmStaticDao;
     @Inject
@@ -111,12 +112,14 @@ public abstract class VmCommand<T extends VmOperationParameterBase> extends Comm
     private OvfDataUpdater ovfDataUpdater;
     @Inject
     private VmBackupDao vmBackupDao;
-
     @Inject
     protected ImagesHandler imagesHandler;
-
     @Inject
     protected OsRepository osRepository;
+    @Inject
+    private Instance<QuotaValidator> quotaValidatorInstance;
+    @Inject
+    private Instance<StorageDomainValidator> storageDomainValidatorProvider;
 
     private Boolean skipCommandExecution;
 
@@ -128,7 +131,7 @@ public abstract class VmCommand<T extends VmOperationParameterBase> extends Comm
     }
 
     protected VmManager getVmManager() {
-        return resourceManager.getVmManager(getVmId());
+        return resourceManagerInstance.get().getVmManager(getVmId());
     }
 
     protected MacPool getMacPool() {
@@ -562,7 +565,7 @@ public abstract class VmCommand<T extends VmOperationParameterBase> extends Comm
 
     protected boolean validateLeaseStorageDomain(Guid leaseStorageDomainId) {
         StorageDomain domain = storageDomainDao.getForStoragePool(leaseStorageDomainId, getStoragePoolId());
-        StorageDomainValidator validator = new StorageDomainValidator(domain);
+        StorageDomainValidator validator = storageDomainValidatorProvider.get().createInstance(domain);
         return validate(validator.isDomainExistAndActive()) && validate(validator.isDataDomain());
     }
 
@@ -592,7 +595,7 @@ public abstract class VmCommand<T extends VmOperationParameterBase> extends Comm
     }
 
     public QuotaValidator createQuotaValidator(Guid quotaId) {
-        return QuotaValidator.createInstance(quotaId, true);
+        return quotaValidatorInstance.get().createInstance(quotaId, true);
     }
 
     /**
@@ -646,7 +649,7 @@ public abstract class VmCommand<T extends VmOperationParameterBase> extends Comm
     }
 
     protected VdsManager getVdsManager(Guid vdsId) {
-        return resourceManager.getVdsManager(vdsId);
+        return resourceManagerInstance.get().getVdsManager(vdsId);
     }
 
     public void clearDiskBitmaps(List<DiskImage> diskImages) {

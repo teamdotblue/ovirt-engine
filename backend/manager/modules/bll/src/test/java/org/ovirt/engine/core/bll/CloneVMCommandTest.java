@@ -8,7 +8,10 @@ import static org.mockito.Mockito.when;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
+
+import javax.enterprise.inject.Instance;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,6 +24,8 @@ import org.mockito.quality.Strictness;
 import org.ovirt.engine.core.bll.context.CommandContext;
 import org.ovirt.engine.core.bll.interfaces.BackendInternal;
 import org.ovirt.engine.core.bll.utils.VmDeviceUtils;
+import org.ovirt.engine.core.bll.validator.storage.DiskImagesValidator;
+import org.ovirt.engine.core.bll.validator.storage.MultipleStorageDomainsValidator;
 import org.ovirt.engine.core.common.action.CloneVmParameters;
 import org.ovirt.engine.core.common.businessentities.BiosType;
 import org.ovirt.engine.core.common.businessentities.Cluster;
@@ -68,6 +73,14 @@ public class CloneVMCommandTest extends BaseCommandTest {
     private VmTemplateHandler vmTemplateHandler;
     @Mock
     private BackendInternal backendInternal;
+    @Mock
+    private Instance<DiskImagesValidator> diskImagesValidatorInstance;
+    @Mock
+    private DiskImagesValidator diskImagesValidator;
+    @Mock
+    private Instance<MultipleStorageDomainsValidator> multipleStorageDomainsValidator;
+    @Mock
+    private MultipleStorageDomainsValidator multipleStorageDomainsValidatorMock;
 
     DiskImage disk = new DiskImage();
 
@@ -89,8 +102,23 @@ public class CloneVMCommandTest extends BaseCommandTest {
     @BeforeEach
     public void setUp() {
         VmBase vmBase = new VmBase();
+        AtomicReference<List<DiskImage>> validatedImages = new AtomicReference<>(Collections.emptyList());
         vmBase.setBiosType(BiosType.Q35_SEA_BIOS);
         doReturn(vmBase).when(cmd).getVmBase(any());
+        when(diskImagesValidatorInstance.get()).thenReturn(diskImagesValidator);
+        when(diskImagesValidator.init(any())).thenAnswer(invocation -> {
+            validatedImages.set(invocation.getArgument(0));
+            return diskImagesValidator;
+        });
+        when(diskImagesValidator.diskImagesNotIllegal()).thenAnswer(invocation -> validatedImages.get().stream()
+                .anyMatch(diskImage -> diskImage.getImageStatus() == ImageStatus.ILLEGAL)
+                ? new ValidationResult(EngineMessage.ACTION_TYPE_FAILED_DISKS_ILLEGAL)
+                : ValidationResult.VALID);
+        when(multipleStorageDomainsValidator.get()).thenReturn(multipleStorageDomainsValidatorMock);
+        when(multipleStorageDomainsValidatorMock.init(any(), any())).thenReturn(multipleStorageDomainsValidatorMock);
+        when(multipleStorageDomainsValidatorMock.allDomainsExistAndActive()).thenReturn(ValidationResult.VALID);
+        when(multipleStorageDomainsValidatorMock.isSupportedByManagedBlockStorageDomains(any()))
+                .thenReturn(ValidationResult.VALID);
     }
 
     @Test

@@ -2,6 +2,7 @@ package org.ovirt.engine.core.bll.qos;
 
 import java.util.Objects;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.context.CommandContext;
@@ -15,6 +16,8 @@ public class UpdateHostNetworkQosCommand extends UpdateQosCommandBase<HostNetwor
 
     @Inject
     private RefreshNetworksParametersFactory refreshNetworksParametersFactory;
+    @Inject
+    private Instance<HostNetworkQosValidator> hostNetworkQosValidatorInstance;
 
     public UpdateHostNetworkQosCommand(QosParametersBase<HostNetworkQos> parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -27,7 +30,7 @@ public class UpdateHostNetworkQosCommand extends UpdateQosCommandBase<HostNetwor
 
     @Override
     protected HostNetworkQosValidator getQosValidator(HostNetworkQos qos) {
-        return new HostNetworkQosValidator(qos);
+        return hostNetworkQosValidatorInstance.get().init(qos);
     }
 
     @Override

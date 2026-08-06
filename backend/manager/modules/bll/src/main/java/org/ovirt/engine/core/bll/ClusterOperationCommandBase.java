@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.apache.commons.lang.StringUtils;
@@ -75,6 +76,8 @@ public abstract class ClusterOperationCommandBase<T extends ClusterOperationPara
     private DefaultManagementNetworkFinder defaultManagementNetworkFinder;
     @Inject
     private ProviderDao providerDao;
+    @Inject
+    private Instance<NetworkProviderValidator> networkProviderValidatorInstance;
 
     private Network managementNetwork;
 
@@ -374,7 +377,7 @@ public abstract class ClusterOperationCommandBase<T extends ClusterOperationPara
     }
 
     private boolean validateNetworkProvider(Provider provider) {
-        NetworkProviderValidator networkProviderValidator = new NetworkProviderValidator(provider);
+        NetworkProviderValidator networkProviderValidator = networkProviderValidatorInstance.get().createInstance(provider);
 
         return validate(networkProviderValidator.providerIsSet())
                 && validate(networkProviderValidator.providerTypeIsNetwork());

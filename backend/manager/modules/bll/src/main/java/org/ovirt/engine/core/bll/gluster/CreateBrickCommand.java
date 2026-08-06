@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.LockMessagesMatchUtil;
@@ -46,6 +47,8 @@ public class CreateBrickCommand extends VdsCommand<CreateBrickParameters> {
     private AnsibleExecutor ansibleExecutor;
     @Inject
     private StorageDeviceDao storageDeviceDao;
+    @Inject
+    private Instance<HostValidator> hostValidatorInstance;
 
     public CreateBrickCommand(CreateBrickParameters parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -71,7 +74,7 @@ public class CreateBrickCommand extends VdsCommand<CreateBrickParameters> {
             return failValidation(EngineMessage.ACTION_TYPE_FAILED_STORAGE_PROVISIONING_NOT_SUPPORTED_BY_CLUSTER);
         }
 
-        HostValidator validator = HostValidator.createInstance(getVds());
+        HostValidator validator = getHostValidator();
         if (!validate(validator.isUp())) {
             return false;
         }
@@ -102,6 +105,10 @@ public class CreateBrickCommand extends VdsCommand<CreateBrickParameters> {
         }
 
         return true;
+    }
+
+    public HostValidator getHostValidator() {
+        return hostValidatorInstance.get().createInstance(getVds());
     }
 
     @Override

@@ -5,6 +5,8 @@ import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.bll.ValidationResult;
 import org.ovirt.engine.core.bll.provider.network.openstack.OpenStackTokenProviderFactory;
 import org.ovirt.engine.core.common.businessentities.BusinessEntitiesDefinitions;
@@ -14,10 +16,12 @@ import org.ovirt.engine.core.common.businessentities.Provider;
 import org.ovirt.engine.core.common.businessentities.ProviderType;
 import org.ovirt.engine.core.common.errors.EngineMessage;
 import org.ovirt.engine.core.dao.provider.ProviderDao;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.utils.ReplacementUtils;
 
 public class ProviderValidator<P extends Provider.AdditionalProperties> {
+
+    @Inject
+    private ProviderDao providerDao;
 
     protected Provider<P> provider;
 
@@ -29,16 +33,24 @@ public class ProviderValidator<P extends Provider.AdditionalProperties> {
         this.provider = provider;
     }
 
+    public ProviderValidator() {
+    }
+
+    public ProviderValidator init(Provider<P> provider) {
+        this.provider = provider;
+        return this;
+    }
+
     public ValidationResult nameAvailable() {
         return ValidationResult.failWith(EngineMessage.ACTION_TYPE_FAILED_NAME_ALREADY_USED)
-                .when(Injector.get(ProviderDao.class).getByName(provider.getName()) != null);
+                .when(getProviderDao().getByName(provider.getName()) != null);
     }
 
     public ValidationResult validateOpenStackImageConstraints() {
         if (ProviderType.OPENSTACK_IMAGE != provider.getType()) {
             return ValidationResult.VALID;
         }
-        List<Provider<?>> existingProviders = Injector.get(ProviderDao.class).getAllByTypes(ProviderType.OPENSTACK_IMAGE);
+        List<Provider<?>> existingProviders = getProviderDao().getAllByTypes(ProviderType.OPENSTACK_IMAGE);
         return OpenStackTokenProviderFactory.isApiV3(provider) ?
                 openStackImageV3UrlAndNameExists(existingProviders) :
                 openStackImageV2UrlAndTenantExists(existingProviders);
@@ -137,5 +149,9 @@ public class ProviderValidator<P extends Provider.AdditionalProperties> {
 
     private String getProviderNameReplacement() {
         return ReplacementUtils.getVariableAssignmentString(EngineMessage.ACTION_TYPE_FAILED_EXTERNAL_PROVIDER_IS_READ_ONLY, provider.getName());
+    }
+
+    public ProviderDao getProviderDao() {
+        return providerDao;
     }
 }

@@ -19,6 +19,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
@@ -43,7 +44,6 @@ import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dao.DiskImageDao;
 import org.ovirt.engine.core.dao.StorageDomainDao;
 import org.ovirt.engine.core.dao.VmDao;
-import org.ovirt.engine.core.utils.InjectedMock;
 import org.ovirt.engine.core.utils.InjectorExtension;
 import org.ovirt.engine.core.utils.ReplacementUtils;
 
@@ -54,19 +54,26 @@ public class DiskValidatorTest {
     private VmDao vmDao;
 
     @Mock
-    @InjectedMock
     public StorageDomainDao storageDomainDao;
 
     @Mock
     private DiskImageDao diskImageDao;
 
-    private DiskValidator validator;
-    private DiskImage disk;
-    private DiskValidator lunValidator;
-    private DiskImagesValidator diskImagesValidator;
+    private DiskImage disk = createDiskImage();
+    private LunDisk lunDisk = createLunDisk();
+
+    @Spy
+    private DiskValidator validator = new DiskValidator(disk);
+
+    @Spy
+    private DiskValidator lunValidator = new DiskValidator(lunDisk);
+
+    @Spy
+    private DiskImagesValidator diskImagesValidator = new DiskImagesValidator(disk);
 
     private static DiskImage createDiskImage() {
         DiskImage disk = new DiskImage();
+        disk.setDiskAlias("disk1");
         disk.setId(Guid.newGuid());
         Image image = new Image();
         image.setVolumeType(VolumeType.Sparse);
@@ -93,19 +100,11 @@ public class DiskValidatorTest {
 
     @BeforeEach
     public void setUp() {
-        disk = createDiskImage();
-        disk.setDiskAlias("disk1");
-        validator = spy(new DiskValidator(disk));
         diskImagesValidator = spy(new DiskImagesValidator(disk));
         doReturn(vmDao).when(validator).getVmDao();
         doReturn(diskImageDao).when(validator).getDiskImageDao();
-        doReturn(diskImageDao).when(diskImagesValidator).getDiskImageDao();
+        doReturn(storageDomainDao).when(validator).getStorageDomainDao();
 
-    }
-
-    private void setupForLun() {
-        LunDisk lunDisk = createLunDisk();
-        lunValidator = spy(new DiskValidator(lunDisk));
     }
 
     private StorageDomain createStorageDomainForDisk(StorageType storageType) {
@@ -140,7 +139,6 @@ public class DiskValidatorTest {
 
     @Test
     public void testIsUsingScsiReservationValidWhenSgioIsUnFiltered() {
-        setupForLun();
 
         LunDisk lunDisk1 = createLunDisk(ScsiGenericIO.UNFILTERED);
 
@@ -150,7 +148,6 @@ public class DiskValidatorTest {
 
     @Test
     public void testIsUsingScsiReservationValidWhenSgioIsFiltered() {
-        setupForLun();
 
         LunDisk lunDisk1 = createLunDisk(ScsiGenericIO.FILTERED);
 
@@ -247,7 +244,6 @@ public class DiskValidatorTest {
 
     @Test
     public void sparsifyNotSupportedForDirectLun() {
-        setupForLun();
         assertThat(lunValidator.isSparsifySupported(),
                 failsWith(EngineMessage.ACTION_TYPE_FAILED_DISK_SPARSIFY_NOT_SUPPORTED_BY_DISK_STORAGE_TYPE));
     }

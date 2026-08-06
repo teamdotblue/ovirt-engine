@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.Lock;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.LockMessagesMatchUtil;
@@ -74,6 +75,12 @@ public class AttachDiskToVmCommand<T extends AttachDetachVmDiskParameters> exten
     private ImageDao imageDao;
     @Inject
     private SnapshotDao snapshotDao;
+    @Inject
+    private Instance<DiskValidator> diskValidatorInstance;
+    @Inject
+    private Instance<StorageDomainValidator> storageDomainValidatorInstance;
+    @Inject
+    private Instance<VmValidator> vmValidatorInstance;
 
     private List<PermissionSubject> permsList = null;
     private Disk disk;
@@ -98,7 +105,7 @@ public class AttachDiskToVmCommand<T extends AttachDetachVmDiskParameters> exten
 
     @Override
     protected boolean validate() {
-        DiskValidator oldDiskValidator = new DiskValidator(disk);
+        DiskValidator oldDiskValidator = diskValidatorInstance.get().init(disk);
         if (!validate(oldDiskValidator.isDiskExists())) {
             return false;
         }
@@ -136,7 +143,7 @@ public class AttachDiskToVmCommand<T extends AttachDetachVmDiskParameters> exten
             }
         }
 
-        VmValidator vmValidator = new VmValidator(getVm());
+        VmValidator vmValidator = vmValidatorInstance.get().init(getVm());
         if (!validate(vmValidator.isVmExists())) {
             return false;
         }
@@ -216,7 +223,7 @@ public class AttachDiskToVmCommand<T extends AttachDetachVmDiskParameters> exten
     }
 
     protected StorageDomainValidator getStorageDomainValidator(StorageDomain storageDomain) {
-        return new StorageDomainValidator(storageDomain);
+        return storageDomainValidatorInstance.get().createInstance(storageDomain);
     }
 
     @Override

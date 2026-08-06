@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.CommandBase;
@@ -28,6 +29,8 @@ public class GetVmLeaseInfoCommand<T extends VmLeaseParameters> extends CommandB
 
     @Inject
     private StorageDomainDao storageDomainDao;
+    @Inject
+    private Instance<StorageDomainValidator> storageDomainValidatorInstance;
 
     public GetVmLeaseInfoCommand(T parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -41,7 +44,7 @@ public class GetVmLeaseInfoCommand<T extends VmLeaseParameters> extends CommandB
     protected boolean validate() {
         StorageDomain domain = storageDomainDao.getForStoragePool(getParameters().getStorageDomainId(),
                 getParameters().getStoragePoolId());
-        StorageDomainValidator validator = new StorageDomainValidator(domain);
+        StorageDomainValidator validator = storageDomainValidatorInstance.get().createInstance(domain);
         return validate(validator.isDomainExistAndActive()) && validate(validator.isDataDomain());
     }
 

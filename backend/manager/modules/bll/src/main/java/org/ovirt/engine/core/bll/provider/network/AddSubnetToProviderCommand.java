@@ -3,6 +3,7 @@ package org.ovirt.engine.core.bll.provider.network;
 import java.util.Collections;
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.CommandBase;
@@ -28,9 +29,10 @@ public class AddSubnetToProviderCommand<T extends AddExternalSubnetParameters> e
 
     @Inject
     private ProviderDao providerDao;
-
     @Inject
     private ProviderProxyFactory providerProxyFactory;
+    @Inject
+    private Instance<ProviderValidator> providerValidatorInstance;
 
 
     public AddSubnetToProviderCommand(T parameters, CommandContext cmdContext) {
@@ -54,7 +56,7 @@ public class AddSubnetToProviderCommand<T extends AddExternalSubnetParameters> e
 
     @Override
     protected boolean validate() {
-        ProviderValidator validator = new ProviderValidator(getProvider());
+        ProviderValidator validator = providerValidatorInstance.get().init(getProvider());
 
         return validate(validator.providerIsSet()) && validate(validator.validateReadOnlyActions());
     }

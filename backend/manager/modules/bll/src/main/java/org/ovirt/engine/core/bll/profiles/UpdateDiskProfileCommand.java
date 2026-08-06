@@ -4,6 +4,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.VmSlaPolicyUtils;
@@ -17,7 +18,6 @@ import org.ovirt.engine.core.common.errors.EngineMessage;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dao.profiles.DiskProfileDao;
 import org.ovirt.engine.core.dao.profiles.ProfilesDao;
-import org.ovirt.engine.core.di.Injector;
 
 public class UpdateDiskProfileCommand extends UpdateProfileCommandBase<DiskProfileParameters, DiskProfile, DiskProfileValidator> {
 
@@ -25,6 +25,8 @@ public class UpdateDiskProfileCommand extends UpdateProfileCommandBase<DiskProfi
     private VmSlaPolicyUtils vmSlaPolicyUtils;
     @Inject
     private DiskProfileDao diskProfileDao;
+    @Inject
+    private Instance<DiskProfileValidator> diskProfileValidatorInstance;
 
     public UpdateDiskProfileCommand(DiskProfileParameters parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -32,7 +34,7 @@ public class UpdateDiskProfileCommand extends UpdateProfileCommandBase<DiskProfi
 
     @Override
     protected DiskProfileValidator getProfileValidator() {
-        return Injector.injectMembers(new DiskProfileValidator(getProfile()));
+        return diskProfileValidatorInstance.get().createWithProfile(getProfile());
     }
 
     @Override

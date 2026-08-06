@@ -10,6 +10,8 @@ import static org.mockito.Mockito.when;
 import java.util.ArrayList;
 import java.util.Collections;
 
+import javax.enterprise.inject.Instance;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,6 +24,8 @@ import org.mockito.quality.Strictness;
 import org.ovirt.engine.core.bll.ValidateTestUtils;
 import org.ovirt.engine.core.bll.ValidationResult;
 import org.ovirt.engine.core.bll.snapshots.SnapshotsValidator;
+import org.ovirt.engine.core.bll.validator.VmValidator;
+import org.ovirt.engine.core.bll.validator.storage.DiskValidator;
 import org.ovirt.engine.core.bll.validator.storage.DiskVmElementValidator;
 import org.ovirt.engine.core.bll.validator.storage.StorageDomainValidator;
 import org.ovirt.engine.core.common.action.ActionType;
@@ -69,6 +73,15 @@ public class AttachDiskToVmCommandTest {
     @Mock
     private DiskHandler diskHandler;
 
+    @Mock
+    private Instance<DiskValidator> diskValidatorInstance;
+
+    @Mock
+    private DiskValidator diskValidator;
+
+    @Mock
+    private Instance<VmValidator> vmValidatorInstance;
+
     private AttachDetachVmDiskParameters parameters = createParameters();
 
     @Spy
@@ -79,6 +92,9 @@ public class AttachDiskToVmCommandTest {
     public void initTest() {
         initialSetup();
         initCommand();
+        when(diskValidatorInstance.get()).thenReturn(diskValidator);
+        when(diskValidator.init(any())).thenReturn(diskValidator);
+        when(vmValidatorInstance.get()).thenReturn(new VmValidator());
     }
 
     private void initialSetup() {

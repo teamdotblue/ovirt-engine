@@ -3,6 +3,8 @@ package org.ovirt.engine.core.bll.validator.storage;
 import java.util.Arrays;
 import java.util.List;
 
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.bll.ValidationResult;
 import org.ovirt.engine.core.common.businessentities.Cluster;
 import org.ovirt.engine.core.common.businessentities.StoragePool;
@@ -13,24 +15,37 @@ import org.ovirt.engine.core.common.config.ConfigValues;
 import org.ovirt.engine.core.common.errors.EngineMessage;
 import org.ovirt.engine.core.dao.ClusterDao;
 import org.ovirt.engine.core.dao.StoragePoolIsoMapDao;
-import org.ovirt.engine.core.di.Injector;
 
 /**
  * Validate validation methods for storage pool handling
  */
 public class StoragePoolValidator {
+
+    @Inject
+    private ClusterDao clusterDao;
+    @Inject
+    private StoragePoolIsoMapDao storagePoolIsoMapDao;
+
     private StoragePool storagePool;
 
     public StoragePoolValidator(StoragePool storagePool) {
         this.storagePool = storagePool;
     }
 
+    public StoragePoolValidator() {
+    }
+
+    public StoragePoolValidator init(StoragePool storagePool) {
+        this.storagePool = storagePool;
+        return this;
+    }
+
     protected ClusterDao getClusterDao() {
-        return Injector.get(ClusterDao.class);
+        return clusterDao;
     }
 
     public StoragePoolIsoMapDao getStoragePoolIsoMapDao() {
-        return Injector.get(StoragePoolIsoMapDao.class);
+        return storagePoolIsoMapDao;
     }
 
     public ValidationResult isNotLocalfsWithDefaultCluster() {

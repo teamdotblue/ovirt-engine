@@ -1,6 +1,7 @@
 package org.ovirt.engine.core.bll.provider;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.ovirt.engine.core.bll.validator.ValidationResultMatchers.failsWith;
@@ -8,9 +9,11 @@ import static org.ovirt.engine.core.bll.validator.ValidationResultMatchers.isVal
 
 import java.util.Collections;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
@@ -21,7 +24,6 @@ import org.ovirt.engine.core.common.businessentities.Provider.AdditionalProperti
 import org.ovirt.engine.core.common.businessentities.ProviderType;
 import org.ovirt.engine.core.common.errors.EngineMessage;
 import org.ovirt.engine.core.dao.provider.ProviderDao;
-import org.ovirt.engine.core.utils.InjectedMock;
 import org.ovirt.engine.core.utils.InjectorExtension;
 import org.ovirt.engine.core.utils.ReplacementUtils;
 
@@ -36,11 +38,29 @@ public class ProviderValidatorTest {
 
     protected Provider<AdditionalProperties> provider = createProvider("provider");
 
+    @Spy
     private ProviderValidator validator = new ProviderValidator(provider);
 
+    @Spy
+    private ProviderValidator nullValidator = new ProviderValidator(null);
+
+    String url = "http://localhost:9292";
+    String tenant = "admin";
+
+    Provider<OpenStackImageProviderProperties> newProvider = createOpenStackV2Provider("new", url, tenant);
+
+    @Spy
+    ProviderValidator openStackValidator = new ProviderValidator(newProvider);
+
     @Mock
-    @InjectedMock
-    public ProviderDao providerDao;
+    private ProviderDao providerDao;
+
+    @BeforeEach
+    public void setup() {
+        doReturn(providerDao).when(validator).getProviderDao();
+        doReturn(providerDao).when(nullValidator).getProviderDao();
+        doReturn(providerDao).when(openStackValidator).getProviderDao();
+    }
 
     @Test
     public void providerIsSet() {
@@ -49,8 +69,7 @@ public class ProviderValidatorTest {
 
     @Test
     public void providerIsNotSet() {
-        validator = new ProviderValidator(null);
-        assertThat(validator.providerIsSet(), failsWith(EngineMessage.ACTION_TYPE_FAILED_PROVIDER_DOESNT_EXIST));
+        assertThat(nullValidator.providerIsSet(), failsWith(EngineMessage.ACTION_TYPE_FAILED_PROVIDER_DOESNT_EXIST));
     }
 
     @Test
@@ -94,13 +113,9 @@ public class ProviderValidatorTest {
     @Test
     @SuppressWarnings("unchecked")
     public void openStackImageV2ConstraintsInvalid() {
-        String url = "http://localhost:9292";
-        String tenant = "admin";
         Provider<OpenStackImageProviderProperties> existingProvider = createOpenStackV2Provider("existing", url, tenant);
-        Provider<OpenStackImageProviderProperties> newProvider = createOpenStackV2Provider("new", url, tenant);
         when(providerDao.getAllByTypes(ProviderType.OPENSTACK_IMAGE)).thenReturn(Collections.singletonList(existingProvider));
-        ProviderValidator validator = new ProviderValidator(newProvider);
-        assertThat(validator.validateOpenStackImageConstraints(), failsWith(EngineMessage.ACTION_TYPE_FAILED_PROVIDER_URL_TENANT_COMBINATION_NOT_UNIQUE));
+        assertThat(openStackValidator.validateOpenStackImageConstraints(), failsWith(EngineMessage.ACTION_TYPE_FAILED_PROVIDER_URL_TENANT_COMBINATION_NOT_UNIQUE));
     }
 
     @Test

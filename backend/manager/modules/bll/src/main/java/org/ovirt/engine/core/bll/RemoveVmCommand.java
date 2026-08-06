@@ -75,6 +75,8 @@ import org.ovirt.engine.core.utils.transaction.TransactionSupport;
 public class RemoveVmCommand<T extends RemoveVmParameters> extends VmCommand<T> implements QuotaStorageDependent {
 
     @Inject
+    private Instance<DiskImagesValidator> diskImagesValidatorInstance;
+    @Inject
     private Event<Guid> vmDeleted;
     @Inject
     private ImageDao imageDao;
@@ -91,12 +93,18 @@ public class RemoveVmCommand<T extends RemoveVmParameters> extends VmCommand<T> 
     @Inject
     @Typed(ConcurrentChildCommandsExecutionCallback.class)
     private Instance<ConcurrentChildCommandsExecutionCallback> callbackProvider;
-
     @Inject
     private ExternalNetworkManagerFactory externalNetworkManagerFactory;
-
     @Inject
     private KubevirtMonitoring kubevirt;
+    @Inject
+    private Instance<MultipleStorageDomainsValidator> multipleStorageDomainsValidator;
+    @Inject
+    private Instance<StorageDomainValidator> storageDomainValidatorProvider;
+    @Inject
+    private Instance<VmValidator> vmValidatorInstance;
+    @Inject
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
 
     private List<CinderDisk> cinderDisks;
 
@@ -264,7 +272,7 @@ public class RemoveVmCommand<T extends RemoveVmParameters> extends VmCommand<T> 
 
         Collection<Disk> vmDisks = getVm().getDiskMap().values();
         List<DiskImage> vmImages = DisksFilter.filterImageDisks(vmDisks, ONLY_NOT_SHAREABLE, ONLY_ACTIVE);
-        if (!vmImages.isEmpty() && !validate(new StoragePoolValidator(getStoragePool()).existsAndUp())) {
+        if (!vmImages.isEmpty() && !validate(storagePoolValidatorInstance.get().init(getStoragePool()).existsAndUp())) {
             return false;
         }
 
@@ -272,12 +280,12 @@ public class RemoveVmCommand<T extends RemoveVmParameters> extends VmCommand<T> 
         vmImages.addAll(getManagedBlockDisks());
         if (!vmImages.isEmpty()) {
             Set<Guid> storageIds = ImagesHandler.getAllStorageIdsForImageIds(vmImages);
-            MultipleStorageDomainsValidator storageValidator = new MultipleStorageDomainsValidator(getVm().getStoragePoolId(), storageIds);
+            MultipleStorageDomainsValidator storageValidator = multipleStorageDomainsValidator.get().init(getVm().getStoragePoolId(), storageIds);
             if (!validate(storageValidator.allDomainsExistAndActive())) {
                 return false;
             }
 
-            DiskImagesValidator diskImagesValidator = new DiskImagesValidator(vmImages);
+            DiskImagesValidator diskImagesValidator = diskImagesValidatorInstance.get().init(vmImages);
             if (!getParameters().getForce() && !validate(diskImagesValidator.diskImagesNotLocked())) {
                 return false;
             }
@@ -287,7 +295,7 @@ public class RemoveVmCommand<T extends RemoveVmParameters> extends VmCommand<T> 
         if (getVm().getLeaseStorageDomainId() != null) {
             StorageDomain leaseStorageDomain =
                     storageDomainDao.getForStoragePool(getVm().getLeaseStorageDomainId(), getVm().getStoragePoolId());
-            StorageDomainValidator storageDomainValidator = new StorageDomainValidator(leaseStorageDomain);
+            StorageDomainValidator storageDomainValidator = storageDomainValidatorProvider.get().createInstance(leaseStorageDomain);
             if (!validate(storageDomainValidator.isDomainExistAndActive())) {
                 return failValidation(EngineMessage.ACTION_TYPE_FAILED_INVALID_VM_LEASE_STORAGE_DOMAIN_STATUS,
                         String.format("$LeaseStorageDomainName %1$s", leaseStorageDomain.getName()));
@@ -296,7 +304,7 @@ public class RemoveVmCommand<T extends RemoveVmParameters> extends VmCommand<T> 
 
 
         // Handle VM status with ImageLocked
-        VmValidator vmValidator = new VmValidator(getVm());
+        VmValidator vmValidator = vmValidatorInstance.get().init(getVm());
         ValidationResult vmLockedValidatorResult = vmValidator.vmNotLocked();
         if (!vmLockedValidatorResult.isValid()) {
             // without force remove, we can't remove the VM

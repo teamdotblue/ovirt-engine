@@ -3,11 +3,15 @@ package org.ovirt.engine.core.bll.provider.network;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.Collections;
 import java.util.List;
+
+import javax.enterprise.inject.Instance;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,6 +24,7 @@ import org.ovirt.engine.core.bll.ValidateTestUtils;
 import org.ovirt.engine.core.bll.context.CommandContext;
 import org.ovirt.engine.core.bll.interfaces.BackendInternal;
 import org.ovirt.engine.core.bll.network.cluster.NetworkHelper;
+import org.ovirt.engine.core.bll.provider.NetworkProviderValidator;
 import org.ovirt.engine.core.bll.provider.ProviderProxyFactory;
 import org.ovirt.engine.core.bll.provider.network.openstack.ExternalNetworkProviderProxy;
 import org.ovirt.engine.core.common.AuditLogType;
@@ -78,6 +83,9 @@ public class SyncNetworkProviderCommandTest extends BaseCommandTest {
     @Mock
     private AuditLogDirector auditLogDirector;
 
+    @Mock
+    private Instance<NetworkProviderValidator> networkProviderValidatorInstance;
+
     @InjectMocks
     private SyncNetworkProviderCommand<IdParameters> command = new SyncNetworkProviderCommand<>(
             new IdParameters(PROVIDER_ID), CommandContext.createContext("context"));
@@ -103,6 +111,9 @@ public class SyncNetworkProviderCommandTest extends BaseCommandTest {
                 .thenReturn(getImportNetworkReturnValue());
 
         when(networkHelper.attachNetworkToClusters(eq(NETWORK_ID), any())).thenReturn(returnValue);
+
+        NetworkProviderValidator networkProviderValidator = spy(new NetworkProviderValidator());
+        doReturn(networkProviderValidator).when(networkProviderValidatorInstance).get();
     }
 
     private void setupProviderDao(Provider provider) {

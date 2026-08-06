@@ -95,10 +95,8 @@ public class AddDiskCommand<T extends AddDiskParameters> extends AbstractDiskVmC
 
     @Inject
     private AuditLogDirector auditLogDirector;
-
     @Inject
     private DiskProfileHelper diskProfileHelper;
-
     @Inject
     private LunHelper lunHelper;
     @Inject
@@ -121,9 +119,16 @@ public class AddDiskCommand<T extends AddDiskParameters> extends AbstractDiskVmC
     private ImageDao imageDao;
     @Inject
     private DiskDao diskDao;
-
     @Inject
     private MultiLevelAdministrationHandler multiLevelAdministrationHandler;
+    @Inject
+    private Instance<StorageDomainValidator> storageDomainValidatorInstance;
+    @Inject
+    private Instance<VmValidator> vmValidatorInstance;
+    @Inject
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
+    @Inject
+    private Instance<CinderDisksValidator> cinderDisksValidatorInstance;
 
     /**
      * Constructor for command creation when compensation is applied on startup
@@ -209,7 +214,7 @@ public class AddDiskCommand<T extends AddDiskParameters> extends AbstractDiskVmC
                 CinderDisk cinderDisk = (CinderDisk) getParameters().getDiskInfo();
                 cinderDisk.setStorageIds(new ArrayList<>(Collections.singletonList(getStorageDomainId())));
                 StorageDomainValidator storageDomainValidator = createStorageDomainValidator();
-                CinderDisksValidator cinderDisksValidator = new CinderDisksValidator(cinderDisk);
+                CinderDisksValidator cinderDisksValidator = cinderDisksValidatorInstance.get().init(cinderDisk);
                 return validate(storageDomainValidator.isDomainExistAndActive()) &&
                         validate(cinderDisksValidator.validateCinderDiskLimits()) &&
                         validate(cinderDisksValidator.validateCinderVolumeTypesExist()) &&
@@ -223,7 +228,7 @@ public class AddDiskCommand<T extends AddDiskParameters> extends AbstractDiskVmC
     }
 
     protected boolean validateVm() {
-        return validate(new VmValidator(getVm()).isVmExists());
+        return validate(vmValidatorInstance.get().init(getVm()).isVmExists());
     }
 
     protected boolean checkIfLunDiskCanBeAdded(DiskValidator diskValidator) {
@@ -237,7 +242,7 @@ public class AddDiskCommand<T extends AddDiskParameters> extends AbstractDiskVmC
             return false;
         }
 
-        if (getVm() != null && !(validate(new VmValidator(getVm()).vmNotLocked()) && isVmNotInPreviewSnapshot())) {
+        if (getVm() != null && !(validate(vmValidatorInstance.get().init(getVm()).vmNotLocked()) && isVmNotInPreviewSnapshot())) {
             return false;
         }
 
@@ -309,9 +314,9 @@ public class AddDiskCommand<T extends AddDiskParameters> extends AbstractDiskVmC
         if (returnValue && vm != null) {
             StoragePool sp = getStoragePool(); // Note this is done according to the VM's spId.
             returnValue =
-                    validate(new StoragePoolValidator(sp).existsAndUp()) &&
+                    validate(storagePoolValidatorInstance.get().init(sp).existsAndUp()) &&
                     isStoragePoolMatching(vm) &&
-                    validate(new VmValidator(getVm()).vmNotLocked()) &&
+                    validate(vmValidatorInstance.get().init(getVm()).vmNotLocked()) &&
                     isVmNotInPreviewSnapshot();
         }
 
@@ -875,6 +880,6 @@ public class AddDiskCommand<T extends AddDiskParameters> extends AbstractDiskVmC
     }
 
     protected StorageDomainValidator createStorageDomainValidator() {
-        return new StorageDomainValidator(getStorageDomain());
+        return storageDomainValidatorInstance.get().createInstance(getStorageDomain());
     }
 }

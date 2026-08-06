@@ -3,6 +3,7 @@ package org.ovirt.engine.core.bll.storage.domain;
 import java.util.Collection;
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.apache.commons.lang.StringUtils;
@@ -29,9 +30,12 @@ public class UpdateStorageDomainCommand<T extends StorageDomainManagementParamet
 
     @Inject
     private StorageDomainStaticDao storageDomainStaticDao;
-
     @Inject
     private VmHandler vmHandler;
+    @Inject
+    private Instance<StorageDomainValidator> storageDomainValidatorInstance;
+    @Inject
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
 
     public UpdateStorageDomainCommand(T parameters, CommandContext commandContext) {
         super(parameters, commandContext);
@@ -88,7 +92,7 @@ public class UpdateStorageDomainCommand<T extends StorageDomainManagementParamet
     }
 
     protected StorageDomainValidator getStorageDomainValidator() {
-        return new StorageDomainValidator(getStorageDomain());
+        return storageDomainValidatorInstance.get().createInstance(getStorageDomain());
     }
 
     private boolean validateStorageNameUpdate() {
@@ -120,7 +124,7 @@ public class UpdateStorageDomainCommand<T extends StorageDomainManagementParamet
     private boolean isPoolUp() {
         // if domain is part of pool, and name changed, check that pool is up in
         // order to change description in spm
-        return validate(new StoragePoolValidator(getStoragePool()).existsAndUp());
+        return validate(storagePoolValidatorInstance.get().init(getStoragePool()).existsAndUp());
     }
 
     private boolean validateNotTheSameName() {

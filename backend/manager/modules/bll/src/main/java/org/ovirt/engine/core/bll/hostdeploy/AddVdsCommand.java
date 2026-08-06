@@ -11,6 +11,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 import javax.naming.AuthenticationException;
 
@@ -77,7 +78,6 @@ public class AddVdsCommand<T extends AddVdsActionParameters> extends VdsCommand<
 
     @Inject
     private AuditLogDirector auditLogDirector;
-
     @Inject
     private ProviderDao providerDao;
     @Inject
@@ -100,6 +100,10 @@ public class AddVdsCommand<T extends AddVdsActionParameters> extends VdsCommand<
     private ClusterUtils clusterUtils;
     @Inject
     private AffinityValidator affinityValidator;
+    @Inject
+    private Instance<HostValidator> hostValidatorInstance;
+    @Inject
+    private EngineSSHClient sshclient;
 
     private BiConsumer<AuditLogable, AuditLogDirector> affinityGroupLoggingMethod = (a, b) -> { };
     /**
@@ -378,7 +382,7 @@ public class AddVdsCommand<T extends AddVdsActionParameters> extends VdsCommand<
     }
 
     protected HostValidator getHostValidator() {
-        return HostValidator.createInstance(getParameters().getvds());
+        return hostValidatorInstance.get().createInstance(getParameters().getvds());
     }
 
     private boolean clusterHasServers() {
@@ -402,7 +406,7 @@ public class AddVdsCommand<T extends AddVdsActionParameters> extends VdsCommand<
         Long timeout =
                 TimeUnit.SECONDS.toMillis(Config.<Integer> getValue(ConfigValues.ConnectToServerTimeoutInSeconds));
 
-        EngineSSHClient sshclient = new EngineSSHClient();
+        // EngineSSHClient sshclient = sshClientInstance.get();
         sshclient.setVds(getParameters().getvds());
         sshclient.setHardTimeout(timeout);
         sshclient.setSoftTimeout(timeout);
@@ -483,7 +487,7 @@ public class AddVdsCommand<T extends AddVdsActionParameters> extends VdsCommand<
                         "Failed to establish session with host '{}': {}",
                         vds.getName(),
                         e.getMessage());
-                log.debug("Exception", e);
+                log.info("Exception", e);
 
                 return failValidation(EngineMessage.VDS_CANNOT_CONNECT_TO_SERVER);
             }

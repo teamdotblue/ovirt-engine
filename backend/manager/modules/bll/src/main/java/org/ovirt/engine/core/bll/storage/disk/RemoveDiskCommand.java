@@ -90,16 +90,11 @@ import org.ovirt.engine.core.utils.transaction.TransactionSupport;
 public class RemoveDiskCommand<T extends RemoveDiskParameters> extends CommandBase<T>
         implements QuotaStorageDependent {
 
-    @Inject
-    private SnapshotsValidator snapshotsValidator;
-
-    @Inject
-    private ImagesHandler imagesHandler;
-
     private Disk disk;
     private List<PermissionSubject> permsList = null;
     private List<VM> listVms;
     private String cachedDiskIsBeingRemovedLockMessage;
+
     @Inject
     private VmDeviceDao vmDeviceDao;
     @Inject
@@ -122,6 +117,18 @@ public class RemoveDiskCommand<T extends RemoveDiskParameters> extends CommandBa
     private CommandCoordinatorUtil commandCoordinatorUtil;
     @Inject
     private Instance<ConcurrentChildCommandsExecutionCallback> callbackProvider;
+    @Inject
+    private Instance<DiskValidator> diskValidatorInstance;
+    @Inject
+    private Instance<StorageDomainValidator> storageDomainValidatorInstance;
+    @Inject
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
+    @Inject
+    private Instance<DiskImagesValidator> diskImagesValidatorInstance;
+    @Inject
+    private SnapshotsValidator snapshotsValidator;
+    @Inject
+    private ImagesHandler imagesHandler;
 
     public RemoveDiskCommand(T parameters, CommandContext commandContext) {
         super(parameters, commandContext);
@@ -173,7 +180,8 @@ public class RemoveDiskCommand<T extends RemoveDiskParameters> extends CommandBa
         // No need to validate for Hosted Engine disks as the remove operation is not allowed of them to begin with
         switch (disk.getContentType()) {
             case OVF_STORE:
-                DiskImagesValidator diskImagesValidator = new DiskImagesValidator((DiskImage) disk);
+                DiskImagesValidator diskImagesValidator =
+                    diskImagesValidatorInstance.get().init(Collections.singletonList((DiskImage) disk));
                 if (!validate(diskImagesValidator.disksInStatus(ImageStatus.ILLEGAL,
                         EngineMessage.ACTION_TYPE_FAILED_OVF_DISK_NOT_IN_APPLICABLE_STATUS))) {
                     return false;
@@ -202,7 +210,7 @@ public class RemoveDiskCommand<T extends RemoveDiskParameters> extends CommandBa
     }
 
     private boolean validateHostedEngineDisks() {
-        DiskValidator oldDiskValidator = new DiskValidator(getDisk());
+        DiskValidator oldDiskValidator = diskValidatorInstance.get().init(getDisk());
         if (getDisk().getVmEntityType() != null && getDisk().getVmEntityType().isVmType()) {
             for (VM vm : getVmsForDiskId()) {
                 if (!validate(oldDiskValidator.validRemovableHostedEngineDisks(vm))) {
@@ -273,7 +281,7 @@ public class RemoveDiskCommand<T extends RemoveDiskParameters> extends CommandBa
             addValidationMessage(EngineMessage.ACTION_TYPE_FAILED_STORAGE_DOMAIN_IS_WRONG);
         }
 
-        StorageDomainValidator validator = new StorageDomainValidator(getStorageDomain());
+        StorageDomainValidator validator = storageDomainValidatorInstance.get().createInstance(getStorageDomain());
         retValue =
                 retValue && validate(validator.isDomainExistAndActive())
                         && validate(validator.domainIsValidDestination());
@@ -350,7 +358,7 @@ public class RemoveDiskCommand<T extends RemoveDiskParameters> extends CommandBa
     }
 
     private DiskImagesValidator createDiskImagesValidator(DiskImage disk) {
-        return new DiskImagesValidator(disk);
+        return diskImagesValidatorInstance.get().init(Collections.singletonList(disk));
     }
 
     protected boolean checkDerivedDisksFromDiskNotExist(DiskImage diskImage) {
@@ -379,14 +387,14 @@ public class RemoveDiskCommand<T extends RemoveDiskParameters> extends CommandBa
         if (!listVms.isEmpty()) {
             Guid storagePoolId = listVms.get(0).getStoragePoolId();
             StoragePool sp = storagePoolDao.get(storagePoolId);
-            if (!validate(new StoragePoolValidator(sp).existsAndUp())) {
+            if (!validate(storagePoolValidatorInstance.get().init(sp).existsAndUp())) {
                 return false;
             }
 
             List<DiskImage> diskList = DisksFilter.filterImageDisks(Collections.singletonList(getDisk()),
                     ONLY_NOT_SHAREABLE,
                     ONLY_ACTIVE);
-            DiskImagesValidator diskImagesValidator = new DiskImagesValidator(diskList);
+            DiskImagesValidator diskImagesValidator = diskImagesValidatorInstance.get().init(diskList);
             if (!validate(diskImagesValidator.diskImagesNotLocked())) {
                 return false;
             }

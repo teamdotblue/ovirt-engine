@@ -2,6 +2,7 @@ package org.ovirt.engine.core.bll.storage.disk;
 
 import java.util.concurrent.locks.Lock;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.NonTransactiveCommandAttribute;
@@ -44,6 +45,8 @@ public class DetachDiskFromVmCommand<T extends AttachDetachVmDiskParameters> ext
     private VmStaticDao vmStaticDao;
     @Inject
     private VmCheckpointDao vmCheckpointDao;
+    @Inject
+    private Instance<VmValidator> vmValidatorInstance;
 
     private Disk disk;
     private VmDevice vmDevice;
@@ -59,7 +62,7 @@ public class DetachDiskFromVmCommand<T extends AttachDetachVmDiskParameters> ext
 
     @Override
     protected boolean validate() {
-        if (!validate(new VmValidator(getVm()).isVmExists()) || !canRunActionOnNonManagedVm()) {
+        if (!validate(vmValidatorInstance.get().init(getVm()).isVmExists()) || !canRunActionOnNonManagedVm()) {
             return false;
         }
 

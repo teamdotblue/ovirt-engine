@@ -1,10 +1,14 @@
 package org.ovirt.engine.core.bll.storage.domain;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
 
 import java.util.Collections;
 import java.util.stream.Stream;
+
+import javax.enterprise.inject.Instance;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,6 +19,7 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.ovirt.engine.core.bll.BaseCommandTest;
 import org.ovirt.engine.core.bll.ValidateTestUtils;
+import org.ovirt.engine.core.bll.validator.storage.StorageDomainValidator;
 import org.ovirt.engine.core.common.action.StorageDomainManagementParameter;
 import org.ovirt.engine.core.common.businessentities.StorageDomain;
 import org.ovirt.engine.core.common.businessentities.StorageDomainStatic;
@@ -60,6 +65,10 @@ public class AddStorageDomainCommonTest extends BaseCommandTest {
     private StoragePoolDao spDao;
     @Mock
     private StorageServerConnectionDao sscDao;
+    @Mock
+    private Instance<StorageDomainValidator> storageDomainValidatorInstance;
+    @Mock
+    private StorageDomainValidator storageDomainValidator;
 
     private StorageDomainStatic sd;
     private StoragePool sp;
@@ -93,6 +102,10 @@ public class AddStorageDomainCommonTest extends BaseCommandTest {
         StorageServerConnections conn = new StorageServerConnections();
         conn.setId(connId.toString());
         conn.setStorageType(StorageType.NFS);
+
+        doReturn(storageDomainValidator).when(storageDomainValidatorInstance).get();
+        when(storageDomainValidator.createInstance(any())).thenAnswer(invocation ->
+            new StorageDomainValidator(invocation.getArgument(0)));
 
         when(sscDao.get(connId.toString())).thenReturn(conn);
 

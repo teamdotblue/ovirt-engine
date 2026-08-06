@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.context.CommandContext;
@@ -24,9 +25,10 @@ public abstract class AbstractSyncLunsCommand<T extends SyncLunsParameters> exte
 
     @Inject
     protected VdsCommandsHelper vdsCommandsHelper;
-
     @Inject
     private VdsDao vdsDao;
+    @Inject
+    private Instance<HostValidator> hostvalidator;
 
     protected AbstractSyncLunsCommand(T parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -45,7 +47,7 @@ public abstract class AbstractSyncLunsCommand<T extends SyncLunsParameters> exte
 
     protected HostValidator getHostValidator() {
         VDS vds = vdsDao.get(getParameters().getVdsId());
-        return HostValidator.createInstance(vds);
+        return hostvalidator.get().createInstance(vds);
     }
 
     @Override

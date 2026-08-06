@@ -118,6 +118,7 @@ import org.ovirt.engine.core.dao.DiskVmElementDao;
 import org.ovirt.engine.core.dao.LabelDao;
 import org.ovirt.engine.core.dao.VmDeviceDao;
 import org.ovirt.engine.core.dao.VmDynamicDao;
+import org.ovirt.engine.core.dao.VmIconDao;
 import org.ovirt.engine.core.dao.VmInitDao;
 import org.ovirt.engine.core.dao.VmNumaNodeDao;
 import org.ovirt.engine.core.dao.VmPoolDao;
@@ -141,11 +142,10 @@ public class UpdateVmCommand<T extends VmManagementParametersBase> extends VmMan
 
     @Inject
     private AuditLogDirector auditLogDirector;
-
     @Inject
     private VmSlaPolicyUtils vmSlaPolicyUtils;
     @Inject
-    private ResourceManager resourceManager;
+    private Instance<ResourceManager> resourceManagerInstance;
     @Inject
     private InClusterUpgradeValidator clusterUpgradeValidator;
     @Inject
@@ -193,6 +193,10 @@ public class UpdateVmCommand<T extends VmManagementParametersBase> extends VmMan
     private SnapshotVmConfigurationHelper snapshotVmConfigurationHelper;
     @Inject
     private VdsCpuUnitPinningHelper vdsCpuUnitPinningHelper;
+    @Inject
+    private VmIconDao vmIconDao;
+    @Inject
+    private Instance<VmValidator> vmValidatorInstance;
 
     private VM oldVm;
     private boolean quotaSanityOnly = false;
@@ -343,7 +347,7 @@ public class UpdateVmCommand<T extends VmManagementParametersBase> extends VmMan
             getCompensationContext().snapshotEntityUpdated(oldStatic);
         }
 
-        resourceManager.getVmManager(getVmId()).update(newVmStatic);
+        resourceManagerInstance.get().getVmManager(getVmId()).update(newVmStatic);
 
         // Hosted Engine and kubevirt doesn't use next-run snapshots. Instead it requires the configuration
         // for next run to be stored in vm_static table.
@@ -1309,14 +1313,14 @@ public class UpdateVmCommand<T extends VmManagementParametersBase> extends VmMan
         if (getParameters().getVmStaticData() != null
                 && getParameters().getVmStaticData().getSmallIconId() != null
                 && getParameters().getVmLargeIcon() == null // icon id is ignored if large icon is sent
-                && !validate(IconValidator.validateIconId(getParameters().getVmStaticData().getSmallIconId(), "Small"))) {
+                && !validate(IconValidator.validateIconId(getParameters().getVmStaticData().getSmallIconId(), "Small", vmIconDao))) {
             return false;
         }
 
         if (getParameters().getVmStaticData() != null
                 && getParameters().getVmStaticData().getLargeIconId() != null
                 && getParameters().getVmLargeIcon() == null // icon id is ignored if large icon is sent
-                && !validate(IconValidator.validateIconId(getParameters().getVmStaticData().getLargeIconId(), "Large"))) {
+                && !validate(IconValidator.validateIconId(getParameters().getVmStaticData().getLargeIconId(), "Large", vmIconDao))) {
             return false;
         }
 
@@ -1471,10 +1475,10 @@ public class UpdateVmCommand<T extends VmManagementParametersBase> extends VmMan
     protected boolean isValidPciAndIdeLimit(VM vmFromParams) {
         List<DiskVmElement> diskVmElements = diskVmElementDao.getAllForVm(getVmId());
         List<VmNic> interfaces = vmNicDao.getAllForVm(getVmId());
+        int maxPciSlots = osRepository.getMaxPciDevices(vmFromParams.getVmOsId(), getEffectiveCompatibilityVersion());
 
         return validate(VmValidator.checkPciAndIdeLimit(
-                vmFromParams.getOs(),
-                getEffectiveCompatibilityVersion(),
+                maxPciSlots,
                 vmFromParams.getNumOfMonitors(),
                 interfaces,
                 diskVmElements,
@@ -1728,7 +1732,7 @@ public class UpdateVmCommand<T extends VmManagementParametersBase> extends VmMan
     }
 
     public VmValidator createVmValidator(VM vm) {
-        return new VmValidator(vm);
+        return vmValidatorInstance.get().init(vm);
     }
 
     protected InClusterUpgradeValidator getClusterUpgradeValidator() {

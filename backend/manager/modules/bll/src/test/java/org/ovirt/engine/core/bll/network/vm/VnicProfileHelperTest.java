@@ -5,7 +5,6 @@ import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.hasEntry;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
 import java.util.ArrayList;
@@ -15,12 +14,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.ovirt.engine.core.common.AuditLogType;
 import org.ovirt.engine.core.common.businessentities.network.VmNetworkInterface;
@@ -46,14 +46,9 @@ public class VnicProfileHelperTest {
     @Captor
     private ArgumentCaptor<AuditLogable> auditLogableCaptor;
 
-    private VnicProfileHelper underTest;
-
-    @BeforeEach
-    public void setUp() {
-        underTest = spy(new VnicProfileHelper(CLUSTER_ID, DATA_CENTER_ID, AUDIT_LOG_TYPE));
-        doReturn(auditLogDirector).when(underTest).createAuditLogDirector();
-        doReturn(networkDao).when(underTest).getNetworkDao();
-    }
+    @Spy
+    @InjectMocks
+    private VnicProfileHelper underTest = new VnicProfileHelper(CLUSTER_ID, DATA_CENTER_ID, AUDIT_LOG_TYPE);
 
     private VmNetworkInterface createVnic(String vnicName, String networkName) {
         final VmNetworkInterface vmInterface = new VmNetworkInterface();
@@ -64,6 +59,7 @@ public class VnicProfileHelperTest {
 
     @Test
     public void testAuditInvalidInterfaces() {
+        doReturn(null).when(networkDao).getAllForCluster(CLUSTER_ID);
         final List<String> vnicNames = new ArrayList<>();
         final Set<String> networkNames = new HashSet<>();
         for (int i = 1; i < 3; i++) {

@@ -22,6 +22,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
 
+import javax.enterprise.inject.Instance;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,9 +39,11 @@ import org.ovirt.engine.core.bll.VmCommand;
 import org.ovirt.engine.core.bll.quota.QuotaManager;
 import org.ovirt.engine.core.bll.snapshots.SnapshotsValidator;
 import org.ovirt.engine.core.bll.validator.QuotaValidator;
+import org.ovirt.engine.core.bll.validator.VmValidator;
 import org.ovirt.engine.core.bll.validator.storage.DiskValidator;
 import org.ovirt.engine.core.bll.validator.storage.DiskVmElementValidator;
 import org.ovirt.engine.core.bll.validator.storage.StorageDomainValidator;
+import org.ovirt.engine.core.bll.validator.storage.StoragePoolValidator;
 import org.ovirt.engine.core.common.action.AddDiskParameters;
 import org.ovirt.engine.core.common.businessentities.StorageDomain;
 import org.ovirt.engine.core.common.businessentities.StorageDomainStatus;
@@ -140,6 +144,24 @@ public class AddDiskCommandTest extends BaseCommandTest {
     @Mock
     private DiskDao diskDao;
 
+    @Mock
+    private Instance<DiskValidator> diskValidatorInstance;
+
+    @Mock
+    private DiskValidator diskValidator;
+
+    @Mock
+    private Instance<VmValidator> vmValidatorInstance;
+
+    @Mock
+    private Instance<StorageDomainValidator> storageDomainValidatorInstance;
+
+    @Mock
+    protected StorageDomainValidator storageDomainValidator;
+
+    @Mock
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
+
     /**
      * The command under test.
      */
@@ -149,6 +171,7 @@ public class AddDiskCommandTest extends BaseCommandTest {
 
     @Test
     public void validateSucceedsOnDiskDomainCheckWhenNoDisks() {
+        doReturn(true).when(command).checkImageConfiguration();
         Guid storageId = Guid.newGuid();
         initializeCommand(storageId);
 
@@ -159,6 +182,7 @@ public class AddDiskCommandTest extends BaseCommandTest {
 
     @Test
     public void validateFailWithUnsupportedDiskInterface() {
+        doReturn(true).when(command).checkImageConfiguration();
         Guid storageId = Guid.newGuid();
         initializeCommand(storageId);
 
@@ -189,6 +213,7 @@ public class AddDiskCommandTest extends BaseCommandTest {
 
     @Test
     public void validateSucceedsOnDiskDomainCheckWhenStorageGuidInParamsMatches() {
+        doReturn(true).when(command).checkImageConfiguration();
         Guid storageId = Guid.newGuid();
         initializeCommand(storageId);
 
@@ -203,6 +228,7 @@ public class AddDiskCommandTest extends BaseCommandTest {
 
     @Test
     public void validateSucceedsOnDiskDomainCheckWhenStorageGuidInParamsMismatches() {
+        doReturn(true).when(command).checkImageConfiguration();
         Guid storageId = Guid.newGuid();
         initializeCommand(storageId);
 
@@ -236,6 +262,7 @@ public class AddDiskCommandTest extends BaseCommandTest {
         DiskImage image = new DiskImage();
         image.setSize(0);
         command.getParameters().setDiskInfo(image);
+        spyDiskValidator(command.getParameters().getDiskInfo());
         mockStorageDomain(storageId);
         mockStoragePoolIsoMap();
         mockInterfaceList();
@@ -396,10 +423,17 @@ public class AddDiskCommandTest extends BaseCommandTest {
         doReturn(true).when(command).setAndValidateDiskProfiles();
         doReturn(true).when(command).validateQuota();
         mockDiskLunMap(null);
+        when(diskValidatorInstance.get()).thenReturn(diskValidator);
+        when(diskValidator.init(any())).thenReturn(diskValidator);
+        when(vmValidatorInstance.get()).thenReturn(new VmValidator());
+        doReturn(new StoragePoolValidator()).when(storagePoolValidatorInstance).get();
 
         doAnswer(invocation -> invocation.getArguments()[0] != null ?
                     invocation.getArguments()[0] : Guid.newGuid())
                 .when(quotaManager).getFirstQuotaForUser(any(), any(), any());
+        doReturn(storageDomainValidator).when(storageDomainValidatorInstance).get();
+        doReturn(storageDomainValidator).when(storageDomainValidator).createInstance(any());
+        doReturn(ValidationResult.VALID).when(storageDomainValidator).isDomainExistAndActive();
     }
 
     /**
@@ -455,9 +489,10 @@ public class AddDiskCommandTest extends BaseCommandTest {
     }
 
     private DiskValidator spyDiskValidator(Disk disk) {
-        DiskValidator diskValidator = spy(new DiskValidator(disk));
-        doReturn(diskValidator).when(command).getDiskValidator(disk);
-        return diskValidator;
+        DiskValidator realDiskValidator = spy(new DiskValidator(disk));
+        doReturn(diskLunMapDao).when(realDiskValidator).getDiskLunMapDao();
+        doReturn(realDiskValidator).when(command).getDiskValidator(disk);
+        return realDiskValidator;
     }
 
     private void mockMaxPciSlots() {
@@ -547,6 +582,7 @@ public class AddDiskCommandTest extends BaseCommandTest {
     @Test
     public void testIscsiLunCanBeAdded() {
         LunDisk disk = createISCSILunDisk();
+        spyDiskValidator(disk);
         command.getParameters().setDiskInfo(disk);
         command.getParameters().getDiskVmElement().setUsingScsiReservation(false);
         assertTrue(command.checkIfLunDiskCanBeAdded(spyDiskValidator(disk)),
@@ -655,6 +691,7 @@ public class AddDiskCommandTest extends BaseCommandTest {
     public void testLunDiskValid() {
         VDS vds = mockVds();
         LunDisk disk = createISCSILunDisk();
+        spyDiskValidator(disk);
 
         command.getParameters().setDiskInfo(disk);
         command.getParameters().setVdsId(vds.getId());
@@ -672,6 +709,7 @@ public class AddDiskCommandTest extends BaseCommandTest {
     public void testGetLunDiskSucceeds() {
         VDS vds = mockVds();
         LunDisk disk = createISCSILunDisk();
+        spyDiskValidator(disk);
         List<LUNs> luns = Collections.singletonList(disk.getLun());
         initializeCommand(Guid.newGuid());
 
@@ -683,6 +721,7 @@ public class AddDiskCommandTest extends BaseCommandTest {
     public void testLunDiskInvalid() {
         VDS vds = mockVds();
         LunDisk disk = createISCSILunDisk();
+        spyDiskValidator(disk);
 
         command.getParameters().setDiskInfo(disk);
         command.getParameters().setVdsId(vds.getId());
@@ -702,6 +741,7 @@ public class AddDiskCommandTest extends BaseCommandTest {
     public void testGetLunDiskFails() {
         VDS vds = mockVds();
         LunDisk disk = createISCSILunDisk();
+        spyDiskValidator(disk);
         List<LUNs> luns = Collections.emptyList();
         initializeCommand(Guid.newGuid());
 
@@ -713,6 +753,7 @@ public class AddDiskCommandTest extends BaseCommandTest {
     public void testAddingIDELunExceedsSlotLimit() {
         mockInterfaceList();
         LunDisk disk = createISCSILunDisk();
+        spyDiskValidator(disk);
 
         command.getParameters().setDiskInfo(disk);
         command.getParameters().getDiskVmElement().setDiskInterface(DiskInterface.IDE);
@@ -738,6 +779,7 @@ public class AddDiskCommandTest extends BaseCommandTest {
     public void testAddingSATALunExceedsSlotLimit() {
         mockInterfaceList();
         LunDisk disk = createISCSILunDisk();
+        spyDiskValidator(disk);
 
         command.getParameters().setDiskInfo(disk);
         command.getParameters().getDiskVmElement().setDiskInterface(DiskInterface.SATA);
@@ -763,6 +805,7 @@ public class AddDiskCommandTest extends BaseCommandTest {
     public void testAddingPCILunExceedsSlotLimit() {
         mockInterfaceList();
         LunDisk disk = createISCSILunDisk();
+        spyDiskValidator(disk);
         command.getParameters().setDiskInfo(disk);
         command.getParameters().getDiskVmElement().setDiskInterface(DiskInterface.VirtIO);
 
@@ -795,6 +838,7 @@ public class AddDiskCommandTest extends BaseCommandTest {
     @Test
     public void testLunDiskWithSgioCanBeAdded() {
         LunDisk disk = createISCSILunDisk();
+        spyDiskValidator(disk);
         disk.setSgio(ScsiGenericIO.UNFILTERED);
         command.getParameters().setDiskInfo(disk);
         command.getParameters().getDiskVmElement().setDiskInterface(DiskInterface.VirtIO_SCSI);
@@ -812,6 +856,7 @@ public class AddDiskCommandTest extends BaseCommandTest {
     @Test
     public void testValidateFailOnAddFloatingDiskWithPlugSet() {
         DiskImage disk = new DiskImage();
+        spyDiskValidator(disk);
 
         command.getParameters().setDiskInfo(disk);
         command.getParameters().setVmId(Guid.Empty);
@@ -823,6 +868,7 @@ public class AddDiskCommandTest extends BaseCommandTest {
     @Test
     public void testValidateSuccessOnAddFloatingDiskWithPlugUnset() {
         DiskImage disk = new DiskImage();
+        spyDiskValidator(disk);
         disk.setSize(1);
         command.getParameters().setDiskInfo(disk);
         command.getParameters().setVmId(Guid.Empty);
@@ -867,6 +913,7 @@ public class AddDiskCommandTest extends BaseCommandTest {
         Guid diskId = Guid.newGuid();
 
         DiskImage disk = new DiskImage();
+        spyDiskValidator(disk);
 
         disk.setSize(1);
         disk.setShareable(true);

@@ -1,6 +1,8 @@
 package org.ovirt.engine.core.bll.validator.storage;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import java.util.stream.Stream;
@@ -11,6 +13,8 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.ovirt.engine.core.bll.ValidationResult;
 import org.ovirt.engine.core.common.businessentities.StorageDomain;
 import org.ovirt.engine.core.common.businessentities.storage.CinderDisk;
@@ -29,6 +33,7 @@ import org.ovirt.engine.core.utils.InjectedMock;
 import org.ovirt.engine.core.utils.InjectorExtension;
 
 @ExtendWith({MockitoExtension.class, InjectorExtension.class})
+@MockitoSettings(strictness = Strictness.LENIENT)
 public class DiskVmElementDiscardSupportValidatorTest {
     @Mock
     @InjectedMock
@@ -163,7 +168,8 @@ public class DiskVmElementDiscardSupportValidatorTest {
         DiskVmElement diskVmElement = new DiskVmElement();
         diskVmElement.setPassDiscard(isPassDiscard);
         diskVmElement.setDiskInterface(diskInterface);
-        DiskVmElementValidator validator = new DiskVmElementValidator(disk, diskVmElement);
+        DiskVmElementValidator validator = spy(new DiskVmElementValidator(disk, diskVmElement));
+        doReturn(storageDomainDao).when(validator).getStorageDomainDao();
         Guid storageDomainId = null;
 
         if (lunDiscardMaxSize != null) {

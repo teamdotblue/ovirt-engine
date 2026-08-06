@@ -130,13 +130,11 @@ public class ImportVmCommand<T extends ImportVmParameters> extends ImportVmComma
         implements QuotaStorageDependent {
 
     @Inject
+    private Instance<DiskImagesValidator> diskImagesValidatorInstance;
+    @Inject
     private AuditLogDirector auditLogDirector;
-
     @Inject
     private VmOverheadCalculator vmOverheadCalculator;
-
-    private static final Logger log = LoggerFactory.getLogger(ImportVmCommand.class);
-
     @Inject
     private VmNicMacsUtils vmNicMacsUtils;
     @Inject
@@ -178,6 +176,18 @@ public class ImportVmCommand<T extends ImportVmParameters> extends ImportVmComma
     @Inject
     @Typed(ConcurrentChildCommandsExecutionCallback.class)
     private Instance<ConcurrentChildCommandsExecutionCallback> callbackProvider;
+    @Inject
+    private Instance<DiskValidator> diskValidatorInstance;
+    @Inject
+    private Instance<DiskVmElementValidator> diskVmElementValidatorInstance;
+    @Inject
+    private Instance<StorageDomainValidator> storageDomainValidatorInstance;
+    @Inject
+    private Instance<VmInterfaceManager> vmInterfaceManager;
+    @Inject
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
+
+    private static final Logger log = LoggerFactory.getLogger(ImportVmCommand.class);
 
     private List<DiskImage> imageList;
 
@@ -271,7 +281,7 @@ public class ImportVmCommand<T extends ImportVmParameters> extends ImportVmComma
         }
 
         DiskVmElementValidator diskVmElementValidator =
-                new DiskVmElementValidator(lunDisk, lunDisk.getDiskVmElementForVm(getVmId()));
+                diskVmElementValidatorInstance.get().init(lunDisk, lunDisk.getDiskVmElementForVm(getVmId()));
         ValidationResult virtIoScsiResult = diskVmElementValidator.isVirtIoScsiValid(getVm());
         if (!virtIoScsiResult.isValid()) {
             return virtIoScsiResult.getMessages();
@@ -331,7 +341,7 @@ public class ImportVmCommand<T extends ImportVmParameters> extends ImportVmComma
     }
 
     protected DiskValidator getDiskValidator(Disk disk) {
-        return new DiskValidator(disk);
+        return diskValidatorInstance.get().init(disk);
     }
 
     private void initImportClonedVm() {
@@ -349,7 +359,7 @@ public class ImportVmCommand<T extends ImportVmParameters> extends ImportVmComma
             setDescription(getVmName());
         }
 
-        StoragePoolValidator spValidator = new StoragePoolValidator(getStoragePool());
+        StoragePoolValidator spValidator = storagePoolValidatorInstance.get().init(getStoragePool());
         if (!validate(spValidator.existsAndUp())) {
             return false;
         }
@@ -357,7 +367,7 @@ public class ImportVmCommand<T extends ImportVmParameters> extends ImportVmComma
         Set<Guid> destGuids = new HashSet<>(imageToDestinationDomainMap.values());
         for (Guid destGuid : destGuids) {
             StorageDomain storageDomain = getStorageDomain(destGuid);
-            StorageDomainValidator validator = new StorageDomainValidator(storageDomain);
+            StorageDomainValidator validator = storageDomainValidatorInstance.get().createInstance(storageDomain);
             if (!validate(validator.isDomainExistAndActive()) || !validate(validator.domainIsValidDestination())) {
                 return false;
             }
@@ -378,7 +388,7 @@ public class ImportVmCommand<T extends ImportVmParameters> extends ImportVmComma
 
         if (!isImagesAlreadyOnTarget()) {
             setSourceDomainId(getParameters().getSourceDomainId());
-            StorageDomainValidator validator = new StorageDomainValidator(getSourceDomain());
+            StorageDomainValidator validator = storageDomainValidatorInstance.get().createInstance(getSourceDomain());
             if (validator.isDomainExistAndActive().isValid()
                     && getSourceDomain().getStorageDomainType() != StorageDomainType.ImportExport) {
                 return failValidation(EngineMessage.ACTION_TYPE_FAILED_STORAGE_DOMAIN_TYPE_ILLEGAL);
@@ -708,7 +718,7 @@ public class ImportVmCommand<T extends ImportVmParameters> extends ImportVmComma
 
     protected boolean validateNoDuplicateDiskImages(Collection<DiskImage> images) {
         if (!getParameters().isImportAsNewEntity()) {
-            DiskImagesValidator diskImagesValidator = new DiskImagesValidator(images);
+            DiskImagesValidator diskImagesValidator = diskImagesValidatorInstance.get().init(images);
             return validate(diskImagesValidator.disksNotExistOrShareable());
         }
 
@@ -1442,7 +1452,7 @@ public class ImportVmCommand<T extends ImportVmParameters> extends ImportVmComma
     }
 
     protected void removeVmNetworkInterfaces() {
-        new VmInterfaceManager(getMacPool()).removeAllAndReleaseMacAddresses(getVmId());
+        vmInterfaceManager.get().init(getMacPool()).removeAllAndReleaseMacAddresses(getVmId());
     }
 
     @Override

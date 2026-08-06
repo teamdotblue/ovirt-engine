@@ -16,6 +16,14 @@ public class ExternalNetworkProviderProxy extends BaseNetworkProviderProxy<Opens
         super(provider);
     }
 
+    public ExternalNetworkProviderProxy() {
+    }
+
+    public ExternalNetworkProviderProxy init(Provider<OpenstackNetworkProviderProperties> provider) {
+        setProvider(provider);
+        return this;
+    }
+
     @Override
     protected void setClientTokenProvider(Quantum client) {
         if (StringUtils.isEmpty(getProvider().getAdditionalProperties().getTenantName())) {

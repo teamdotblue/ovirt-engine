@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.DisableInPrepareMode;
@@ -59,6 +60,8 @@ public class ImportVmTemplateCommand<T extends ImportVmTemplateParameters> exten
     private DiskVmElementDao diskVmElementDao;
     @Inject
     protected ImageDao imageDao;
+    @Inject
+    private Instance<StorageDomainValidator> storageDomainValidatorInstance;
 
     private Map<Guid, QemuImageInfo> diskImageInfoMap = new HashMap<>();
 
@@ -77,7 +80,7 @@ public class ImportVmTemplateCommand<T extends ImportVmTemplateParameters> exten
                 storageDomainDao.getForStoragePool(sourceDomainId, getStoragePool().getId()) :
                 null;
 
-        if (!validate(new StorageDomainValidator(sourceDomain).isDomainExistAndActive())) {
+        if (!validate(storageDomainValidatorInstance.get().createInstance(sourceDomain).isDomainExistAndActive())) {
             return false;
         }
 
@@ -119,7 +122,7 @@ public class ImportVmTemplateCommand<T extends ImportVmTemplateParameters> exten
                         imageToDestinationDomainMap.get(image.getId()),
                         getStoragePool().getId());
 
-                StorageDomainValidator validator = new StorageDomainValidator(storageDomain);
+                StorageDomainValidator validator = storageDomainValidatorInstance.get().createInstance(storageDomain);
                 if (!validate(validator.isDomainExistAndActive()) ||
                         !validate(validator.domainIsValidDestination())) {
                     return false;

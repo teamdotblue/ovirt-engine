@@ -65,6 +65,8 @@ public class AddVmFromSnapshotCommand<T extends AddVmFromSnapshotParameters> ext
     @Inject
     @Typed(ConcurrentChildCommandsExecutionCallback.class)
     private Instance<ConcurrentChildCommandsExecutionCallback> callbackProvider;
+    @Inject
+    private Instance<VmValidator> vmValidatorInstance;
 
     private Guid sourceSnapshotId;
     private Snapshot snapshot;
@@ -313,7 +315,7 @@ public class AddVmFromSnapshotCommand<T extends AddVmFromSnapshotParameters> ext
     }
 
     public VmValidator createVmValidator(VM vm) {
-        return new VmValidator(vm);
+        return vmValidatorInstance.get().init(vm);
     }
 
     @Override

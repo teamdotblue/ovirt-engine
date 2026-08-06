@@ -96,12 +96,10 @@ public class LiveMigrateDiskCommand<T extends LiveMigrateDiskParameters> extends
 
     @Inject
     private ImagesHandler imagesHandler;
-
     @Inject
     private AuditLogDirector auditLogDirector;
-
     @Inject
-    private ResourceManager resourceManager;
+    private Instance<ResourceManager> resourceManagerInstance;
     @Inject
     private ImageDao imageDao;
     @Inject
@@ -129,6 +127,8 @@ public class LiveMigrateDiskCommand<T extends LiveMigrateDiskParameters> extends
     private Instance<SerialChildCommandsExecutionCallback> callbackProvider;
     @Inject
     private SnapshotDao snapshotDao;
+    @Inject
+    private Instance<StorageDomainValidator> storageDomainValidatorInstance;
 
     private Map<Guid, DiskImage> diskImagesMap = new HashMap<>();
 
@@ -460,7 +460,7 @@ public class LiveMigrateDiskCommand<T extends LiveMigrateDiskParameters> extends
                 getParameters().getDestinationImageId(),
                 null);
 
-        VDSReturnValue ret = resourceManager.runVdsCommand(
+        VDSReturnValue ret = resourceManagerInstance.get().runVdsCommand(
                 VDSCommandType.VmReplicateDiskFinish, migrationFinishParams);
 
         if (!ret.getSucceeded()) {
@@ -580,7 +580,7 @@ public class LiveMigrateDiskCommand<T extends LiveMigrateDiskParameters> extends
             migrationStartParams.setNeedExtend(false);
         }
 
-        VDSReturnValue ret = resourceManager.runVdsCommand(VDSCommandType.VmReplicateDiskStart, migrationStartParams);
+        VDSReturnValue ret = resourceManagerInstance.get().runVdsCommand(VDSCommandType.VmReplicateDiskStart, migrationStartParams);
         if (!ret.getSucceeded()) {
             log.error("Failed VmReplicateDiskStart (Disk '{}' , VM '{}')",
                     getParameters().getImageGroupID(),
@@ -638,7 +638,7 @@ public class LiveMigrateDiskCommand<T extends LiveMigrateDiskParameters> extends
             return failValidation(EngineMessage.CANNOT_LIVE_MIGRATE_VM_SHOULD_BE_IN_PAUSED_OR_UP_STATUS);
         }
 
-        if (!validate(new StorageDomainValidator(getDstStorageDomain()).isNotBackupDomain())
+        if (!validate(storageDomainValidatorInstance.get().createInstance(getDstStorageDomain()).isNotBackupDomain())
                 || !validateDestDomainsSpaceRequirements()) {
             return false;
         }

@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.context.CommandContext;
@@ -60,6 +61,10 @@ public abstract class AddStorageDomainCommand<T extends StorageDomainManagementP
     private VdsDao vdsDao;
     @Inject
     private StoragePoolDao storagePoolDao;
+    @Inject
+    private Instance<StorageDomainValidator> storageDomainValidatorInstance;
+    @Inject
+    private StorageDomainToPoolRelationValidator storageDomainToPoolRelationValidator;
 
 
     protected AddStorageDomainCommand(Guid commandId) {
@@ -252,7 +257,7 @@ public abstract class AddStorageDomainCommand<T extends StorageDomainManagementP
             // In case of creating an unattached storage domain
             storagePool = storagePoolDao.get(getVds().getStoragePoolId());
         }
-        return new StorageDomainToPoolRelationValidator(getStorageDomain().getStorageStaticData(), storagePool)
+        return storageDomainToPoolRelationValidator.createInstance(getStorageDomain().getStorageStaticData(), storagePool)
                 .isBlockSizeAutoDetectionSupported().isValid();
     }
 
@@ -292,7 +297,7 @@ public abstract class AddStorageDomainCommand<T extends StorageDomainManagementP
     }
 
     public StorageDomainValidator getStorageDomainValidator() {
-        return new StorageDomainValidator(getStorageDomain());
+        return storageDomainValidatorInstance.get().createInstance(getStorageDomain());
     }
 
     private void initStorageDomainDiscardAfterDeleteIfNeeded() {

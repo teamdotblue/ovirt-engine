@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.context.CommandContext;
@@ -28,6 +29,8 @@ public class SetHaMaintenanceCommand extends VdsCommand<SetHaMaintenanceParamete
 
     @Inject
     private VmDao vmDao;
+    @Inject
+    private Instance<HostValidator> hostValidatorInstance;
 
     public SetHaMaintenanceCommand(SetHaMaintenanceParameters parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -70,7 +73,7 @@ public class SetHaMaintenanceCommand extends VdsCommand<SetHaMaintenanceParamete
 
     @Override
     protected boolean validate() {
-        HostValidator hostValidator = HostValidator.createInstance(getVds());
+        HostValidator hostValidator = hostValidatorInstance.get().createInstance(getVds());
 
         if (!validate(hostValidator.hostExists())
                 || !validate(hostValidator.isUp())) {

@@ -62,10 +62,14 @@ import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dao.ClusterDao;
 import org.ovirt.engine.core.dao.DiskVmElementDao;
 import org.ovirt.engine.core.dao.ImageDao;
+import org.ovirt.engine.core.dao.StorageDomainStaticDao;
 import org.ovirt.engine.core.dao.VmTemplateDao;
+import org.ovirt.engine.core.dao.provider.ProviderDao;
 
 public class ImportRepoImageCommand<T extends ImportRepoImageParameters> extends BaseImagesCommand<T> implements SerialChildExecutingCommand, QuotaStorageDependent {
 
+    @Inject
+    private Instance<DiskImagesValidator> diskImagesValidatorInstance;
     @Inject
     private VmDeviceUtils vmDeviceUtils;
     @Inject
@@ -83,9 +87,16 @@ public class ImportRepoImageCommand<T extends ImportRepoImageParameters> extends
     @Inject
     @Typed(SerialChildCommandsExecutionCallback.class)
     private Instance<SerialChildCommandsExecutionCallback> callbackProvider;
-
     @Inject
     private ImagesHandler imagesHandler;
+    @Inject
+    private StorageDomainStaticDao storageDomainStaticDao;
+    @Inject
+    private ProviderDao providerDao;
+    @Inject
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
+    @Inject
+    private Instance<StorageDomainValidator> storageDomainValidatorInstance;
 
     private OpenStackImageProviderProxy providerProxy;
 
@@ -203,7 +214,7 @@ public class ImportRepoImageCommand<T extends ImportRepoImageParameters> extends
     protected OpenStackImageProviderProxy getProviderProxy() {
         if (providerProxy == null) {
             providerProxy = OpenStackImageProviderProxy
-                    .getFromStorageDomainId(getParameters().getSourceStorageDomainId(), providerProxyFactory);
+                    .getFromStorageDomainId(getParameters().getSourceStorageDomainId(), providerProxyFactory, storageDomainStaticDao, providerDao);
         }
         return providerProxy;
     }
@@ -383,7 +394,7 @@ public class ImportRepoImageCommand<T extends ImportRepoImageParameters> extends
 
     @Override
     protected boolean validate() {
-        if (!validate(new StoragePoolValidator(getStoragePool()).existsAndUp())) {
+        if (!validate(storagePoolValidatorInstance.get().init(getStoragePool()).existsAndUp())) {
             return false;
         }
 
@@ -467,11 +478,11 @@ public class ImportRepoImageCommand<T extends ImportRepoImageParameters> extends
     }
 
     protected StorageDomainValidator createStorageDomainValidator() {
-        return new StorageDomainValidator(getStorageDomain());
+        return storageDomainValidatorInstance.get().createInstance(getStorageDomain());
     }
 
     protected DiskImagesValidator createDiskImagesValidator(DiskImage diskImage) {
-        return new DiskImagesValidator(Collections.singletonList(diskImage));
+        return diskImagesValidatorInstance.get().init(Collections.singletonList(diskImage));
     }
 
     private void addAuditLogCustomValues() {

@@ -11,6 +11,14 @@ public class VmwareVmProviderProxy extends AbstractVmProviderProxy<VmwareVmProvi
         super(provider);
     }
 
+    public VmwareVmProviderProxy() {
+    }
+
+    public VmwareVmProviderProxy init(Provider<VmwareVmProviderProperties> provider) {
+        setProvider(provider);
+        return this;
+    }
+
     @Override
     protected GetVmsFromExternalProviderQueryParameters buildGetVmsFromExternalProviderQueryParameters() {
         return new GetVmsFromExternalProviderQueryParameters(

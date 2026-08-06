@@ -1,5 +1,7 @@
 package org.ovirt.engine.core.bll.validator.storage;
 
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.bll.ValidationResult;
 import org.ovirt.engine.core.bll.utils.VmDeviceUtils;
 import org.ovirt.engine.core.bll.validator.VmValidationUtils;
@@ -15,16 +17,33 @@ import org.ovirt.engine.core.common.osinfo.OsRepository;
 import org.ovirt.engine.core.common.utils.VmDeviceCommonUtils;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dao.StorageDomainDao;
-import org.ovirt.engine.core.di.Injector;
 
 public class DiskVmElementValidator {
 
     private Disk disk;
     private DiskVmElement diskVmElement;
 
+    @Inject
+    private VmDeviceUtils vmDeviceUtils;
+    @Inject
+    private VmValidationUtils vmValidationUtils;
+    @Inject
+    private OsRepository osRepository;
+    @Inject
+    private StorageDomainDao storageDomainDao;
+
     public DiskVmElementValidator(Disk disk, DiskVmElement diskVmElement) {
         this.disk = disk;
         this.diskVmElement = diskVmElement;
+    }
+
+    public DiskVmElementValidator() {
+    }
+
+    public DiskVmElementValidator init(Disk disk, DiskVmElement diskVmElement) {
+        this.disk = disk;
+        this.diskVmElement = diskVmElement;
+        return this;
     }
 
     public Guid getDiskId() {
@@ -78,8 +97,7 @@ public class DiskVmElementValidator {
         }
 
         // If it does not exist in the map, check in the DB
-        VmDeviceUtils vmDeviceUtils = Injector.get(VmDeviceUtils.class);
-        return vmDeviceUtils.hasVirtioScsiController(vm.getId());
+        return getVmDeviceUtils().hasVirtioScsiController(vm.getId());
     }
 
     public ValidationResult isDiskInterfaceSupported(VM vm) {
@@ -87,7 +105,7 @@ public class DiskVmElementValidator {
             return ValidationResult.VALID;
         }
 
-        if (!Injector.get(VmValidationUtils.class).isDiskInterfaceSupportedByOs(
+        if (!getVmValidationUtils().isDiskInterfaceSupportedByOs(
                 vm.getOs(), vm.getCompatibilityVersion(), vm.getBiosType().getChipsetType(),
                 diskVmElement.getDiskInterface())) {
             return new ValidationResult(EngineMessage.ACTION_TYPE_DISK_INTERFACE_UNSUPPORTED,
@@ -97,8 +115,20 @@ public class DiskVmElementValidator {
         return ValidationResult.VALID;
     }
 
-    private static OsRepository getOsRepository() {
-        return Injector.get(OsRepository.class);
+    public OsRepository getOsRepository() {
+        return osRepository;
+    }
+
+    public VmValidationUtils getVmValidationUtils() {
+        return vmValidationUtils;
+    }
+
+    public VmDeviceUtils getVmDeviceUtils() {
+        return vmDeviceUtils;
+    }
+
+    public StorageDomainDao getStorageDomainDao() {
+        return storageDomainDao;
     }
 
     public ValidationResult isPassDiscardSupported(Guid storageDomainId) {
@@ -136,7 +166,7 @@ public class DiskVmElementValidator {
     }
 
     private ValidationResult isPassDiscardSupportedByUnderlyingStorageForDiskImage(Guid storageDomainId) {
-        StorageDomain diskStorageDomain = Injector.get(StorageDomainDao.class).get(storageDomainId);
+        StorageDomain diskStorageDomain = getStorageDomainDao().get(storageDomainId);
         if (diskStorageDomain.getStorageType().isFileDomain()) {
             return ValidationResult.VALID;
         } else if (diskStorageDomain.getStorageType().isBlockDomain()) {

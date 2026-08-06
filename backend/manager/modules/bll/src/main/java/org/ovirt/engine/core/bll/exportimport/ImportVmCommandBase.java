@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.apache.commons.collections.CollectionUtils;
@@ -97,7 +98,6 @@ public abstract class ImportVmCommandBase<T extends ImportVmParameters> extends 
 
     @Inject
     private AuditLogDirector auditLogDirector;
-
     @Inject
     ExternalVmMacsFinder externalVmMacsFinder;
     @Inject
@@ -124,6 +124,12 @@ public abstract class ImportVmCommandBase<T extends ImportVmParameters> extends 
     private VmInfoBuildUtils vmInfoBuildUtils;
     @Inject
     private StorageDomainStaticDao storageDomainStaticDao;
+    @Inject
+    private Instance<ImportValidator> importValidatorInstance;
+    @Inject
+    private Instance<VmInterfaceManager> vmInterfaceManagerInstance;
+    @Inject
+    private Instance<VnicProfileHelper> vnicProfileHelperInstance;
 
     private final List<String> macsAdded = new ArrayList<>();
     private static VmStatic vmStaticForDefaultValues = new VmStatic();
@@ -220,7 +226,7 @@ public abstract class ImportVmCommandBase<T extends ImportVmParameters> extends 
 
     protected ImportValidator getImportValidator() {
         if (importValidator == null) {
-            importValidator = new ImportValidator(getParameters());
+            importValidator = importValidatorInstance.get().init(getParameters());
         }
         return importValidator;
     }
@@ -675,10 +681,10 @@ public abstract class ImportVmCommandBase<T extends ImportVmParameters> extends 
     }
 
     protected void addVmInterfaces() {
-        VmInterfaceManager vmInterfaceManager = new VmInterfaceManager(macPool);
+        VmInterfaceManager vmInterfaceManager = vmInterfaceManagerInstance.get().init(macPool);
 
         VnicProfileHelper vnicProfileHelper =
-                new VnicProfileHelper(getClusterId(),
+                vnicProfileHelperInstance.get().init(getClusterId(),
                         getStoragePoolId(),
                         AuditLogType.IMPORTEXPORT_IMPORT_VM_INVALID_INTERFACES);
 

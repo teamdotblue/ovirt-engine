@@ -5,6 +5,8 @@ import static org.mockito.Mockito.doReturn;
 import java.util.Collections;
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -13,6 +15,7 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.ovirt.engine.core.bll.BaseCommandTest;
 import org.ovirt.engine.core.bll.ValidateTestUtils;
+import org.ovirt.engine.core.bll.validator.storage.StoragePoolValidator;
 import org.ovirt.engine.core.common.action.ForceSelectSPMParameters;
 import org.ovirt.engine.core.common.businessentities.BusinessEntitiesDefinitions;
 import org.ovirt.engine.core.common.businessentities.StoragePool;
@@ -49,8 +52,12 @@ public class ForceSelectSPMCommandTest extends BaseCommandTest {
     @Mock
     private AsyncTaskDao asyncTaskDaoMock;
 
+    @Mock
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
+
     @BeforeEach
     public void setup() {
+        doReturn(new StoragePoolValidator()).when(storagePoolValidatorInstance).get();
         createVDSandStoragePool();
         mockCommand();
     }

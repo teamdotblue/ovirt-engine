@@ -10,6 +10,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.InternalCommandAttribute;
@@ -56,6 +57,8 @@ public class SyncLunsInfoForBlockStorageDomainCommand<T extends SyncLunsInfoForB
     private BlockStorageDomainHelper blockStorageDomainHelper;
     @Inject
     private StorageDomainStaticDao storageDomainStaticDao;
+    @Inject
+    private Instance<HostValidator> hostValidatorInstance;
 
     public SyncLunsInfoForBlockStorageDomainCommand(T parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -72,7 +75,7 @@ public class SyncLunsInfoForBlockStorageDomainCommand<T extends SyncLunsInfoForB
     }
 
     protected HostValidator getHostValidator() {
-        return HostValidator.createInstance(getVds());
+        return hostValidatorInstance.get().createInstance(getVds());
     }
 
     @Override

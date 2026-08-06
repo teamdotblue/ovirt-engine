@@ -13,6 +13,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -88,66 +89,48 @@ public class SnapshotsManager {
 
     @Inject
     private VmDeviceUtils vmDeviceUtils;
-
     @Inject
     private VmDeviceDao vmDeviceDao;
-
     @Inject
     private BaseDiskDao baseDiskDao;
-
     @Inject
     private SnapshotDao snapshotDao;
-
     @Inject
     private VmDynamicDao vmDynamicDao;
-
     @Inject
     private VmStaticDao vmStaticDao;
-
     @Inject
     private VmDao vmDao;
-
     @Inject
     private VmNetworkInterfaceDao vmNetworkInterfaceDao;
-
     @Inject
     private VmTemplateDao vmTemplateDao;
-
     @Inject
     private ClusterDao clusterDao;
-
     @Inject
     private DiskVmElementDao diskVmElementDao;
-
     @Inject
     private DiskDao diskDao;
-
     @Inject
     private DiskImageDao diskImageDao;
-
     @Inject
     private QuotaDao quotaDao;
-
     @Inject
     private VmHandler vmHandler;
-
     @Inject
     private OvfManager ovfManager;
-
     @Inject
     private ImagesHandler imagesHandler;
-
     @Inject
     private ClusterUtils clusterUtils;
-
     @Inject
     private VmNicDao vmNicDao;
-
     @Inject
     private AuditLogDirector auditLogDirector;
-
     @Inject
     private OvfHelper ovfHelper;
+    @Inject
+    private Instance<VnicProfileHelper> vnicProfileHelperInstance;
 
     /**
      * Save an active snapshot for the VM, without saving the configuration.<br>
@@ -662,7 +645,7 @@ public class SnapshotsManager {
             VmInterfaceManager vmInterfaceManager,
             boolean macsInSnapshotAreExpectedToBeAlreadyAllocated) {
         VnicProfileHelper vnicProfileHelper =
-                new VnicProfileHelper(snapshotedVm.getClusterId(),
+                vnicProfileHelperInstance.get().init(snapshotedVm.getClusterId(),
                         snapshotedVm.getStoragePoolId(),
                         AuditLogType.IMPORTEXPORT_SNAPSHOT_VM_INVALID_INTERFACES);
 

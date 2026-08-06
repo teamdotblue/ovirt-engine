@@ -74,11 +74,12 @@ import org.ovirt.engine.core.utils.transaction.TransactionSupport;
 @DisableInPrepareMode
 public class RemoveSnapshotCommand<T extends RemoveSnapshotParameters> extends VmCommand<T>
         implements QuotaStorageDependent {
-    private List<DiskImage> _sourceImages = null;
 
     @Inject
+    private Instance<DiskImagesValidator> diskImagesValidatorInstance;
+    private List<DiskImage> _sourceImages = null;
+    @Inject
     private AuditLogDirector auditLogDirector;
-
     @Inject
     private OvfManager ovfManager;
     @Inject
@@ -96,6 +97,12 @@ public class RemoveSnapshotCommand<T extends RemoveSnapshotParameters> extends V
     @Inject
     @Typed(ConcurrentChildCommandsExecutionCallback.class)
     private Instance<ConcurrentChildCommandsExecutionCallback> callbackProvider;
+    @Inject
+    private Instance<MultipleStorageDomainsValidator> multipleStorageDomainsValidator;
+    @Inject
+    private Instance<VmValidator> vmValidatorInstance;
+    @Inject
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
 
     public RemoveSnapshotCommand(T parameters, CommandContext context) {
         super(parameters, context);
@@ -394,7 +401,7 @@ public class RemoveSnapshotCommand<T extends RemoveSnapshotParameters> extends V
         }
 
         VmValidator vmValidator = createVmValidator(getVm());
-        if (!validate(new StoragePoolValidator(getStoragePool()).existsAndUp()) ||
+        if (!validate(storagePoolValidatorInstance.get().init(getStoragePool()).existsAndUp()) ||
                 !validateVmSnapshotDisksNotDuringMerge() ||
                 !validateVmNotInPreview() ||
                 !validateSnapshotExists() ||
@@ -473,7 +480,7 @@ public class RemoveSnapshotCommand<T extends RemoveSnapshotParameters> extends V
     }
 
     protected MultipleStorageDomainsValidator getStorageDomainsValidator(Guid spId, Collection<Guid> sdIds) {
-        return new MultipleStorageDomainsValidator(spId, sdIds);
+        return multipleStorageDomainsValidator.get().init(spId, sdIds);
     }
 
     @Override
@@ -501,7 +508,7 @@ public class RemoveSnapshotCommand<T extends RemoveSnapshotParameters> extends V
 
     protected boolean validateImages() {
         List<DiskImage> allDiskImagesInSrcAndDstToValidate = getAllDiskImagesInSrcAndDstToValidate();
-        DiskImagesValidator allDiskImagesInChainValidator = new DiskImagesValidator(allDiskImagesInSrcAndDstToValidate);
+        DiskImagesValidator allDiskImagesInChainValidator = diskImagesValidatorInstance.get().init(allDiskImagesInSrcAndDstToValidate);
 
         return validateImagesNotLocked(allDiskImagesInChainValidator) &&
                 (getVm().isQualifiedForLiveSnapshotMerge() || validate(allDiskImagesInChainValidator.diskImagesNotIllegal())) &&
@@ -556,7 +563,7 @@ public class RemoveSnapshotCommand<T extends RemoveSnapshotParameters> extends V
     }
 
     protected VmValidator createVmValidator(VM vm) {
-        return new VmValidator(vm);
+        return vmValidatorInstance.get().init(vm);
     }
 
     @Override

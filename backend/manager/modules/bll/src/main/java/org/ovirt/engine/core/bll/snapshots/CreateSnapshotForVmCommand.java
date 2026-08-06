@@ -84,7 +84,6 @@ import org.ovirt.engine.core.dao.DiskImageDao;
 import org.ovirt.engine.core.dao.ImageDao;
 import org.ovirt.engine.core.dao.SnapshotDao;
 import org.ovirt.engine.core.dao.VmStaticDao;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.utils.ReplacementUtils;
 import org.ovirt.engine.core.utils.transaction.TransactionSupport;
 
@@ -98,6 +97,8 @@ public class CreateSnapshotForVmCommand<T extends CreateSnapshotForVmParameters>
     private boolean isLiveSnapshotApplicable;
     private boolean shouldFreezeOrThaw;
 
+    @Inject
+    private Instance<DiskImagesValidator> diskImagesValidatorInstance;
     @Inject
     private AuditLogDirector auditLogDirector;
     @Inject
@@ -117,6 +118,20 @@ public class CreateSnapshotForVmCommand<T extends CreateSnapshotForVmParameters>
     @Inject
     @Typed(SerialChildCommandsExecutionCallback.class)
     private Instance<SerialChildCommandsExecutionCallback> callbackProvider;
+    @Inject
+    private Instance<MultipleStorageDomainsValidator> multipleStorageDomainsValidator;
+    @Inject
+    private Instance<DiskExistenceValidator> diskExistenceValidatorInstance;
+    @Inject
+    private Instance<VmValidator> vmValidatorInstance;
+    @Inject
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
+    @Inject
+    private Instance<CinderDisksValidator> cinderDisksValidatorInstance;
+    @Inject
+    private Instance<LiveSnapshotMemoryImageBuilder> liveSnapshotMemoryImageBuilderInstance;
+    @Inject
+    private Instance<StatelessSnapshotMemoryImageBuilder> statelessSnapshotMemoryImageBuilderInstance;
 
     public CreateSnapshotForVmCommand(T parameters, CommandContext commandContext) {
         super(parameters, commandContext);
@@ -244,7 +259,7 @@ public class CreateSnapshotForVmCommand<T extends CreateSnapshotForVmParameters>
     }
 
     private CinderDisksValidator getCinderDisksValidator(List<CinderDisk> cinderDisks) {
-        return new CinderDisksValidator(cinderDisks);
+        return cinderDisksValidatorInstance.get().init(cinderDisks);
     }
 
     @Override
@@ -347,11 +362,11 @@ public class CreateSnapshotForVmCommand<T extends CreateSnapshotForVmParameters>
     }
 
     protected DiskImagesValidator createDiskImageValidator(List<DiskImage> disksList) {
-        return new DiskImagesValidator(disksList);
+        return diskImagesValidatorInstance.get().init(disksList);
     }
 
     protected VmValidator createVmValidator() {
-        return new VmValidator(getVm());
+        return vmValidatorInstance.get().init(getVm());
     }
 
     protected List<DiskImage> getDiskImagesForVm() {
@@ -363,15 +378,15 @@ public class CreateSnapshotForVmCommand<T extends CreateSnapshotForVmParameters>
     }
 
     protected DiskExistenceValidator createDiskExistenceValidator(Set<Guid> disksGuids) {
-        return Injector.injectMembers(new DiskExistenceValidator(disksGuids));
+        return diskExistenceValidatorInstance.get().init(disksGuids);
     }
 
     protected StoragePoolValidator createStoragePoolValidator() {
-        return new StoragePoolValidator(getStoragePool());
+        return storagePoolValidatorInstance.get().init(getStoragePool());
     }
 
     protected MultipleStorageDomainsValidator createMultipleStorageDomainsValidator(Collection<DiskImage> disksList) {
-        return new MultipleStorageDomainsValidator(getVm().getStoragePoolId(),
+        return multipleStorageDomainsValidator.get().init(getVm().getStoragePoolId(),
                 ImagesHandler.getAllStorageIdsForImageIds(disksList));
     }
 
@@ -702,12 +717,12 @@ public class CreateSnapshotForVmCommand<T extends CreateSnapshotForVmParameters>
 
     private MemoryImageBuilder createMemoryImageBuilder() {
         if (getParameters().getSnapshotType() == Snapshot.SnapshotType.STATELESS) {
-            return new StatelessSnapshotMemoryImageBuilder(getVm());
+            return statelessSnapshotMemoryImageBuilderInstance.get().init(getVm());
         }
 
         if (getParameters().isSaveMemory() && isLiveSnapshotApplicable) {
             boolean wipeAfterDelete = getDisksList().stream().anyMatch(DiskImage::isWipeAfterDelete);
-            return new LiveSnapshotMemoryImageBuilder(getVm(), cachedStorageDomainId,
+            return liveSnapshotMemoryImageBuilderInstance.get().init(getVm(), cachedStorageDomainId,
                     this, vmOverheadCalculator, getParameters().getDescription(), wipeAfterDelete);
         }
 

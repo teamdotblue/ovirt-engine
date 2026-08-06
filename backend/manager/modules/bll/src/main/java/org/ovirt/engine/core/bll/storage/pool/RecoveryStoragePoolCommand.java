@@ -1,5 +1,6 @@
 package org.ovirt.engine.core.bll.storage.pool;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.NonTransactiveCommandAttribute;
@@ -37,6 +38,8 @@ public class RecoveryStoragePoolCommand extends StorageDomainCommandBase<Reconst
     private StorageDomainDao storageDomainDao;
     @Inject
     private StoragePoolDao storagePoolDao;
+    @Inject
+    private Instance<StorageDomainValidator> storageDomainValidatorInstance;
 
     /**
      * Constructor for command creation when compensation is applied on startup
@@ -64,7 +67,7 @@ public class RecoveryStoragePoolCommand extends StorageDomainCommandBase<Reconst
     protected boolean validate() {
         StoragePoolValidator storagePoolValidator = createStoragePoolValidator();
         if (!validate(storagePoolValidator.exists())
-                || !validate(new StorageDomainValidator(getStorageDomain()).isInProcess())
+                || !validate(storageDomainValidatorInstance.get().createInstance(getStorageDomain()).isInProcess())
                 || !validate(storagePoolValidator.isAnyDomainInProcess())
                 || !validate(storagePoolValidator.isNotInStatus(StoragePoolStatus.Uninitialized))) {
             return false;

@@ -1,9 +1,12 @@
 package org.ovirt.engine.core.bll.storage.disk.image;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
+
+import javax.enterprise.inject.Instance;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,7 +20,10 @@ import org.ovirt.engine.core.bll.BaseCommandTest;
 import org.ovirt.engine.core.bll.ValidateTestUtils;
 import org.ovirt.engine.core.bll.ValidationResult;
 import org.ovirt.engine.core.bll.context.CommandContext;
+import org.ovirt.engine.core.bll.validator.storage.DiskImagesValidator;
 import org.ovirt.engine.core.bll.validator.storage.DiskValidator;
+import org.ovirt.engine.core.bll.validator.storage.StorageDomainValidator;
+import org.ovirt.engine.core.bll.validator.storage.StoragePoolValidator;
 import org.ovirt.engine.core.common.action.AmendImageGroupVolumesCommandParameters;
 import org.ovirt.engine.core.common.businessentities.StorageDomain;
 import org.ovirt.engine.core.common.businessentities.StorageDomainStatus;
@@ -51,6 +57,21 @@ public class AmendImageGroupVolumesCommandTest extends BaseCommandTest {
     @Mock
     private DiskValidator diskValidator;
 
+    @Mock
+    private StorageDomainValidator storageDomainValidator;
+
+    @Mock
+    private Instance<StorageDomainValidator> storageDomainValidatorInstance;
+
+    @Mock
+    private Instance<DiskImagesValidator> diskImagesValidatorInstance;
+
+    @Mock
+    private DiskImagesValidator diskImagesValidator;
+
+    @Mock
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
+
     private Guid diskId = Guid.newGuid();
     private Guid storagePoolId = Guid.newGuid();
     private Guid storageDomainId = Guid.newGuid();
@@ -65,6 +86,7 @@ public class AmendImageGroupVolumesCommandTest extends BaseCommandTest {
 
     @BeforeEach
     public void setup() {
+        doReturn(new StoragePoolValidator()).when(storagePoolValidatorInstance).get();
         diskImage = new DiskImage();
         diskImage.setStoragePoolId(storagePoolId);
         diskImage.setVmEntityType(VmEntityType.VM);
@@ -74,6 +96,19 @@ public class AmendImageGroupVolumesCommandTest extends BaseCommandTest {
         diskImage.setStorageIds(storageIds);
         doReturn(diskImage).when(diskDao).get(diskId);
         doReturn(diskValidator).when(command).createDiskValidator();
+        doReturn(storageDomainValidator).when(storageDomainValidatorInstance).get();
+        when(storageDomainValidator.createInstance(any())).thenAnswer(invocation ->
+            new StorageDomainValidator(invocation.getArgument(0)));
+        when(diskImagesValidatorInstance.get()).thenReturn(diskImagesValidator);
+        when(diskImagesValidator.init(any())).thenReturn(diskImagesValidator);
+        when(diskImagesValidator.diskImagesNotIllegal()).thenAnswer(invocation ->
+            diskImage.getImageStatus() == ImageStatus.ILLEGAL
+                ? new ValidationResult(EngineMessage.ACTION_TYPE_FAILED_DISKS_ILLEGAL)
+                : ValidationResult.VALID);
+        when(diskImagesValidator.diskImagesNotLocked()).thenAnswer(invocation ->
+            diskImage.getImageStatus() == ImageStatus.LOCKED
+                ? new ValidationResult(EngineMessage.ACTION_TYPE_FAILED_DISKS_LOCKED)
+                : ValidationResult.VALID);
         mockRunningStoragePool();
         mockRunningStorageDomain();
     }

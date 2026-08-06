@@ -10,6 +10,8 @@ import static org.mockito.Mockito.when;
 import java.util.Collections;
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,6 +22,7 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.ovirt.engine.core.bll.BaseCommandTest;
 import org.ovirt.engine.core.bll.ValidateTestUtils;
+import org.ovirt.engine.core.bll.validator.storage.StorageDomainValidator;
 import org.ovirt.engine.core.common.action.StorageDomainManagementParameter;
 import org.ovirt.engine.core.common.businessentities.StorageDomainStatic;
 import org.ovirt.engine.core.common.businessentities.StorageDomainType;
@@ -56,11 +59,19 @@ public class AddExistingFileStorageDomainCommandTest extends BaseCommandTest {
     @Mock
     private StorageDomainStaticDao storageDomainStaticDao;
 
+    @Mock
+    private StorageDomainValidator storageDomainValidator;
+
+    @Mock
+    private Instance<StorageDomainValidator> storageDomainValidatorInstance;
+
     @BeforeEach
     public void setUp() {
         command.setStoragePool(getStoragePool());
 
         doReturn(false).when(command).isStorageWithSameNameExists();
+        doReturn(storageDomainValidator).when(storageDomainValidatorInstance).get();
+        doReturn(storageDomainValidator).when(storageDomainValidator).createInstance(any());
 
         doNothing().when(command).addStorageDomainInDb();
         doNothing().when(command).updateStorageDomainFromIrs();

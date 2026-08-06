@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.context.CommandContext;
@@ -35,12 +36,13 @@ public class ActivateVdsCommand<T extends VdsActionParameters> extends VdsComman
 
     @Inject
     private NetworkClusterHelper networkClusterHelper;
-
     @Inject
     private NetworkDao networkDao;
-
     @Inject
     private GlusterUtil glusterUtil;
+    @Inject
+    private Instance<HostValidator> hostValidatorInstance;
+
     public ActivateVdsCommand(T parameters, CommandContext commandContext) {
         super(parameters, commandContext);
     }
@@ -125,7 +127,7 @@ public class ActivateVdsCommand<T extends VdsActionParameters> extends VdsComman
 
     @Override
     protected boolean validate() {
-        HostValidator validator = HostValidator.createInstance(getVds());
+        HostValidator validator = hostValidatorInstance.get().createInstance(getVds());
         return validate(validator.hostExists()) &&
                 validate(validator.validateStatusForActivation()) &&
                 validate(validator.validateUniqueId());

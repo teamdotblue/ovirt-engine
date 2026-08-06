@@ -12,12 +12,16 @@ import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import javax.enterprise.inject.Instance;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.ovirt.engine.core.bll.utils.VmDeviceUtils;
+import org.ovirt.engine.core.bll.validator.QuotaValidator;
 import org.ovirt.engine.core.bll.validator.storage.StorageDomainValidator;
+import org.ovirt.engine.core.bll.validator.storage.StoragePoolValidator;
 import org.ovirt.engine.core.common.businessentities.ArchitectureType;
 import org.ovirt.engine.core.common.businessentities.BiosType;
 import org.ovirt.engine.core.common.businessentities.Cluster;
@@ -59,6 +63,13 @@ public abstract class AddVmCommandTestBase<T extends AddVmCommand<?>> extends Ba
 
     @Mock
     protected StorageDomainValidator storageDomainValidator;
+
+    @Mock
+    private Instance<StorageDomainValidator> storageDomainValidatorProvider;
+
+    @Mock
+    private Instance<StoragePoolValidator> storagePoolValidatorInstance;
+
     private VmTemplate vmTemplate;
     protected VM vm;
     protected Cluster cluster;
@@ -73,6 +84,9 @@ public abstract class AddVmCommandTestBase<T extends AddVmCommand<?>> extends Ba
     @Spy
     @InjectMocks
     private VmHandler vmHandler;
+
+    @Mock
+    private QuotaValidator quotaValidator;
 
     @Spy
     @InjectMocks
@@ -103,9 +117,14 @@ public abstract class AddVmCommandTestBase<T extends AddVmCommand<?>> extends Ba
         initVmTemplate();
         cmd.setVmTemplate(vmTemplate);
         cmd.setVmTemplateId(vmTemplate.getId());
+        doReturn(quotaValidator).when(cmd).createQuotaValidator(any());
     }
 
     protected void mockOtherDependencies() {
+        doReturn(new StoragePoolValidator()).when(storagePoolValidatorInstance).get();
+        doReturn(storageDomainValidator).when(storageDomainValidatorProvider).get();
+        doReturn(storageDomainValidator).when(storageDomainValidator).createInstance(any());
+        doReturn(ValidationResult.VALID).when(storageDomainValidator).isDomainExistAndActive();
         doReturn(storageDomainValidator).when(cmd).createStorageDomainValidator(any());
 
         VmBase vmBase = new VmBase();
