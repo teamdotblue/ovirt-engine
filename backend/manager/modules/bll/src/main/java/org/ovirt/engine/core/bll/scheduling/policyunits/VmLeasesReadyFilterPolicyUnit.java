@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.scheduling.PolicyUnitImpl;
@@ -32,7 +33,7 @@ public class VmLeasesReadyFilterPolicyUnit extends PolicyUnitImpl {
     private static final Logger log = LoggerFactory.getLogger(VmLeasesReadyFilterPolicyUnit.class);
 
     @Inject
-    private ResourceManager resourceManager;
+    private Instance<ResourceManager> resourceManagerInstance;
 
     public VmLeasesReadyFilterPolicyUnit(PolicyUnit policyUnit,
                                  PendingResourceManager pendingResourceManager) {
@@ -48,7 +49,7 @@ public class VmLeasesReadyFilterPolicyUnit extends PolicyUnitImpl {
 
         List<VDS> filteredHosts = hosts.stream()
                 .filter(vds -> {
-                    ArrayList<VDSDomainsData> domainsData = resourceManager.getVdsManager(vds.getId()).getDomains();
+                    ArrayList<VDSDomainsData> domainsData = resourceManagerInstance.get().getVdsManager(vds.getId()).getDomains();
                     if (!isVmLeaseReadyForHost(domainsData, vm, vds.getName())) {
                         messages.addMessage(vds.getId(),
                                 EngineMessage.ACTION_TYPE_FAILED_VM_LEASE_IS_NOT_READY_FOR_HOST.toString());
@@ -58,7 +59,7 @@ public class VmLeasesReadyFilterPolicyUnit extends PolicyUnitImpl {
                 }).collect(Collectors.toList());
 
         if (filteredHosts.isEmpty() && !hosts.isEmpty()) {
-            resourceManager.getVmManager(vm.getId()).setFailedSchedulingDueToLeaseSd(true);
+            resourceManagerInstance.get().getVmManager(vm.getId()).setFailedSchedulingDueToLeaseSd(true);
         }
 
         return filteredHosts;

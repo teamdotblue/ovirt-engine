@@ -3,6 +3,7 @@ package org.ovirt.engine.core.bll.scheduling.policyunits;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
@@ -11,6 +12,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
+
+import javax.enterprise.inject.Instance;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -55,7 +58,7 @@ public class EvenDistributionWeightPolicyUnitTest extends AbstractPolicyUnitTest
     private VmOverheadCalculator vmOverheadCalculator;
 
     @Mock
-    private ResourceManager resourceManager;
+    private Instance<ResourceManager> resourceManagerInstance;
 
     @Mock
     private VdsCpuUnitPinningHelper vdsCpuUnitPinningHelper;
@@ -75,6 +78,8 @@ public class EvenDistributionWeightPolicyUnitTest extends AbstractPolicyUnitTest
     @BeforeEach
     public void setUp() {
         when(vmOverheadCalculator.getTotalRequiredMemMb(any(VM.class))).thenAnswer(invocation -> invocation.<VM>getArgument(0).getMemSizeMb());
+        ResourceManager resourceManager = mock(ResourceManager.class);
+        when(resourceManagerInstance.get()).thenReturn(resourceManager);
         when(resourceManager.getVdsManager(any())).thenReturn(vdsManager);
         when(vdsManager.getCpuTopology()).thenReturn(Collections.emptyList());
     }

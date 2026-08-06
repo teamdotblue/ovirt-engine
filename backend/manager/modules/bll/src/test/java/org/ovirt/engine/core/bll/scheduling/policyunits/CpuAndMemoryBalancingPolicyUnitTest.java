@@ -17,6 +17,8 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import javax.enterprise.inject.Instance;
+
 import org.mockito.Mock;
 import org.ovirt.engine.core.bll.scheduling.external.BalanceResult;
 import org.ovirt.engine.core.bll.scheduling.utils.VdsCpuUnitPinningHelper;
@@ -37,7 +39,7 @@ public class CpuAndMemoryBalancingPolicyUnitTest extends AbstractPolicyUnitTest 
     @Mock
     protected VmDao vmDao;
     @Mock
-    protected ResourceManager resourceManager;
+    protected Instance<ResourceManager> resourceManagerInstance;
 
     @Mock
     private VdsCpuUnitPinningHelper vdsCpuUnitPinningHelper;
@@ -59,6 +61,9 @@ public class CpuAndMemoryBalancingPolicyUnitTest extends AbstractPolicyUnitTest 
                     .filter(vm -> hostIds.contains(vm.getRunOnVds()))
                     .collect(Collectors.groupingBy(VM::getRunOnVds));
         }).when(vmDao).getAllRunningForMultipleVds(any(Collection.class));
+
+        ResourceManager resourceManager = mock(ResourceManager.class);
+        when(resourceManagerInstance.get()).thenReturn(resourceManager);
 
         for (Map.Entry<Guid, VM> vm: vms.entrySet()) {
             doReturn(vm.getValue()).when(vmDao).get(vm.getKey());

@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -32,7 +33,7 @@ public class RunVmDelayer {
     private static final Logger log = LoggerFactory.getLogger(RunVmDelayer.class);
 
     @Inject
-    private ResourceManager resourceManager;
+    private Instance<ResourceManager> resourceManagerInstance;
 
     /**
      * throttle bulk run of VMs by waiting for the update of run-time to kick in and fire <br>
@@ -47,12 +48,12 @@ public class RunVmDelayer {
             // time out waiting for an update is the highest between the refresh rate and the last update elapsed time
             // but still no higher than a configurable max to prevent very long updates to stall command.
             long t = Math.max(
-                    resourceManager.getVdsManager(vdsId).getLastUpdateElapsed(),
+                    resourceManagerInstance.get().getVdsManager(vdsId).getLastUpdateElapsed(),
                     TimeUnit.SECONDS.toMillis(Config.<Long> getValue(VdsRefreshRate)));
             t = Math.min(Config.<Integer> getValue(ConfigValues.ThrottlerMaxWaitForVdsUpdateInMillis), t);
 
             // wait for the run-time refresh to decrease any current powering-up VMs
-            BlockingQueue<Boolean> queue = resourceManager.getVdsManager(vdsId).getVdsMonitor().getQueue();
+            BlockingQueue<Boolean> queue = resourceManagerInstance.get().getVdsManager(vdsId).getVdsMonitor().getQueue();
             queue.poll(t, TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
             // ignore
@@ -67,7 +68,7 @@ public class RunVmDelayer {
         log.debug("Try to wait for the engine to update memory and cpu stats");
 
         long maxUpdateElapsed = vdsIds.stream()
-                .mapToLong(vdsId -> resourceManager.getVdsManager(vdsId).getLastUpdateElapsed())
+                .mapToLong(vdsId -> resourceManagerInstance.get().getVdsManager(vdsId).getLastUpdateElapsed())
                 .max().getAsLong();
 
         long maxWaitTime = Math.min(
@@ -86,7 +87,7 @@ public class RunVmDelayer {
 
             try {
                 // wait for the run-time refresh to decrease any current powering-up VMs
-                BlockingQueue<Boolean> queue = resourceManager.getVdsManager(vdsId).getVdsMonitor().getQueue();
+                BlockingQueue<Boolean> queue = resourceManagerInstance.get().getVdsManager(vdsId).getVdsMonitor().getQueue();
                 queue.poll(endTime - currentTime, TimeUnit.MILLISECONDS);
             } catch (InterruptedException e) {
                 // ignore

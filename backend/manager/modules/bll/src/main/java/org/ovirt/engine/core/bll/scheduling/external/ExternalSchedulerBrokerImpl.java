@@ -92,7 +92,7 @@ public class ExternalSchedulerBrokerImpl implements ExternalSchedulerBroker {
             XmlRpcClient client = new XmlRpcClient();
             client.setConfig(config);
             Object xmlRpcStruct = client.execute(FILTER, createFilterArgs(filterNames, hostIDs, vmID, propertiesMap));
-            return ExternalSchedulerBrokerObjectBuilder.getFilteringResult(xmlRpcStruct).getHosts();
+            return ExternalSchedulerBrokerObjectBuilder.getFilteringResult(xmlRpcStruct, auditLogDirector).getHosts();
 
         } catch (XmlRpcException e) {
             log.error("Error communicating with the external scheduler while filtering: {}", e.getMessage());
@@ -141,7 +141,7 @@ public class ExternalSchedulerBrokerImpl implements ExternalSchedulerBroker {
             XmlRpcClient client = new XmlRpcClient();
             client.setConfig(config);
             Object result = client.execute(SCORE, createScoreArgs(scoreNameAndWeight, hostIDs, vmID, propertiesMap));
-            return ExternalSchedulerBrokerObjectBuilder.getScoreResult(result).getHosts();
+            return ExternalSchedulerBrokerObjectBuilder.getScoreResult(result, auditLogDirector).getHosts();
 
         } catch (XmlRpcException e) {
             log.error("Error communicating with the external scheduler while running weight modules: {}",
@@ -187,7 +187,7 @@ public class ExternalSchedulerBrokerImpl implements ExternalSchedulerBroker {
             client.setConfig(config);
             Object result =
                     client.execute(BALANCE, createBalanceArgs(balanceName, hostIDs, propertiesMap));
-            return Optional.of(ExternalSchedulerBrokerObjectBuilder.getBalanceResult(result));
+            return Optional.of(ExternalSchedulerBrokerObjectBuilder.getBalanceResult(result, auditLogDirector));
 
         } catch (XmlRpcException e) {
             log.error("Error communicating with the external scheduler while balancing: {}", e.getMessage());

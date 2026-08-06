@@ -5,6 +5,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.bll.scheduling.HaReservationHandling;
 import org.ovirt.engine.core.bll.scheduling.PolicyUnitImpl;
 import org.ovirt.engine.core.bll.scheduling.PolicyUnitParameter;
@@ -19,6 +21,7 @@ import org.ovirt.engine.core.common.scheduling.PolicyUnit;
 import org.ovirt.engine.core.common.scheduling.PolicyUnitType;
 import org.ovirt.engine.core.common.utils.Pair;
 import org.ovirt.engine.core.compat.Guid;
+import org.ovirt.engine.core.dao.VmDao;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,6 +33,9 @@ import org.slf4j.LoggerFactory;
         parameters = PolicyUnitParameter.SCALE_DOWN
 )
 public class HaReservationWeightPolicyUnit extends PolicyUnitImpl {
+
+    @Inject
+    private VmDao vmDao;
 
     private static final Logger log = LoggerFactory.getLogger(HaReservationWeightPolicyUnit.class);
 
@@ -54,7 +60,7 @@ public class HaReservationWeightPolicyUnit extends PolicyUnitImpl {
             fillDefaultScores(hosts, scores);
         } else {
             // Use a single call to the DB to retrieve all VM in the Cluster and map them by Host id
-            Map<Guid, List<VM>> hostId2HaVmMapping = HaReservationHandling.mapHaVmToHostByCluster(context.getCluster().getId());
+            Map<Guid, List<VM>> hostId2HaVmMapping = HaReservationHandling.mapHaVmToHostByCluster(context.getCluster().getId(), vmDao);
 
             int maxCount = 0;
             for (VDS host : hosts) {

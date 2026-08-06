@@ -2,12 +2,15 @@ package org.ovirt.engine.core.bll.scheduling.policyunits;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.IntStream;
+
+import javax.enterprise.inject.Instance;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,7 +36,10 @@ import org.ovirt.engine.core.vdsbroker.VmManager;
 class VmLeasesReadyFilterPolicyUnitTest {
 
     @Mock
-    ResourceManager resourceManager;
+    Instance<ResourceManager> resourceManagerInstance;
+
+    @Mock
+    private ResourceManager resourceManager;
 
     @Mock
     VdsManager host1VdsManager;
@@ -56,6 +62,7 @@ class VmLeasesReadyFilterPolicyUnitTest {
 
     @BeforeEach
     public void setUp() {
+        when(resourceManagerInstance.get()).thenReturn(resourceManager);
         cluster = new Cluster();
         cluster.setId(Guid.newGuid());
 

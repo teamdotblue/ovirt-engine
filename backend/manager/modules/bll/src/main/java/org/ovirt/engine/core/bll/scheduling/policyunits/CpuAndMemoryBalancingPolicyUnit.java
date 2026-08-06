@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.apache.commons.lang.math.NumberUtils;
@@ -45,7 +46,7 @@ public abstract class CpuAndMemoryBalancingPolicyUnit extends PolicyUnitImpl {
     @Inject
     private VmDao vmDao;
     @Inject
-    protected ResourceManager resourceManager;
+    protected Instance<ResourceManager> resourceManagerInstance;
     @Inject
     protected VdsCpuUnitPinningHelper vdsCpuUnitPinningHelper;
     @Override
@@ -124,7 +125,7 @@ public abstract class CpuAndMemoryBalancingPolicyUnit extends PolicyUnitImpl {
             final List<VDS> overUtilizedHosts,
             final List<VDS> underUtilizedHosts) {
 
-        return findVmAndDestinations.invoke(overUtilizedHosts, underUtilizedHosts, vmDao, resourceManager);
+        return findVmAndDestinations.invoke(overUtilizedHosts, underUtilizedHosts, vmDao, resourceManagerInstance.get());
     }
 
     /**
@@ -180,7 +181,7 @@ public abstract class CpuAndMemoryBalancingPolicyUnit extends PolicyUnitImpl {
 
         long duration = TimeUnit.MINUTES.toMillis(params.getCpuOverCommitDurationMinutes());
         HostCpuLoadHelper cpuLoadHelper = new HostCpuLoadHelper(host,
-                resourceManager,
+                resourceManagerInstance.get(),
                 vdsCpuUnitPinningHelper,
                 params.isCountThreadsAsCores());
 
@@ -210,7 +211,7 @@ public abstract class CpuAndMemoryBalancingPolicyUnit extends PolicyUnitImpl {
 
         long duration = TimeUnit.MINUTES.toMillis(params.getCpuOverCommitDurationMinutes());
         HostCpuLoadHelper cpuLoadHelper = new HostCpuLoadHelper(host,
-                resourceManager,
+                resourceManagerInstance.get(),
                 vdsCpuUnitPinningHelper,
                 params.isCountThreadsAsCores());
 
@@ -242,7 +243,7 @@ public abstract class CpuAndMemoryBalancingPolicyUnit extends PolicyUnitImpl {
             // Assume all hosts belong to the same cluster
             Cluster cluster = clusterDao.get(overUtilizedHosts.get(0).getClusterId());
             overUtilizedHosts.sort(new VdsCpuUsageComparator(
-                    resourceManager,
+                    resourceManagerInstance.get(),
                     vdsCpuUnitPinningHelper,
                     cluster != null && cluster.getCountThreadsAsCores())
                             .reversed());
@@ -277,7 +278,7 @@ public abstract class CpuAndMemoryBalancingPolicyUnit extends PolicyUnitImpl {
             // Assume all hosts belong to the same cluster
             Cluster cluster = clusterDao.get(underUtilizedHosts.get(0).getClusterId());
             underUtilizedHosts.sort(new VdsCpuUsageComparator(
-                    resourceManager,
+                    resourceManagerInstance.get(),
                     vdsCpuUnitPinningHelper,
                     cluster != null && cluster.getCountThreadsAsCores()));
         }

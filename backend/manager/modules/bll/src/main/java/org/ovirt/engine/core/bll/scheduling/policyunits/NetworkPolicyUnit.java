@@ -35,7 +35,6 @@ import org.ovirt.engine.core.dao.network.InterfaceDao;
 import org.ovirt.engine.core.dao.network.NetworkDao;
 import org.ovirt.engine.core.dao.network.VmNetworkInterfaceDao;
 import org.ovirt.engine.core.dao.network.VnicProfileViewDao;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.utils.NetworkUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,6 +56,8 @@ public class NetworkPolicyUnit extends PolicyUnitImpl {
     private VmNetworkInterfaceDao vmNetworkInterfaceDao;
     @Inject
     private VnicProfileViewDao vnicProfileViewDao;
+    @Inject
+    private VfScheduler vfScheduler;
 
     public NetworkPolicyUnit(PolicyUnit policyUnit,
             PendingResourceManager pendingResourceManager) {
@@ -274,8 +275,6 @@ public class NetworkPolicyUnit extends PolicyUnitImpl {
 
     private ValidationResult validatePassthroughVnics(Guid vmId, VDS host,
             List<VmNetworkInterface> vnics) {
-
-        VfScheduler vfScheduler = Injector.get(VfScheduler.class);
         List<String> problematicVnics = vfScheduler.validatePassthroughVnics(vmId, host.getId(), vnics);
 
         if (!problematicVnics.isEmpty()) {

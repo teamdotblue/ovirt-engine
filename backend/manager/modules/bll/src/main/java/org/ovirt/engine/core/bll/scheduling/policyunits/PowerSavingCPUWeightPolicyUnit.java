@@ -42,7 +42,7 @@ public class PowerSavingCPUWeightPolicyUnit extends EvenDistributionCPUWeightPol
         List<Guid> hostsWithMaxScore = new ArrayList<>();
         for (VDS vds : hosts) {
             HostCpuLoadHelper cpuLoadHelper = new HostCpuLoadHelper(vds,
-                    resourceManager,
+                    resourceManagerInstance.get(),
                     vdsCpuUnitPinningHelper,
                     pendingResourceManager,
                     countThreadsAsCores);

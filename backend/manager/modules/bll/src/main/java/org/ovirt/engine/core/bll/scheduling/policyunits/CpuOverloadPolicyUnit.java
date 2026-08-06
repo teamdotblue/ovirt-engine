@@ -5,6 +5,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.apache.commons.lang.math.NumberUtils;
@@ -41,8 +42,7 @@ public class CpuOverloadPolicyUnit extends PolicyUnitImpl {
     private static final Logger log = LoggerFactory.getLogger(CpuOverloadPolicyUnit.class);
 
     @Inject
-    protected ResourceManager resourceManager;
-
+    protected Instance<ResourceManager> resourceManagerInstance;
     @Inject
     protected VdsCpuUnitPinningHelper vdsCpuUnitPinningHelper;
 
@@ -65,7 +65,7 @@ public class CpuOverloadPolicyUnit extends PolicyUnitImpl {
         for (VDS vds : hosts) {
 
             HostCpuLoadHelper cpuLoadHelper = new HostCpuLoadHelper(vds,
-                    resourceManager,
+                    resourceManagerInstance.get(),
                     vdsCpuUnitPinningHelper,
                     context.getCluster().getCountThreadsAsCores());
 

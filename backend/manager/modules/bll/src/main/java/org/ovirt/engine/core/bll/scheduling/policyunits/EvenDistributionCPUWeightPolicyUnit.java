@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.apache.commons.lang.math.NumberUtils;
@@ -36,8 +37,7 @@ import org.ovirt.engine.core.vdsbroker.ResourceManager;
 public class EvenDistributionCPUWeightPolicyUnit extends PolicyUnitImpl {
 
     @Inject
-    protected ResourceManager resourceManager;
-
+    protected Instance<ResourceManager> resourceManagerInstance;
     @Inject
     protected VdsCpuUnitPinningHelper vdsCpuUnitPinningHelper;
 
@@ -56,7 +56,7 @@ public class EvenDistributionCPUWeightPolicyUnit extends PolicyUnitImpl {
 
         for (VDS vds : hosts) {
             HostCpuLoadHelper cpuLoadHelper = new HostCpuLoadHelper(vds,
-                    resourceManager,
+                    resourceManagerInstance.get(),
                     vdsCpuUnitPinningHelper,
                     pendingResourceManager,
                     countThreadsAsCores);

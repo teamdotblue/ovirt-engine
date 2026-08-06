@@ -9,6 +9,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -41,7 +43,7 @@ public class CPUPolicyUnitTest {
     private VdsManager vdsManager;
 
     @Mock
-    private ResourceManager resourceManager;
+    private Instance<ResourceManager> resourceManagerInstance;
 
     @InjectMocks
     private final CPUPolicyUnit cpuPolicyUnit = new CPUPolicyUnit(null, pendingHostResources);
@@ -75,6 +77,8 @@ public class CPUPolicyUnitTest {
         cluster.setId(Guid.newGuid());
 
         when(pendingHostResources.pendingHostResources(any(), any())).thenReturn(Collections.emptyList());
+        ResourceManager resourceManager = mock(ResourceManager.class);
+        when(resourceManagerInstance.get()).thenReturn(resourceManager);
         when(resourceManager.getVdsManager(any())).thenReturn(vdsManager);
     }
 

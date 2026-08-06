@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
@@ -11,6 +12,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import javax.enterprise.inject.Instance;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,7 +37,7 @@ public class VdsCpuUnitPinningHelperTest {
     @Mock
     private VdsManager vdsManager;
     @Mock
-    private ResourceManager resourceManager;
+    private Instance<ResourceManager> resourceManagerInstance;
     @Mock
     private VdsNumaNodeDao vdsNumaNodeDao;
     @InjectMocks
@@ -63,6 +66,9 @@ public class VdsCpuUnitPinningHelperTest {
         host.setCpuSockets(3);
         host.setCpuThreads(12);
         host.setCpuCores(6);
+
+        ResourceManager resourceManager = mock(ResourceManager.class);
+        when(resourceManagerInstance.get()).thenReturn(resourceManager);
 
         when(vdsManager.getCpuTopology()).thenReturn(cpuTopology);
         when(resourceManager.getVdsManager(host.getId())).thenReturn(vdsManager);

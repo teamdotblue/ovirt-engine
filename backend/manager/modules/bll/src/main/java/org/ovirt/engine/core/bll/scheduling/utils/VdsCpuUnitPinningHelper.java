@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.common.businessentities.CpuPinningPolicy;
@@ -21,7 +22,7 @@ import org.ovirt.engine.core.vdsbroker.ResourceManager;
 
 public class VdsCpuUnitPinningHelper {
     @Inject
-    private ResourceManager resourceManager;
+    private Instance<ResourceManager> resourceManagerInstance;
     @Inject
     private VdsNumaNodeDao vdsNumaNodeDao;
 
@@ -60,7 +61,7 @@ public class VdsCpuUnitPinningHelper {
     }
 
     public List<VdsCpuUnit> updatePhysicalCpuAllocations(VM vm, Map<Guid, List<VdsCpuUnit>> vmToPendingPinnings, Guid hostId) {
-        return updatePhysicalCpuAllocations(vm, vmToPendingPinnings, hostId, resourceManager.getVdsManager(hostId).getCpuTopology());
+        return updatePhysicalCpuAllocations(vm, vmToPendingPinnings, hostId, resourceManagerInstance.get().getVdsManager(hostId).getCpuTopology());
     }
 
     /**

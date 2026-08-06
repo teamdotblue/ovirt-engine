@@ -18,6 +18,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -61,7 +63,7 @@ public class CpuPinningPolicyUnitTest {
     private Cluster cluster;
 
     @Mock
-    private ResourceManager resourceManager;
+    private Instance<ResourceManager> resourceManagerInstance;
 
     @Mock
     private VdsManager vdsManager;
@@ -82,6 +84,8 @@ public class CpuPinningPolicyUnitTest {
         vm.setId(Guid.newGuid());
         vm.setCpuPinningPolicy(CpuPinningPolicy.MANUAL);
         cluster = new Cluster();
+        ResourceManager resourceManager = mock(ResourceManager.class);
+        when(resourceManagerInstance.get()).thenReturn(resourceManager);
         doReturn(vdsManager).when(resourceManager).getVdsManager(any());
         doReturn(new ArrayList<>()).when(vdsManager).getCpuTopology();
         when(pendingResourceManager.pendingHostResources(any(), any())).thenReturn(Collections.emptyList());

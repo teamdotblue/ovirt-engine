@@ -9,6 +9,8 @@ import java.util.Objects;
 import java.util.Random;
 import java.util.stream.Collectors;
 
+import javax.inject.Inject;
+
 import org.apache.commons.lang.math.NumberUtils;
 import org.ovirt.engine.core.bll.scheduling.HaReservationHandling;
 import org.ovirt.engine.core.bll.scheduling.PolicyUnitImpl;
@@ -22,6 +24,7 @@ import org.ovirt.engine.core.common.config.Config;
 import org.ovirt.engine.core.common.config.ConfigValues;
 import org.ovirt.engine.core.common.scheduling.PolicyUnit;
 import org.ovirt.engine.core.compat.Guid;
+import org.ovirt.engine.core.dao.VmDao;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,6 +35,9 @@ import org.slf4j.LoggerFactory;
  * host.
  */
 public class HaReservationBalancePolicyUnit extends PolicyUnitImpl {
+
+    @Inject
+    private VmDao vmDao;
 
     private static final Logger log = LoggerFactory.getLogger(HaReservationBalancePolicyUnit.class);
 
@@ -61,7 +67,7 @@ public class HaReservationBalancePolicyUnit extends PolicyUnitImpl {
 
         int haVmsInCluster = 0;
 
-        Map<Guid, List<VM>> hostId2HaVmMapping = HaReservationHandling.mapHaVmToHostByCluster(cluster.getId());
+        Map<Guid, List<VM>> hostId2HaVmMapping = HaReservationHandling.mapHaVmToHostByCluster(cluster.getId(), vmDao);
         haVmsInCluster = countHaVmsInCluster(hostId2HaVmMapping);
 
 

@@ -54,7 +54,7 @@ public class EvenDistributionBalancePolicyUnit extends CpuAndMemoryBalancingPoli
                 cluster,
                 highCpuUtilization,
                 overUtilizedMemory,
-                resourceManager,
+                resourceManagerInstance.get(),
                 vdsCpuUnitPinningHelper);
     }
 

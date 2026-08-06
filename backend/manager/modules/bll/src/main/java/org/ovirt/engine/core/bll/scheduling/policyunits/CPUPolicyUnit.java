@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.scheduling.PolicyUnitImpl;
@@ -37,9 +38,8 @@ public class CPUPolicyUnit extends PolicyUnitImpl {
 
     @Inject
     private VdsCpuUnitPinningHelper vdsCpuUnitPinningHelper;
-
     @Inject
-    private ResourceManager resourceManager;
+    private Instance<ResourceManager> resourceManagerInstance;
 
     public CPUPolicyUnit(PolicyUnit policyUnit,
             PendingResourceManager pendingResourceManager) {
@@ -120,7 +120,7 @@ public class CPUPolicyUnit extends PolicyUnitImpl {
     }
 
     private List<VdsCpuUnit> getEffectiveCpuTopology(VDS host) {
-        List<VdsCpuUnit> cpuTopology = resourceManager.getVdsManager(host.getId()).getCpuTopology();
+        List<VdsCpuUnit> cpuTopology = resourceManagerInstance.get().getVdsManager(host.getId()).getCpuTopology();
 
         Map<Guid, List<VdsCpuUnit>> vmToPendingExclusiveCpuPinnings =
                 PendingCpuPinning.collectForHost(getPendingResourceManager(), host.getId());
@@ -159,7 +159,7 @@ public class CPUPolicyUnit extends PolicyUnitImpl {
                 .max()
                 .orElse(0);
 
-        long maxRunningVmsSharedCoresCount = resourceManager.getVdsManager(host.getId()).getMaxRunningVmsSharedCoresCount();
+        long maxRunningVmsSharedCoresCount = resourceManagerInstance.get().getVdsManager(host.getId()).getMaxRunningVmsSharedCoresCount();
 
         return Math.max(maxPendingSharedCoresCount, maxRunningVmsSharedCoresCount);
     }

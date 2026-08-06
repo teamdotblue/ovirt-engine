@@ -12,6 +12,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Stream;
 
+import javax.enterprise.inject.Instance;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -62,6 +64,9 @@ public class PowerSavingWeightPolicyUnitTest extends AbstractPolicyUnitTest {
     private VmOverheadCalculator vmOverheadCalculator;
 
     @Mock
+    private Instance<ResourceManager> resourceManagerInstance;
+
+    @Mock
     private ResourceManager resourceManager;
 
     @Mock
@@ -84,6 +89,7 @@ public class PowerSavingWeightPolicyUnitTest extends AbstractPolicyUnitTest {
     @BeforeEach
     public void setUp() {
         when(vmOverheadCalculator.getTotalRequiredMemMb(any(VM.class))).thenAnswer(invocation -> invocation.<VM>getArgument(0).getMemSizeMb());
+        when(resourceManagerInstance.get()).thenReturn(resourceManager);
         when(resourceManager.getVdsManager(any())).thenReturn(vdsManager);
         when(vdsManager.getCpuTopology()).thenReturn(Collections.emptyList());
 

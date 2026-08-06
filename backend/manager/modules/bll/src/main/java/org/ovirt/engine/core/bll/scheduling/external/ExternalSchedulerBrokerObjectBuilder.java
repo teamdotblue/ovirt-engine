@@ -8,16 +8,14 @@ import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogDirector;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogable;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogableImpl;
-import org.ovirt.engine.core.di.Injector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class ExternalSchedulerBrokerObjectBuilder {
     private static final Logger log = LoggerFactory.getLogger(ExternalSchedulerBrokerObjectBuilder.class);
     private static final int RESULT_OK = 0;
-    private static final AuditLogDirector auditLogDirector = Injector.get(AuditLogDirector.class);
 
-    private static void auditLogPluginError(String pluginName, String errorMessage) {
+    private static void auditLogPluginError(String pluginName, String errorMessage, AuditLogDirector auditLogDirector) {
         AuditLogable loggable = new AuditLogableImpl();
 
         loggable.addCustomValue("PluginName", pluginName);
@@ -26,14 +24,14 @@ public class ExternalSchedulerBrokerObjectBuilder {
         auditLogDirector.log(loggable, AuditLogType.EXTERNAL_SCHEDULER_PLUGIN_ERROR);
     }
 
-    private static void auditLogExternalSchedulerError(String errorMessage) {
+    private static void auditLogExternalSchedulerError(String errorMessage, AuditLogDirector auditLogDirector) {
         AuditLogable loggable = new AuditLogableImpl();
         loggable.addCustomValue("ErrorMessage", errorMessage);
         auditLogDirector.log(loggable, AuditLogType.EXTERNAL_SCHEDULER_ERROR);
     }
 
 
-    private static Object populateCommonFields(Object xmlRpcStruct, SchedulerResult result) {
+    private static Object populateCommonFields(Object xmlRpcStruct, SchedulerResult result, AuditLogDirector auditLogDirector) {
         /* new response format
         {
           "result_code": int,
@@ -66,7 +64,7 @@ public class ExternalSchedulerBrokerObjectBuilder {
             if (plugin_errors != null) {
                 for (Map.Entry<String, Object[]> entry: plugin_errors.entrySet()) {
                     for (Object errorMsg: entry.getValue()) {
-                        auditLogPluginError(entry.getKey(), errorMsg.toString());
+                        auditLogPluginError(entry.getKey(), errorMsg.toString(), auditLogDirector);
                         result.addPluginErrors(entry.getKey(), errorMsg.toString());
                     }
                 }
@@ -74,7 +72,7 @@ public class ExternalSchedulerBrokerObjectBuilder {
 
             if (errors != null) {
                 for (Object msg: errors) {
-                    auditLogExternalSchedulerError((String) msg);
+                    auditLogExternalSchedulerError((String) msg, auditLogDirector);
                     result.addError((String) msg);
                 }
             }
@@ -86,9 +84,9 @@ public class ExternalSchedulerBrokerObjectBuilder {
         return castedResult.get("result");
     }
 
-    public static FilteringResult getFilteringResult(Object xmlRpcStruct) {
+    public static FilteringResult getFilteringResult(Object xmlRpcStruct, AuditLogDirector auditLogDirector) {
         FilteringResult result = new FilteringResult();
-        Object rawResult = populateCommonFields(xmlRpcStruct, result);
+        Object rawResult = populateCommonFields(xmlRpcStruct, result, auditLogDirector);
 
         if (rawResult == null) {
             return result;
@@ -102,9 +100,9 @@ public class ExternalSchedulerBrokerObjectBuilder {
         return result;
     }
 
-    public static ScoringResult getScoreResult(Object xmlRpcStruct) {
+    public static ScoringResult getScoreResult(Object xmlRpcStruct, AuditLogDirector auditLogDirector) {
         ScoringResult result = new ScoringResult();
-        Object rawResult = populateCommonFields(xmlRpcStruct, result);
+        Object rawResult = populateCommonFields(xmlRpcStruct, result, auditLogDirector);
 
         if (rawResult == null) {
             return result;
@@ -130,9 +128,9 @@ public class ExternalSchedulerBrokerObjectBuilder {
         return result;
     }
 
-    public static BalanceResult getBalanceResult(Object xmlRpcStruct) {
+    public static BalanceResult getBalanceResult(Object xmlRpcStruct, AuditLogDirector auditLogDirector) {
         BalanceResult result = new BalanceResult();
-        Object[] castedRawResult = (Object[]) populateCommonFields(xmlRpcStruct, result);
+        Object[] castedRawResult = (Object[]) populateCommonFields(xmlRpcStruct, result, auditLogDirector);
 
         if (castedRawResult == null) {
             return result;

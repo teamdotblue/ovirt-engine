@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.apache.commons.collections.CollectionUtils;
@@ -49,7 +50,7 @@ public class CpuPinningPolicyUnit extends PolicyUnitImpl {
     @Inject
     private VdsCpuUnitPinningHelper vdsCpuUnitPinningHelper;
     @Inject
-    private ResourceManager resourceManager;
+    private Instance<ResourceManager> resourceManagerInstance;
 
     public CpuPinningPolicyUnit(PolicyUnit policyUnit,
             PendingResourceManager pendingResourceManager) {
@@ -80,7 +81,7 @@ public class CpuPinningPolicyUnit extends PolicyUnitImpl {
                 .collect(Collectors.toList());
 
         for (final VDS host : hosts) {
-            var cpuTopology = resourceManager.getVdsManager(host.getId()).getCpuTopology();
+            var cpuTopology = resourceManagerInstance.get().getVdsManager(host.getId()).getCpuTopology();
             Map<Guid, List<VdsCpuUnit>> vmToPendingDedicatedCpuPinnings =
                     PendingCpuPinning.collectForHost(getPendingResourceManager(), host.getId());
             vdsCpuUnitPinningHelper.previewPinOfPendingExclusiveCpus(cpuTopology, vmToPendingDedicatedCpuPinnings);
