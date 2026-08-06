@@ -27,6 +27,14 @@ public class MigrateVMActionRunner extends SortedMultipleActionsRunnerBase {
         super(actionType, parameters, commandContext, isInternal);
     }
 
+    public MigrateVMActionRunner() {
+    }
+
+    public MigrateVMActionRunner createInstance(ActionType actionType, List<ActionParametersBase> parameters, CommandContext commandContext, boolean isInternal) {
+        init(actionType, parameters, commandContext, isInternal);
+        return this;
+    }
+
     @Override
     protected void sortCommands() {
         List<CommandBase<?>> commands = getCommands();

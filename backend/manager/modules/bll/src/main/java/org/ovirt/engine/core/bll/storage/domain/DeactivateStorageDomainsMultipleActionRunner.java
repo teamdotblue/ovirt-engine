@@ -14,6 +14,15 @@ public class DeactivateStorageDomainsMultipleActionRunner extends SortedMultiple
         super(actionType, parameters, commandContext, isInternal);
     }
 
+    public DeactivateStorageDomainsMultipleActionRunner() {
+    }
+
+    public DeactivateStorageDomainsMultipleActionRunner createInstance(ActionType actionType, List<ActionParametersBase> parameters, CommandContext commandContext, boolean isInternal) {
+        init(actionType, parameters, commandContext, isInternal);
+        return this;
+    }
+
+
     @Override
     protected void sortCommands() {
         Collections.sort(getCommands(), Collections.reverseOrder(new StorageDomainsByTypeComparer()));

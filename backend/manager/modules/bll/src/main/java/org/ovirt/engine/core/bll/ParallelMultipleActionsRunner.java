@@ -15,6 +15,14 @@ public class ParallelMultipleActionsRunner extends PrevalidatingMultipleActionsR
         super(actionType, parameters, commandContext, isInternal);
     }
 
+    public ParallelMultipleActionsRunner() {
+    }
+
+    public ParallelMultipleActionsRunner createInstance(ActionType actionType, List<ActionParametersBase> parameters, CommandContext commandContext, boolean isInternal) {
+        init(actionType, parameters, commandContext, isInternal);
+        return this;
+    }
+
     @Override
     protected void invokeCommands() {
         runCommands();

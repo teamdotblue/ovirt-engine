@@ -25,6 +25,14 @@ public class RemoveVmFromPoolRunner extends PrevalidatingMultipleActionsRunner {
         super(actionType, parameters, commandContext, isInternal);
     }
 
+    public RemoveVmFromPoolRunner() {
+    }
+
+    public RemoveVmFromPoolRunner createInstance(ActionType actionType, List<ActionParametersBase> parameters, CommandContext commandContext, boolean isInternal) {
+        init(actionType, parameters, commandContext, isInternal);
+        return this;
+    }
+
     @Override
     protected void runCommands() {
         super.runCommands();

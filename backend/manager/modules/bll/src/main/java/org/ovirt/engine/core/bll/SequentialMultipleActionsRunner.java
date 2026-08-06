@@ -24,10 +24,10 @@ public class SequentialMultipleActionsRunner implements MultipleActionsRunner {
 
     private static final Logger log = LoggerFactory.getLogger(SequentialMultipleActionsRunner.class);
 
-    private final ActionType actionType;
-    private final List<ActionParametersBase> parameters;
-    private final CommandContext commandContext;
-    private final boolean isInternal;
+    private ActionType actionType;
+    private List<ActionParametersBase> parameters;
+    private CommandContext commandContext;
+    private boolean isInternal;
     private final ArrayList<ActionReturnValue> returnValues = new ArrayList<>();
 
     @Inject
@@ -46,6 +46,20 @@ public class SequentialMultipleActionsRunner implements MultipleActionsRunner {
         }
         this.commandContext = commandContext;
         this.isInternal = isInternal;
+    }
+
+    public SequentialMultipleActionsRunner() {
+    }
+
+    public SequentialMultipleActionsRunner createInstance(ActionType actionType, List<ActionParametersBase> parameters, CommandContext commandContext, boolean isInternal) {
+        this.actionType = requireNonNull(actionType);
+        this.parameters = requireNonNull(parameters);
+        if (parameters.isEmpty()) {
+            throw new IllegalArgumentException("Multiple actions runner received an empty parameter list.");
+        }
+        this.commandContext = commandContext;
+        this.isInternal = isInternal;
+        return this;
     }
 
     @Override

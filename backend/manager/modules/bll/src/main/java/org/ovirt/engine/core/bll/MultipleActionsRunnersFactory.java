@@ -4,6 +4,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -18,7 +19,6 @@ import org.ovirt.engine.core.common.businessentities.VDS;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dao.ClusterDao;
 import org.ovirt.engine.core.dao.VdsDao;
-import org.ovirt.engine.core.di.Injector;
 
 @Singleton
 public class MultipleActionsRunnersFactory {
@@ -28,6 +28,24 @@ public class MultipleActionsRunnersFactory {
 
     @Inject
     private ClusterDao clusterDao;
+    @Inject
+    private Instance<DeactivateStorageDomainsMultipleActionRunner> deactivateStorageDomainsMultipleActionRunnerProvider;
+    @Inject
+    private Instance<RunVMActionRunner> runVMActionRunnerProvider;
+    @Inject
+    private Instance<MigrateVMActionRunner> migrateVMActionRunnerProvider;
+    @Inject
+    private Instance<AttachStorageDomainsMultipleActionRunner> attachStorageDomainsMultipleActionRunnerProvider;
+    @Inject
+    private Instance<RemoveVmFromPoolRunner> removeVmFromPoolRunnerProvider;
+    @Inject
+    private Instance<GlusterMultipleActionsRunner> glusterMultipleActionsRunnerProvider;
+    @Inject
+    private Instance<DefaultPrevalidatingMultipleActionsRunner> prevalidatingMultipleActionsRunnerProvider;
+    @Inject
+    private Instance<ParallelMultipleActionsRunner> parallelMultipleActionsRunnerProvider;
+    @Inject
+    private Instance<SequentialMultipleActionsRunner> sequentialMultipleActionsRunnerProvider;
 
     public MultipleActionsRunner createMultipleActionsRunner(ActionType actionType,
                                                              List<ActionParametersBase> parameters,
@@ -35,19 +53,19 @@ public class MultipleActionsRunnersFactory {
         MultipleActionsRunner runner;
         switch (actionType) {
             case DeactivateStorageDomainWithOvfUpdate:
-                runner = new DeactivateStorageDomainsMultipleActionRunner(actionType, parameters, commandContext, isInternal);
+                runner = deactivateStorageDomainsMultipleActionRunnerProvider.get().createInstance(actionType, parameters, commandContext, isInternal);
                 break;
             case AttachStorageDomainToPool:
-                runner = new AttachStorageDomainsMultipleActionRunner(actionType, parameters, commandContext, isInternal);
+                runner = attachStorageDomainsMultipleActionRunnerProvider.get().createInstance(actionType, parameters, commandContext, isInternal);
                 break;
             case RunVm:
-                runner = new RunVMActionRunner(actionType, parameters, commandContext, isInternal);
+                runner = runVMActionRunnerProvider.get().createInstance(actionType, parameters, commandContext, isInternal);
                 break;
             case MigrateVm:
-                runner = new MigrateVMActionRunner(actionType, parameters, commandContext, isInternal);
+                runner = migrateVMActionRunnerProvider.get().createInstance(actionType, parameters, commandContext, isInternal);
                 break;
             case RemoveVmFromPool:
-                runner = new RemoveVmFromPoolRunner(actionType, parameters, commandContext, isInternal);
+                runner = removeVmFromPoolRunnerProvider.get().createInstance(actionType, parameters, commandContext, isInternal);
                 break;
             case StartGlusterVolume:
             case StopGlusterVolume:
@@ -59,19 +77,19 @@ public class MultipleActionsRunnersFactory {
             case EnableGlusterHook:
             case DisableGlusterHook:
             case DeleteGlusterVolumeSnapshot:
-                runner = new GlusterMultipleActionsRunner(actionType, parameters, commandContext, isInternal);
+                runner = glusterMultipleActionsRunnerProvider.get().createInstance(actionType, parameters, commandContext, isInternal);
                 break;
             case RemoveVds:
                 if (containsGlusterServer(parameters)) {
-                    runner = new GlusterMultipleActionsRunner(actionType, parameters, commandContext, isInternal);
+                    runner = glusterMultipleActionsRunnerProvider.get().createInstance(actionType, parameters, commandContext, isInternal);
                 } else {
-                    runner = new PrevalidatingMultipleActionsRunner(actionType, parameters, commandContext, isInternal);
+                    runner = prevalidatingMultipleActionsRunnerProvider.get().createInstance(actionType, parameters, commandContext, isInternal);
                 }
 
                 break;
             case PersistentHostSetupNetworks:
             case SyncAllHostNetworks:
-                runner = new ParallelMultipleActionsRunner(actionType, parameters, commandContext, isInternal);
+                runner = parallelMultipleActionsRunnerProvider.get().createInstance(actionType, parameters, commandContext, isInternal);
                 break;
             case AttachNetworkToCluster:
             case DetachNetworkToCluster:
@@ -85,13 +103,13 @@ public class MultipleActionsRunnersFactory {
             case RemoveDiskProfile:
             case RemoveCpuProfile:
             case RemoveNetwork:
-                runner = new SequentialMultipleActionsRunner(actionType, parameters, commandContext, isInternal);
+                runner = sequentialMultipleActionsRunnerProvider.get().createInstance(actionType, parameters, commandContext, isInternal);
                 break;
             default:
-                runner = new PrevalidatingMultipleActionsRunner(actionType, parameters, commandContext, isInternal);
+                runner = prevalidatingMultipleActionsRunnerProvider.get().init(actionType, parameters, commandContext, isInternal);
                 break;
         }
-        return Injector.injectMembers(runner);
+        return runner;
     }
 
     private boolean containsGlusterServer(List<ActionParametersBase> parameters) {

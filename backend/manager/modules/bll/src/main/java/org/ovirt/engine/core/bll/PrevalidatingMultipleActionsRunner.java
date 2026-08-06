@@ -25,7 +25,7 @@ public class PrevalidatingMultipleActionsRunner implements MultipleActionsRunner
     private static final int CONCURRENT_ACTIONS = 10;
 
     private ActionType actionType = ActionType.Unknown;
-    private final Set<ActionParametersBase> parameters;
+    private Set<ActionParametersBase> parameters;
     private final List<CommandBase<?>> commands = new ArrayList<>();
     protected boolean isInternal;
     private boolean isWaitForResult = false;
@@ -53,6 +53,17 @@ public class PrevalidatingMultipleActionsRunner implements MultipleActionsRunner
         this.parameters = new LinkedHashSet<>(parameters);
     }
 
+    public PrevalidatingMultipleActionsRunner() {
+    }
+
+    protected PrevalidatingMultipleActionsRunner init(ActionType actionType, List<ActionParametersBase> parameters, CommandContext commandContext, boolean isInternal) {
+        this.actionType = actionType;
+        this.isInternal = isInternal;
+        this.commandContext = commandContext;
+        this.parameters = new LinkedHashSet<>(parameters);
+        return this;
+    }
+
     protected Set<ActionParametersBase> getParameters() {
         return parameters;
     }
@@ -63,6 +74,7 @@ public class PrevalidatingMultipleActionsRunner implements MultipleActionsRunner
 
     @Override
     public List<ActionReturnValue> execute() {
+        log.info("Trying to execute prevalidating actions");
         // sanity - don't do anything if no parameters passed
         if (parameters == null || parameters.isEmpty()) {
             log.info("{} of type '{}' invoked with no actions", this.getClass().getSimpleName(), actionType);

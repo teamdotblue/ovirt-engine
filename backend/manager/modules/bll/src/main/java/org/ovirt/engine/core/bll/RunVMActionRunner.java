@@ -22,6 +22,14 @@ public class RunVMActionRunner extends SortedMultipleActionsRunnerBase {
         super(actionType, parameters, commandContext, isInternal);
     }
 
+    public RunVMActionRunner() {
+    }
+
+    public RunVMActionRunner createInstance(ActionType actionType, List<ActionParametersBase> parameters, CommandContext commandContext, boolean isInternal) {
+        init(actionType, parameters, commandContext, isInternal);
+        return this;
+    }
+
     @Override
     protected void sortCommands() {
 

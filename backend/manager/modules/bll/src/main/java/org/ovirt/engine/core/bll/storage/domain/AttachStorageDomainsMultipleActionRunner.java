@@ -28,6 +28,14 @@ public class AttachStorageDomainsMultipleActionRunner extends SortedMultipleActi
         super(actionType, parameters, commandContext, isInternal);
     }
 
+    public AttachStorageDomainsMultipleActionRunner() {
+    }
+
+    public AttachStorageDomainsMultipleActionRunner createInstance(ActionType actionType, List<ActionParametersBase> parameters, CommandContext commandContext, boolean isInternal) {
+        init(actionType, parameters, commandContext, isInternal);
+        return this;
+    }
+
     @Inject
     private StoragePoolDao storagePoolDao;
 

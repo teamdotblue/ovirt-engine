@@ -15,6 +15,14 @@ public class GlusterMultipleActionsRunner extends PrevalidatingMultipleActionsRu
         super(actionType, parameters, commandContext, isInternal);
     }
 
+    public GlusterMultipleActionsRunner() {
+    }
+
+    public GlusterMultipleActionsRunner createInstance(ActionType actionType, List<ActionParametersBase> parameters, CommandContext commandContext, boolean isInternal) {
+        init(actionType, parameters, commandContext, isInternal);
+        return this;
+    }
+
     @Override
     protected ActionReturnValue runValidateOnly(final int currentValidateId, final int totalSize) {
         try {
