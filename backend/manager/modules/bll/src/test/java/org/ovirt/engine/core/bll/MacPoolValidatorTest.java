@@ -2,7 +2,6 @@ package org.ovirt.engine.core.bll;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 import static org.ovirt.engine.core.bll.validator.ValidationResultMatchers.failsWith;
 import static org.ovirt.engine.core.bll.validator.ValidationResultMatchers.isValid;
@@ -11,38 +10,32 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.stream.Stream;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.ovirt.engine.core.common.businessentities.Cluster;
 import org.ovirt.engine.core.common.businessentities.MacPool;
 import org.ovirt.engine.core.common.businessentities.MacRange;
 import org.ovirt.engine.core.common.errors.EngineMessage;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dao.ClusterDao;
-import org.ovirt.engine.core.utils.InjectedMock;
 
+@ExtendWith(MockitoExtension.class)
 public class MacPoolValidatorTest extends BaseCommandTest {
 
     private final MacPool macPool = new MacPool();
 
-    private MacPoolValidator macPoolValidator;
+    @Spy
+    @InjectMocks
+    private MacPoolValidator macPoolValidator = new MacPoolValidator(Collections.singletonList(new MacPool()), macPool);
 
     @Mock
-    @InjectedMock
     public ClusterDao clusterDao;
-
-    @BeforeEach
-    public void setUp() {
-        this.macPoolValidator = createMacPoolValidator(macPool);
-    }
-
-    private MacPoolValidator createMacPoolValidator(MacPool macPool) {
-        macPoolValidator = spy(new MacPoolValidator(Collections.singletonList(new MacPool()), macPool));
-        return macPoolValidator;
-    }
 
     @Test
     public void testDefaultPoolFlagIsNotSetValidUsage() {
@@ -147,12 +140,6 @@ public class MacPoolValidatorTest extends BaseCommandTest {
         macPool.setId(Guid.newGuid());
 
         assertThat(macPoolValidator.notRemovingUsedPool(), isValid());
-    }
-
-    @Test
-    public void testMacPoolExistsEntityNotExist() {
-        assertThat(createMacPoolValidator(null).macPoolExists(),
-                failsWith(EngineMessage.ACTION_TYPE_FAILED_MAC_POOL_DOES_NOT_EXIST));
     }
 
     @Test

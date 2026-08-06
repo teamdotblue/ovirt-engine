@@ -3,6 +3,9 @@ package org.ovirt.engine.core.bll;
 import java.util.Collections;
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.bll.context.CommandContext;
 import org.ovirt.engine.core.bll.utils.PermissionSubject;
 import org.ovirt.engine.core.common.AuditLogType;
@@ -18,6 +21,9 @@ import org.ovirt.engine.core.utils.transaction.TransactionRollbackListener;
 import org.ovirt.engine.core.utils.transaction.TransactionSupport;
 
 public class UpdateMacPoolCommand extends MacPoolCommandBase<MacPoolParameters> {
+
+    @Inject
+    private Instance<MacPoolValidator> macPoolValidatorInstance;
 
     private MacPool oldMacPool;
 
@@ -49,8 +55,8 @@ public class UpdateMacPoolCommand extends MacPoolCommandBase<MacPoolParameters> 
 
         oldMacPool = macPoolDao.get(getMacPoolId());
         List<MacPool> allMacPools = macPoolDao.getAll();
-        MacPoolValidator validator = new MacPoolValidator(allMacPools, getMacPoolEntity());
-        return validate(new MacPoolValidator(allMacPools, oldMacPool).macPoolExists()) &&
+        MacPoolValidator validator = macPoolValidatorInstance.get().init(allMacPools, getMacPoolEntity());
+        return validate(macPoolValidatorInstance.get().init(allMacPools, oldMacPool).macPoolExists()) &&
                 validate(validator.hasUniqueName()) &&
                 validate(validator.validateOverlappingRanges(getMacPoolEntity())) &&
                 validate(validator.validateOverlapWithAllCurrentPools(getMacPoolEntity())) &&

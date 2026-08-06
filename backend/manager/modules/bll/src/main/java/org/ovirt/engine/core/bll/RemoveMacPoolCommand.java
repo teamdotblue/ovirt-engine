@@ -3,6 +3,9 @@ package org.ovirt.engine.core.bll;
 import java.util.Collections;
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.bll.context.CommandContext;
 import org.ovirt.engine.core.bll.utils.PermissionSubject;
 import org.ovirt.engine.core.common.AuditLogType;
@@ -17,6 +20,8 @@ import org.ovirt.engine.core.utils.transaction.TransactionRollbackListener;
 public class RemoveMacPoolCommand extends MacPoolCommandBase<RemoveMacPoolByIdParameters> {
 
     private MacPool oldMacPool;
+    @Inject
+    private Instance<MacPoolValidator> macPoolValidatorInstance;
 
     public RemoveMacPoolCommand(RemoveMacPoolByIdParameters parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -63,7 +68,7 @@ public class RemoveMacPoolCommand extends MacPoolCommandBase<RemoveMacPoolByIdPa
             return false;
         }
 
-        final MacPoolValidator validator = new MacPoolValidator(macPoolDao.getAll(), getOldMacPool());
+        final MacPoolValidator validator = macPoolValidatorInstance.get().init(macPoolDao.getAll(), getOldMacPool());
 
         return validate(validator.macPoolExists()) &&
                 validate(validator.notRemovingDefaultPool()) &&

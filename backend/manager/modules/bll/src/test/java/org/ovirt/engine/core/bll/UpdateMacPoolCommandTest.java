@@ -12,12 +12,16 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.stream.Stream;
 
+import javax.enterprise.inject.Instance;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
@@ -39,8 +43,17 @@ public class UpdateMacPoolCommandTest {
     private MacPoolDao macPoolDao;
     @Mock
     private MacPoolPerCluster macPoolPerCluster;
+    @Mock
+    private Instance<MacPoolValidator> macPoolValidatorInstance;
+    @Spy
+    private MacPoolValidator macPoolValidator = new MacPoolValidator();
     @InjectMocks
     UpdateMacPoolCommand command = new UpdateMacPoolCommand(new MacPoolParameters(new MacPool()), CommandContext.createContext(""));
+
+    @BeforeEach
+    public void setUp() {
+        when(macPoolValidatorInstance.get()).thenReturn(macPoolValidator);
+    }
 
     @Test
     public void testFirstParameterIsNotNull() {

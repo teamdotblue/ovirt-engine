@@ -3,6 +3,7 @@ package org.ovirt.engine.core.bll;
 import java.util.Collections;
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.context.CommandContext;
@@ -20,6 +21,8 @@ public class AddMacPoolCommand extends MacPoolCommandBase<MacPoolParameters> {
 
     @Inject
     private MultiLevelAdministrationHandler multiLevelAdministrationHandler;
+    @Inject
+    private Instance<MacPoolValidator> macPoolValidatorInstance;
 
     public AddMacPoolCommand(MacPoolParameters parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -53,7 +56,7 @@ public class AddMacPoolCommand extends MacPoolCommandBase<MacPoolParameters> {
             return false;
         }
 
-        final MacPoolValidator validator = new MacPoolValidator(macPoolDao.getAll(), getMacPoolEntity());
+        final MacPoolValidator validator = macPoolValidatorInstance.get().init(macPoolDao.getAll(), getMacPoolEntity());
         return validate(validator.defaultPoolFlagIsNotSet()) && validate(validator.hasUniqueName()) &&
             validate(validator.validateOverlappingRanges(getMacPoolEntity())) &&
             validate(validator.validateOverlapWithAllCurrentPools(getMacPoolEntity()));

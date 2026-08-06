@@ -9,22 +9,35 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.StringJoiner;
 
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.bll.network.macpool.MacPoolPerCluster;
 import org.ovirt.engine.core.common.businessentities.Cluster;
 import org.ovirt.engine.core.common.businessentities.MacPool;
 import org.ovirt.engine.core.common.errors.EngineMessage;
 import org.ovirt.engine.core.dao.ClusterDao;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.utils.ReplacementUtils;
 
 public class MacPoolValidator {
 
-    private final MacPool macPoolUnderValidation;
-    private final List<MacPool> validMacPools;
+    @Inject
+    private ClusterDao clusterDao;
+
+    private MacPool macPoolUnderValidation;
+    private List<MacPool> validMacPools;
 
     public MacPoolValidator(List<MacPool> validMacPools, MacPool macPoolUnderValidation) {
         this.validMacPools = validMacPools;
         this.macPoolUnderValidation = macPoolUnderValidation;
+    }
+
+    public MacPoolValidator() {
+    }
+
+    public MacPoolValidator init(List<MacPool> validMacPools, MacPool macPoolUnderValidation) {
+        this.validMacPools = validMacPools;
+        this.macPoolUnderValidation = macPoolUnderValidation;
+        return this;
     }
 
     public ValidationResult notRemovingDefaultPool() {
@@ -33,7 +46,6 @@ public class MacPoolValidator {
     }
 
     public ValidationResult notRemovingUsedPool() {
-        final ClusterDao clusterDao = Injector.get(ClusterDao.class);
         final List<Cluster> clusters = clusterDao.getAllClustersByMacPoolId(macPoolUnderValidation.getId());
 
         final Collection<String> replacements = ReplacementUtils.replaceWithNameable("CLUSTERS_USING_MAC_POOL", clusters);
