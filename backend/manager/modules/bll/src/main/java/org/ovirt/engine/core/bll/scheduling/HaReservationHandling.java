@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.bll.scheduling.pending.PendingOvercommitMemory;
 import org.ovirt.engine.core.bll.scheduling.pending.PendingResourceManager;
 import org.ovirt.engine.core.common.businessentities.Cluster;
@@ -18,7 +20,6 @@ import org.ovirt.engine.core.common.utils.VmCpuCountHelper;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dao.VdsDao;
 import org.ovirt.engine.core.dao.VmDao;
-import org.ovirt.engine.core.di.Injector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,12 +28,25 @@ import org.slf4j.LoggerFactory;
  */
 public class HaReservationHandling {
 
+    @Inject
+    private VdsDao vdsDao;
+    @Inject
+    private VmDao vmDao;
+
     private static final Logger log = LoggerFactory.getLogger(HaReservationHandling.class);
 
-    private final PendingResourceManager pendingResourceManager;
+    private PendingResourceManager pendingResourceManager;
 
     public HaReservationHandling(PendingResourceManager pendingResourceManager) {
         this.pendingResourceManager = pendingResourceManager;
+    }
+
+    public HaReservationHandling() {
+    }
+
+    public HaReservationHandling init(PendingResourceManager pendingResourceManager) {
+        this.pendingResourceManager = pendingResourceManager;
+        return this;
     }
 
     /**
@@ -44,7 +58,7 @@ public class HaReservationHandling {
      *         impacting performance.
      */
     public boolean checkHaReservationStatusForCluster(Cluster cluster, List<VDS> failedHosts) {
-        List<VDS> hosts = Injector.get(VdsDao.class).getAllForClusterWithStatus(cluster.getId(), VDSStatus.Up);
+        List<VDS> hosts = vdsDao.getAllForClusterWithStatus(cluster.getId(), VDSStatus.Up);
 
         // No hosts, return true
         if (hosts == null || hosts.isEmpty()) {
@@ -63,7 +77,7 @@ public class HaReservationHandling {
         // for the inner Pair, first is cpu second is ram
         List<Pair<Guid, Pair<Integer, Integer>>> hostsUnutilizedResources = getUnutilizedResources(hosts);
 
-        Map<Guid, List<VM>> hostToHaVmsMapping = mapHaVmToHostByCluster(cluster.getId());
+        Map<Guid, List<VM>> hostToHaVmsMapping = mapHaVmToHostByCluster(cluster.getId(), vmDao);
 
         for (VDS host : hosts) {
             if (hostToHaVmsMapping.get(host.getId()) != null) {
@@ -199,9 +213,9 @@ public class HaReservationHandling {
         return hostsUnutilizedResources;
     }
 
-    public static Map<Guid, List<VM>> mapHaVmToHostByCluster(Guid clusterId) {
+    public static Map<Guid, List<VM>> mapHaVmToHostByCluster(Guid clusterId, VmDao vmDao) {
 
-        List<VM> vms = Injector.get(VmDao.class).getAllForCluster(clusterId);
+        List<VM> vms = vmDao.getAllForCluster(clusterId);
         if (vms == null || vms.isEmpty()) {
             log.debug("No VMs available for this cluster with id '{}'", clusterId);
             // return empty map

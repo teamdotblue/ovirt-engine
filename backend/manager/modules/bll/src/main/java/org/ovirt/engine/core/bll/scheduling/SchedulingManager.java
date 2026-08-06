@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.concurrent.ManagedScheduledExecutorService;
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -111,7 +112,9 @@ public class SchedulingManager implements BackendService {
     @Inject
     private AuditLogDirector auditLogDirector;
     @Inject
-    private ResourceManager resourceManager;
+    private Instance<ResourceManager> resourceManagerInstance;
+    @Inject
+    private Instance<HaReservationHandling> haReservationHandlingInstance;
     @Inject
     private MigrationHandler migrationHandler;
     @Inject
@@ -197,7 +200,7 @@ public class SchedulingManager implements BackendService {
     }
 
     private void initializePendingResourceManager() {
-        pendingResourceManager = new PendingResourceManager(resourceManager);
+        pendingResourceManager = new PendingResourceManager(resourceManagerInstance.get());
     }
 
     private void loadExternalScheduler() {
@@ -1281,7 +1284,7 @@ public class SchedulingManager implements BackendService {
         log.debug("HA Reservation check timer entered.");
         List<Cluster> clusters = clusterDao.getAll();
         if (clusters != null) {
-            HaReservationHandling haReservationHandling = new HaReservationHandling(getPendingResourceManager());
+            HaReservationHandling haReservationHandling = haReservationHandlingInstance.get().init(getPendingResourceManager());
             for (Cluster cluster : clusters) {
                 if (cluster.supportsHaReservation()) {
                     List<VDS> returnedFailedHosts = new ArrayList<>();
@@ -1449,7 +1452,7 @@ public class SchedulingManager implements BackendService {
      */
     public void updateHostSchedulingStats(VDS vds) {
         HostCpuLoadHelper cpuLoadHelper = new HostCpuLoadHelper(vds,
-                resourceManager,
+                resourceManagerInstance.get(),
                 vdsCpuUnitPinningHelper);
 
         if (cpuLoadHelper.hostStatisticsPresent()) {
