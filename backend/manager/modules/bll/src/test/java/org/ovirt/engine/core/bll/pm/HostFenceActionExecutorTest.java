@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
@@ -16,7 +15,9 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
@@ -29,7 +30,6 @@ import org.ovirt.engine.core.common.businessentities.pm.FenceOperationResult.Sta
 import org.ovirt.engine.core.common.businessentities.pm.PowerStatus;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dao.FenceAgentDao;
-import org.ovirt.engine.core.utils.InjectedMock;
 import org.ovirt.engine.core.utils.InjectorExtension;
 
 @ExtendWith({MockitoExtension.class, InjectorExtension.class})
@@ -38,11 +38,9 @@ public class HostFenceActionExecutorTest {
     private static Guid FENCECD_HOST_ID = new Guid("11111111-1111-1111-1111-111111111111");
 
     @Mock
-    @InjectedMock
     public FenceAgentDao fenceAgentDao;
 
-    @Mock
-    VDS fencedHost;
+    VDS fencedHost = new VDS();
 
     @Mock
     SingleAgentFenceActionExecutor agentExecutor1;
@@ -50,15 +48,16 @@ public class HostFenceActionExecutorTest {
     @Mock
     SingleAgentFenceActionExecutor agentExecutor2;
 
-    HostFenceActionExecutor executor;
+    @Spy
+    @InjectMocks
+    HostFenceActionExecutor executor = new HostFenceActionExecutor();
 
     List<FenceAgent> fenceAgents;
 
     @BeforeEach
     public void setup() {
-        when(fencedHost.getId()).thenReturn(FENCECD_HOST_ID);
-
-        executor = spy(new HostFenceActionExecutor(fencedHost, new FencingPolicy()));
+        fencedHost.setId(FENCECD_HOST_ID);
+        executor.init(fencedHost, new FencingPolicy());
         doReturn(agentExecutor1).doReturn(agentExecutor2).when(executor).createFenceActionExecutor(any());
         doNothing().when(executor).alertActionSkippedAlreadyInStatus(any(), any());
         doNothing().when(executor).alertActionSkippedFencingDisabledInPolicy();
@@ -219,10 +218,10 @@ public class HostFenceActionExecutorTest {
      */
     @Test
     public void testSingleAgentFenceActionExecutorUsage() {
-        HostFenceActionExecutor executor = new HostFenceActionExecutor(fencedHost, new FencingPolicy());
+        HostFenceActionExecutor newExecutor = new HostFenceActionExecutor().init(fencedHost, new FencingPolicy());
 
         assertTrue(
-                executor.createFenceActionExecutor(createSingleAgentList(1))
+                newExecutor.createFenceActionExecutor(createSingleAgentList(1))
                         instanceof SingleAgentFenceActionExecutor);
     }
 
@@ -231,10 +230,10 @@ public class HostFenceActionExecutorTest {
      */
     @Test
     public void testConcurrentAgentsFenceActionExecutorUsage() {
-        HostFenceActionExecutor executor = new HostFenceActionExecutor(fencedHost, new FencingPolicy());
+        HostFenceActionExecutor newExecutor = new HostFenceActionExecutor().init(fencedHost, new FencingPolicy());
 
         assertTrue(
-                executor.createFenceActionExecutor(createConcurrentAgentsList(2, 1))
+                newExecutor.createFenceActionExecutor(createConcurrentAgentsList(2, 1))
                         instanceof ConcurrentAgentsFenceActionExecutor);
     }
 

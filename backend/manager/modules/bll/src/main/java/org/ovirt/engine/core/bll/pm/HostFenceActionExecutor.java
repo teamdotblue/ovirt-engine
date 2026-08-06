@@ -3,6 +3,8 @@ package org.ovirt.engine.core.bll.pm;
 import java.util.Arrays;
 import java.util.List;
 
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.common.AuditLogType;
 import org.ovirt.engine.core.common.businessentities.FencingPolicy;
 import org.ovirt.engine.core.common.businessentities.VDS;
@@ -15,7 +17,6 @@ import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogDirector;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogable;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogableImpl;
 import org.ovirt.engine.core.dao.FenceAgentDao;
-import org.ovirt.engine.core.di.Injector;
 
 /**
  * It manages:
@@ -28,10 +29,15 @@ import org.ovirt.engine.core.di.Injector;
  * </ul>
  */
 public class HostFenceActionExecutor {
+
+    @Inject
+    private AuditLogDirector auditLogDirector;
+    @Inject
+    private FenceAgentDao fenceAgentDao;
     /**
      * Host which the action is executed for
      */
-    private final VDS fencedHost;
+    private VDS fencedHost;
 
     /**
      * Fencing policy applied during action execution
@@ -46,13 +52,17 @@ public class HostFenceActionExecutor {
         this.fencingPolicy = fencingPolicy;
     }
 
-    public HostFenceActionExecutor(VDS fencedHost) {
-        this(fencedHost, null);
+    public HostFenceActionExecutor() {
     }
 
-    public HostFenceActionExecutor(VDS fencedHost, FencingPolicy fencingPolicy) {
+    public HostFenceActionExecutor init(VDS fencedHost) {
+        return init(fencedHost, null);
+    }
+
+    public HostFenceActionExecutor init(VDS fencedHost, FencingPolicy fencingPolicy) {
         this.fencedHost = fencedHost;
         this.fencingPolicy = fencingPolicy;
+        return this;
     }
 
     /**
@@ -63,7 +73,7 @@ public class HostFenceActionExecutor {
      * @return result of the action
      */
     public FenceOperationResult fence(FenceActionType fenceAction) {
-        List<FenceAgent> fenceAgents = Injector.get(FenceAgentDao.class).getFenceAgentsForHost(fencedHost.getId());
+        List<FenceAgent> fenceAgents = fenceAgentDao.getFenceAgentsForHost(fencedHost.getId());
         if (fenceAgents == null || fenceAgents.isEmpty()) {
             return new FenceOperationResult(
                     Status.ERROR,
@@ -164,7 +174,7 @@ public class HostFenceActionExecutor {
         auditLogable.addCustomValue("HostName", fencedHost.getName());
         auditLogable.addCustomValue("AgentStatus", powerStatus.name());
         auditLogable.addCustomValue("Operation", fenceActionType.getValue());
-        Injector.get(AuditLogDirector.class).log(auditLogable, AuditLogType.VDS_ALREADY_IN_REQUESTED_STATUS);
+        auditLogDirector.log(auditLogable, AuditLogType.VDS_ALREADY_IN_REQUESTED_STATUS);
     }
 
     /**
@@ -173,7 +183,7 @@ public class HostFenceActionExecutor {
     protected void alertActionSkippedFencingDisabledInPolicy() {
         AuditLogable auditLogable = new AuditLogableImpl();
         auditLogable.addCustomValue("VdsName", fencedHost.getName());
-        Injector.get(AuditLogDirector.class).log(auditLogable, AuditLogType.VDS_ALERT_FENCE_DISABLED_BY_CLUSTER_POLICY);
+        auditLogDirector.log(auditLogable, AuditLogType.VDS_ALERT_FENCE_DISABLED_BY_CLUSTER_POLICY);
     }
 
     /**

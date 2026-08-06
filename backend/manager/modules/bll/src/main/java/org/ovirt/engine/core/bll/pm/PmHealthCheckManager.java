@@ -64,6 +64,8 @@ public class PmHealthCheckManager implements BackendService {
     @Inject
     private Instance<BackendInternal> backend;
     @Inject
+    private Instance<HostFenceActionExecutor> hostFenceActionExecutorInstance;
+    @Inject
     @ThreadPools(ThreadPools.ThreadPoolType.EngineScheduledThreadPool)
     private ManagedScheduledExecutorService executor;
 
@@ -210,7 +212,7 @@ public class PmHealthCheckManager implements BackendService {
      * doesn't matter whether that answer is "on" or "off".
      */
     private boolean isHealthy(FenceAgent agent, VDS host) {
-        return new HostFenceActionExecutor(host).getFenceAgentStatus(agent).getStatus() == Status.SUCCESS;
+        return hostFenceActionExecutorInstance.get().init(host).getFenceAgentStatus(agent).getStatus() == Status.SUCCESS;
     }
 
     private void waitUntilFencingAllowed() {
@@ -266,7 +268,7 @@ public class PmHealthCheckManager implements BackendService {
             RestartVdsCommand<FenceVdsActionParameters> restartVdsCommand =
                     new RestartVdsCommand<>(new
                             FenceVdsActionParameters(host.getId()), null);
-            if (new HostFenceActionExecutor(host).isHostPoweredOff()) {
+            if (hostFenceActionExecutorInstance.get().init(host).isHostPoweredOff()) {
                 //if an external-status other than OK has been set on the host,
                 //that is considered an indication not to perform automatic
                 //power-management operations on the host.

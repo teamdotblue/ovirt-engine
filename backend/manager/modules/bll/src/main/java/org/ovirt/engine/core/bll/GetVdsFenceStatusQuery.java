@@ -1,5 +1,6 @@
 package org.ovirt.engine.core.bll;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.context.EngineContext;
@@ -13,6 +14,9 @@ public class GetVdsFenceStatusQuery<P extends IdQueryParameters> extends FenceQu
     @Inject
     private VdsDao vdsDao;
 
+    @Inject
+    private Instance<HostFenceActionExecutor> hostFenceActionExecutorInstance;
+
     public GetVdsFenceStatusQuery(P parameters, EngineContext engineContext) {
         super(parameters, engineContext);
     }
@@ -20,7 +24,7 @@ public class GetVdsFenceStatusQuery<P extends IdQueryParameters> extends FenceQu
     @Override
     protected void executeQueryCommand() {
         VDS vds = vdsDao.get(getParameters().getId());
-        HostFenceActionExecutor executor = new HostFenceActionExecutor(vds);
+        HostFenceActionExecutor executor = hostFenceActionExecutorInstance.get().init(vds);
         getQueryReturnValue().setReturnValue(executor.fence(FenceActionType.STATUS));
     }
 }

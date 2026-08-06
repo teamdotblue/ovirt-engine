@@ -1,5 +1,8 @@
 package org.ovirt.engine.core.bll;
 
+import javax.enterprise.inject.Instance;
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.bll.context.EngineContext;
 import org.ovirt.engine.core.bll.pm.HostFenceActionExecutor;
 import org.ovirt.engine.core.common.businessentities.VDS;
@@ -9,13 +12,16 @@ import org.ovirt.engine.core.common.queries.GetFenceAgentStatusParameters;
 import org.ovirt.engine.core.compat.Guid;
 
 public class GetFenceAgentStatusQuery<P extends GetFenceAgentStatusParameters> extends FenceQueryBase<P> {
+    @Inject
+    private Instance<HostFenceActionExecutor> hostFenceActionExecutorInstance;
+
     public GetFenceAgentStatusQuery(P parameters, EngineContext engineContext) {
         super(parameters, engineContext);
     }
 
     @Override
     protected void executeQueryCommand() {
-        HostFenceActionExecutor executor = new HostFenceActionExecutor(getHost());
+        HostFenceActionExecutor executor = hostFenceActionExecutorInstance.get().init(getHost());
         FenceOperationResult result = executor.getFenceAgentStatus(getParameters().getAgent());
         getQueryReturnValue().setSucceeded(result.getStatus() == Status.SUCCESS);
         getQueryReturnValue().setReturnValue(result);

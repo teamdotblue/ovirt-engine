@@ -3,6 +3,7 @@ package org.ovirt.engine.core.bll.pm;
 import java.util.List;
 import java.util.Map;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.HostLocking;
@@ -34,7 +35,6 @@ import org.ovirt.engine.core.dao.VmDao;
 public abstract class FenceVdsBaseCommand<T extends FenceVdsActionParameters> extends VdsCommand<T> {
     @Inject
     private AuditLogDirector auditLogDirector;
-
     @Inject
     private PreviousHostedEngineHost previousHostedEngineHost;
     @Inject
@@ -45,6 +45,8 @@ public abstract class FenceVdsBaseCommand<T extends FenceVdsActionParameters> ex
     private VmDao vmDao;
     @Inject
     private HostLocking hostLocking;
+    @Inject
+    private Instance<HostFenceActionExecutor> hostFenceActionExecutorInstance;
 
     /**
      * Constructor for command creation when compensation is applied on startup
@@ -129,7 +131,7 @@ public abstract class FenceVdsBaseCommand<T extends FenceVdsActionParameters> ex
     }
 
     protected HostFenceActionExecutor createHostFenceActionExecutor(VDS fencedHost, FencingPolicy fencingPolicy) {
-        return new HostFenceActionExecutor(fencedHost, fencingPolicy);
+        return hostFenceActionExecutorInstance.get().init(fencedHost, fencingPolicy);
     }
 
     private void audit(AuditLogType auditMessage) {

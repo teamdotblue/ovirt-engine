@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.NonTransactiveCommandAttribute;
@@ -26,7 +27,11 @@ import org.ovirt.engine.core.vdsbroker.VdsManager;
 public class SshSoftFencingCommand<T extends VdsActionParameters> extends VdsCommand<T> {
 
     @Inject
-    private ResourceManager resourceManager;
+    private Instance<ResourceManager> resourceManagerInstance;
+    @Inject
+    private Instance<HostFenceActionExecutor> hostFenceActionExecutorInstance;
+    @Inject
+    private EngineSSHClient sshClient;
 
     public SshSoftFencingCommand(T parameters, CommandContext commandContext) {
         super(parameters, commandContext);
@@ -46,7 +51,7 @@ public class SshSoftFencingCommand<T extends VdsActionParameters> extends VdsCom
             getReturnValue().setSucceeded(false);
             return;
         }
-        if (new HostFenceActionExecutor(getVds()).isHostPoweredOff()) {
+        if (hostFenceActionExecutorInstance.get().init(getVds()).isHostPoweredOff()) {
             // do not try to soft-fence if Host is reported as Down via PM
             getReturnValue().setSucceeded(false);
         } else {
@@ -77,7 +82,7 @@ public class SshSoftFencingCommand<T extends VdsActionParameters> extends VdsCom
     private boolean executeSshSoftFencingCommand(String version) {
         boolean ret = false;
         try (
-            final EngineSSHClient sshClient = new EngineSSHClient();
+            // final EngineSSHClient sshClient = new EngineSSHClient();
             final ByteArrayOutputStream cmdOut = new ByteArrayOutputStream();
             final ByteArrayOutputStream cmdErr = new ByteArrayOutputStream()
         ) {
@@ -141,7 +146,7 @@ public class SshSoftFencingCommand<T extends VdsActionParameters> extends VdsCom
     }
 
     public ResourceManager getResourceManager() {
-        return resourceManager;
+        return resourceManagerInstance.get();
     }
 
     @Override

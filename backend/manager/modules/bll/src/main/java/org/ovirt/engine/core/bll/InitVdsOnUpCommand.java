@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.attestationbroker.AttestThread;
@@ -61,10 +62,12 @@ import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogable;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogableImpl;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.MessageBundler;
 import org.ovirt.engine.core.dao.ClusterDao;
+import org.ovirt.engine.core.dao.FenceAgentDao;
 import org.ovirt.engine.core.dao.StorageDomainDao;
 import org.ovirt.engine.core.dao.StorageDomainStaticDao;
 import org.ovirt.engine.core.dao.StoragePoolDao;
 import org.ovirt.engine.core.dao.StoragePoolIsoMapDao;
+import org.ovirt.engine.core.dao.VdsDao;
 import org.ovirt.engine.core.dao.VdsDynamicDao;
 import org.ovirt.engine.core.dao.VdsKdumpStatusDao;
 import org.ovirt.engine.core.vdsbroker.ResourceManager;
@@ -116,6 +119,12 @@ public class InitVdsOnUpCommand extends StorageHandlingCommandBase<HostStoragePo
     private HostedEngineHelper hostedEngineHelper;
     @Inject
     private ClusterCpuFlagsManager clusterCpuFlagsManager;
+    @Inject
+    private VdsDao vdsDao;
+    @Inject
+    private FenceAgentDao fenceAgentDao;
+    @Inject
+    private Instance<HostFenceActionExecutor> hostFenceActionExecutorInstance;
 
     public InitVdsOnUpCommand(HostStoragePoolParametersBase parameters, CommandContext commandContext) {
         super(parameters, commandContext);
@@ -256,9 +265,9 @@ public class InitVdsOnUpCommand extends StorageHandlingCommandBase<HostStoragePo
     }
 
     private void processFence() {
-        vdsProxyFound = new FenceProxyLocator(getVds()).isProxyHostAvailable();
+        vdsProxyFound = new FenceProxyLocator(getVds(), vdsDao, fenceAgentDao).isProxyHostAvailable();
         if (getVds().isPmEnabled() && vdsProxyFound) {
-            HostFenceActionExecutor executor = new HostFenceActionExecutor(getVds());
+            HostFenceActionExecutor executor = hostFenceActionExecutorInstance.get().init(getVds());
             fenceStatusResult = executor.fence(FenceActionType.STATUS);
             fenceSucceeded = fenceStatusResult.getStatus() == Status.SUCCESS;
         }
