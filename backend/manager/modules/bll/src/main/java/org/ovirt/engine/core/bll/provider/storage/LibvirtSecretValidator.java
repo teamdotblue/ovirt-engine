@@ -1,23 +1,32 @@
 package org.ovirt.engine.core.bll.provider.storage;
 
+import javax.inject.Inject;
+
 import org.apache.commons.lang.StringUtils;
 import org.ovirt.engine.core.bll.ValidationResult;
 import org.ovirt.engine.core.common.businessentities.storage.LibvirtSecret;
 import org.ovirt.engine.core.common.errors.EngineMessage;
 import org.ovirt.engine.core.dao.LibvirtSecretDao;
 import org.ovirt.engine.core.dao.provider.ProviderDao;
-import org.ovirt.engine.core.di.Injector;
 
 public class LibvirtSecretValidator {
 
-    private final LibvirtSecret libvirtSecret;
+    private LibvirtSecret libvirtSecret;
+    @Inject
     private ProviderDao providerDao;
+    @Inject
     private LibvirtSecretDao libvirtSecretDao;
 
     public LibvirtSecretValidator(LibvirtSecret libvirtSecret) {
         this.libvirtSecret = libvirtSecret;
-        this.providerDao = Injector.get(ProviderDao.class);
-        this.libvirtSecretDao = Injector.get(LibvirtSecretDao.class);
+    }
+
+    public LibvirtSecretValidator() {
+    }
+
+    public LibvirtSecretValidator init(LibvirtSecret libvirtSecret) {
+        this.libvirtSecret = libvirtSecret;
+        return this;
     }
 
     public ValidationResult uuidNotEmpty() {

@@ -1,11 +1,17 @@
 package org.ovirt.engine.core.bll.provider.storage;
 
+import javax.enterprise.inject.Instance;
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.bll.context.CommandContext;
 import org.ovirt.engine.core.common.AuditLogType;
 import org.ovirt.engine.core.common.action.LibvirtSecretParameters;
 import org.ovirt.engine.core.common.errors.EngineMessage;
 
 public class UpdateLibvirtSecretCommand extends LibvirtSecretCommandBase {
+
+    @Inject
+    private Instance<LibvirtSecretValidator> libvirtSecretValidatorInstance;
 
     public UpdateLibvirtSecretCommand(LibvirtSecretParameters parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -14,7 +20,7 @@ public class UpdateLibvirtSecretCommand extends LibvirtSecretCommandBase {
     @Override
     protected boolean validate() {
         LibvirtSecretValidator libvirtSecretValidator =
-                new LibvirtSecretValidator(getParameters().getLibvirtSecret());
+                libvirtSecretValidatorInstance.get().init(getParameters().getLibvirtSecret());
         return validate(libvirtSecretValidator.uuidExist())
                 && validate(libvirtSecretValidator.valueNotEmpty())
                 && validate(libvirtSecretValidator.providerExist());
