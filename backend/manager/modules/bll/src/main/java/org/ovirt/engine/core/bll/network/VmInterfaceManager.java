@@ -7,6 +7,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import javax.inject.Inject;
+
 import org.apache.commons.lang.StringUtils;
 import org.ovirt.engine.core.bll.context.CompensationContext;
 import org.ovirt.engine.core.bll.network.macpool.MacPool;
@@ -22,10 +24,8 @@ import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogDirector;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogable;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogableImpl;
 import org.ovirt.engine.core.dao.VmDao;
-import org.ovirt.engine.core.dao.network.VmNetworkInterfaceDao;
 import org.ovirt.engine.core.dao.network.VmNetworkStatisticsDao;
 import org.ovirt.engine.core.dao.network.VmNicDao;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.utils.transaction.TransactionSupport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,6 +35,17 @@ import org.slf4j.LoggerFactory;
  */
 public class VmInterfaceManager {
 
+    @Inject
+    private VmNetworkStatisticsDao vmNetworkStatisticsDao;
+    @Inject
+    private VmDao vmDao;
+    @Inject
+    private VmNicDao vmNicDao;
+    @Inject
+    private AuditLogDirector auditLogDirector;
+    @Inject
+    private ExternalNetworkManagerFactory externalNetworkManagerFactory;
+
     private Logger log = LoggerFactory.getLogger(getClass());
     private MacPool macPool;
 
@@ -43,6 +54,11 @@ public class VmInterfaceManager {
 
     public VmInterfaceManager(MacPool macPool) {
         this.macPool = macPool;
+    }
+
+    public VmInterfaceManager init(MacPool macPool) {
+        this.macPool = macPool;
+        return this;
     }
 
     /**
@@ -76,8 +92,8 @@ public class VmInterfaceManager {
     }
 
     public void persistIface(VmNic iface, CompensationContext compensationContext) {
-        getVmNicDao().save(iface);
-        getVmNetworkStatisticsDao().save(iface.getStatistics());
+        vmNicDao.save(iface);
+        vmNetworkStatisticsDao.save(iface.getStatistics());
         compensationContext.snapshotNewEntity(iface);
         compensationContext.snapshotNewEntity(iface.getStatistics());
     }
@@ -85,7 +101,7 @@ public class VmInterfaceManager {
     public void auditLogMacInUse(final VmNic iface) {
         TransactionSupport.executeInNewTransaction(() -> {
             AuditLogable logable = createAuditLog(iface);
-            log(logable, AuditLogType.MAC_ADDRESS_IS_IN_USE);
+            auditLogDirector.log(logable, AuditLogType.MAC_ADDRESS_IS_IN_USE);
             log.warn("Network Interface '{}' has MAC address '{}' which is in use, " +
                     "therefore the action for VM '{}' failed.", iface.getName(), iface.getMacAddress(),
                     iface.getVmId());
@@ -97,7 +113,7 @@ public class VmInterfaceManager {
         TransactionSupport.executeInNewTransaction(() -> {
             AuditLogable logable = createAuditLog(iface);
             logable.setVmName(vmName);
-            log(logable, AuditLogType.MAC_ADDRESS_IS_IN_USE_UNPLUG);
+            auditLogDirector.log(logable, AuditLogType.MAC_ADDRESS_IS_IN_USE_UNPLUG);
             log.warn("Network Interface '{}' has MAC address '{}' which is in use, " +
                     "therefore it is being unplugged from VM '{}'.", iface.getName(), iface.getMacAddress(),
                     iface.getVmId());
@@ -112,7 +128,7 @@ public class VmInterfaceManager {
      *            The ID of the VM to remove from.
      */
     public void removeAllAndReleaseMacAddresses(Guid vmId) {
-        removeAllAndReleaseMacAddresses(getVmNicDao().getAllForVm(vmId));
+        removeAllAndReleaseMacAddresses(vmNicDao.getAllForVm(vmId));
     }
 
     public void removeAllAndReleaseMacAddresses(List<? extends VmNic> interfaces) {
@@ -128,8 +144,8 @@ public class VmInterfaceManager {
         removeFromExternalNetworks(interfaces);
 
         for (VmNic iface : interfaces) {
-            getVmNicDao().remove(iface.getId());
-            getVmNetworkStatisticsDao().remove(iface.getId());
+            vmNicDao.remove(iface.getId());
+            vmNetworkStatisticsDao.remove(iface.getId());
         }
     }
 
@@ -140,7 +156,7 @@ public class VmInterfaceManager {
     protected void removeFromExternalNetworks(List<? extends VmNic> interfaces) {
         TransactionSupport.executeInSuppressed(() -> {
             for (VmNic iface : interfaces) {
-                getExternalNetworkManagerFactory().create(iface).deallocateIfExternal();
+                externalNetworkManagerFactory.create(iface).deallocateIfExternal();
             }
             return null;
         });
@@ -156,6 +172,7 @@ public class VmInterfaceManager {
      *         <code>false</code> otherwise.
      */
     public boolean tooManyPluggedInterfaceWithSameMac(VmNic iface, ReadMacPool readMacPool) {
+        log.info("too many plugged interface with same MAC triggered");
         return !readMacPool.isDuplicateMacAddressesAllowed() && findPluggedInterfaceWithSameMac(iface) != null;
     }
 
@@ -169,9 +186,10 @@ public class VmInterfaceManager {
      * @return  {@link Optional}&lt;{@link VM}&gt; if duplicate MACs are not allowed, empty {@link Optional} otherwise.
      */
     public Optional<VM> getVmWithSameMacIfDuplicateIsNotAllowed(VmNic iface, ReadMacPool readMacPool) {
+        log.info("get VM with same MAC if duplicate is not allowed triggered");
         if (!readMacPool.isDuplicateMacAddressesAllowed()) {
             return Optional.ofNullable(findPluggedInterfaceWithSameMac(iface))
-                    .map(vmInterface -> getVmDao().get(vmInterface.getVmId()));
+                    .map(vmInterface -> vmDao.get(vmInterface.getVmId()));
         }
         return Optional.empty();
     }
@@ -184,7 +202,8 @@ public class VmInterfaceManager {
      * @return {@link VmNic} of interface that is using the same MAC , <code>null</code> otherwise.
      */
     private VmNic findPluggedInterfaceWithSameMac(VmNic interfaceToPlug) {
-        List<VmNic> vmNetworkIntrefaces = getVmNicDao().getPluggedForMac(interfaceToPlug.getMacAddress());
+        log.info("find plugged interface with same MAC triggered");
+        List<VmNic> vmNetworkIntrefaces = vmNicDao.getPluggedForMac(interfaceToPlug.getMacAddress());
         for (VmNic vmNetworkInterface : vmNetworkIntrefaces) {
             if (!interfaceToPlug.getId().equals(vmNetworkInterface.getId())) {
                 return vmNetworkInterface;
@@ -225,37 +244,6 @@ public class VmInterfaceManager {
                 return nic1.getName().compareTo(nic2.getName());
             }
         });
-    }
-
-    /**
-     * Log the given loggable & message to the {@link AuditLogDirector}.
-     */
-    private void log(AuditLogable logable, AuditLogType auditLogType) {
-        getAuditLogDirector().log(logable, auditLogType);
-    }
-
-    AuditLogDirector getAuditLogDirector() {
-        return Injector.get(AuditLogDirector.class);
-    }
-
-    protected VmNetworkStatisticsDao getVmNetworkStatisticsDao() {
-        return Injector.get(VmNetworkStatisticsDao.class);
-    }
-
-    protected VmNetworkInterfaceDao getVmNetworkInterfaceDao() {
-        return Injector.get(VmNetworkInterfaceDao.class);
-    }
-
-    protected VmNicDao getVmNicDao() {
-        return Injector.get(VmNicDao.class);
-    }
-
-    protected VmDao getVmDao() {
-        return Injector.get(VmDao.class);
-    }
-
-    private ExternalNetworkManagerFactory getExternalNetworkManagerFactory() {
-        return Injector.get(ExternalNetworkManagerFactory.class);
     }
 
     private AuditLogable createAuditLog(final VmNic iface) {

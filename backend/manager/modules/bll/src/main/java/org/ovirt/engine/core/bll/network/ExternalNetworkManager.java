@@ -46,6 +46,20 @@ public class ExternalNetworkManager {
         this.nic = nic;
     }
 
+    ExternalNetworkManager() {
+    }
+
+    public ExternalNetworkManager init(VmNic nic) {
+        this.nic = nic;
+        return this;
+    }
+
+    public ExternalNetworkManager init(VmNic nic, Network network) {
+        this.nic = nic;
+        this.network = network;
+        return this;
+    }
+
     /**
      * Create a manager for the specific vNIC with the given network.
      *

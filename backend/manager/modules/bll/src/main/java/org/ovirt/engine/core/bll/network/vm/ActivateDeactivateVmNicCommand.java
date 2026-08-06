@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.apache.commons.lang.StringUtils;
@@ -89,19 +90,14 @@ public class ActivateDeactivateVmNicCommand<T extends ActivateDeactivateVmNicPar
 
     @Inject
     private ManagementNetworkUtil managementNetworkUtil;
-
     @Inject
     private VfScheduler vfScheduler;
-
     @Inject
     private NetworkDeviceHelper networkDeviceHelper;
-
     @Inject
     private HostLocking hostLocking;
-
     @Inject
     private VmDevicesMonitoring vmDevicesMonitoring;
-
     @Inject
     private VmDeviceDao vmDeviceDao;
     @Inject
@@ -114,18 +110,16 @@ public class ActivateDeactivateVmNicCommand<T extends ActivateDeactivateVmNicPar
     private ProviderProxyFactory providerProxyFactory;
     @Inject
     private HostProviderBindingDao hostProviderBindingDao;
-
     @Inject
     private ExternalNetworkManagerFactory externalNetworkManagerFactory;
-
     @Inject
     private NetworkHelper networkHelper;
-
     @Inject
     private NetworkDao networkDao;
-
     @Inject
-    private ResourceManager resourceManager;
+    private Instance<ResourceManager> resourceManagerInstance;
+    @Inject
+    private Instance<VmInterfaceManager> vmInterfaceManagerInstance;
 
     public ActivateDeactivateVmNicCommand(T parameters, CommandContext commandContext) {
         super(parameters, commandContext);
@@ -296,7 +290,7 @@ public class ActivateDeactivateVmNicCommand<T extends ActivateDeactivateVmNicPar
             };
         }
         log.debug("Acquired lock for {}", action);
-        return resourceManager.getVmManager(getVmId()).getVmDevicesLock();
+        return resourceManagerInstance.get().getVmManager(getVmId()).getVmDevicesLock();
     }
 
     private void plugNic() {
@@ -556,7 +550,7 @@ public class ActivateDeactivateVmNicCommand<T extends ActivateDeactivateVmNicPar
     protected ValidationResult macAvailable() {
         VmNic nic = getParameters().getNic();
 
-        Optional<VM> optionalVm = new VmInterfaceManager().getVmWithSameMacIfDuplicateIsNotAllowed(nic, getMacPool());
+        Optional<VM> optionalVm = vmInterfaceManagerInstance.get().getVmWithSameMacIfDuplicateIsNotAllowed(nic, getMacPool());
         if (optionalVm.isPresent()) {
             return new ValidationResult(EngineMessage.NETWORK_MAC_ADDRESS_IN_USE,
                     ReplacementUtils.createSetVariableString(MacAddressValidator.VAR_MAC_ADDRESS, nic.getMacAddress()),

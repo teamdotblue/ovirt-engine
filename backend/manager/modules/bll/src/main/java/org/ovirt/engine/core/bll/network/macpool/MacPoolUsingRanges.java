@@ -16,6 +16,7 @@ import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogDirector;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogable;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogableImpl;
+import org.ovirt.engine.core.dao.network.VmNicDao;
 import org.ovirt.engine.core.utils.MacAddressRangeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,15 +31,18 @@ public final class MacPoolUsingRanges implements MacPool {
     private Collection<LongRange> rangesBoundaries;
     private final AuditLogDirector auditLogDirector;
     private String macPoolName;
+    private VmNicDao vmNicDao;
 
     public MacPoolUsingRanges(Guid id,
             Collection<LongRange> rangesBoundaries,
             boolean allowDuplicates,
-            AuditLogDirector auditLogDirector) {
+            AuditLogDirector auditLogDirector,
+            VmNicDao vmNicDao) {
         this.id = id;
         this.allowDuplicates = allowDuplicates;
         this.rangesBoundaries = rangesBoundaries;
         this.auditLogDirector = auditLogDirector;
+        this.vmNicDao = vmNicDao;
 
     }
 
@@ -76,7 +80,7 @@ public final class MacPoolUsingRanges implements MacPool {
      * @return initialized {@link MacsStorage} instance.
      */
     private MacsStorage createMacsStorage(Collection<LongRange> rangesBoundaries) {
-        MacsStorage macsStorage = new MacsStorage(allowDuplicates);
+        MacsStorage macsStorage = new MacsStorage(allowDuplicates, vmNicDao, auditLogDirector);
         for (LongRange longRange : rangesBoundaries) {
             log.debug("Adding range {} to pool {}.", longRange, this);
             macsStorage.addRange(new Range(longRange));

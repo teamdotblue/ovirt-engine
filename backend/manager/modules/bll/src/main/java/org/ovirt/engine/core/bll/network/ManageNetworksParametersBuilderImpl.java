@@ -9,11 +9,16 @@ import java.util.stream.Stream;
 
 import javax.inject.Inject;
 
+import org.ovirt.engine.core.bll.host.HostConnectivityChecker;
+import org.ovirt.engine.core.bll.interfaces.BackendInternal;
+import org.ovirt.engine.core.bll.network.cluster.ManagementNetworkUtil;
 import org.ovirt.engine.core.common.action.PersistentHostSetupNetworksParameters;
 import org.ovirt.engine.core.common.businessentities.network.Network;
 import org.ovirt.engine.core.common.businessentities.network.NetworkAttachment;
 import org.ovirt.engine.core.common.businessentities.network.VdsNetworkInterface;
+import org.ovirt.engine.core.common.interfaces.VDSBrokerFrontend;
 import org.ovirt.engine.core.compat.Guid;
+import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogDirector;
 import org.ovirt.engine.core.dao.VdsStaticDao;
 import org.ovirt.engine.core.dao.network.InterfaceDao;
 import org.ovirt.engine.core.dao.network.NetworkAttachmentDao;
@@ -24,7 +29,6 @@ final class ManageNetworksParametersBuilderImpl extends HostSetupNetworksParamet
 
     @Inject
     private AddNetworksByLabelParametersBuilder addNetworksByLabelParametersBuilder;
-
     @Inject
     private RemoveNetworksByLabelParametersBuilder removeNetworksByLabelParametersBuilder;
 
@@ -32,8 +36,14 @@ final class ManageNetworksParametersBuilderImpl extends HostSetupNetworksParamet
     ManageNetworksParametersBuilderImpl(InterfaceDao interfaceDao,
             VdsStaticDao vdsStaticDao,
             NetworkClusterDao networkClusterDao,
-            NetworkAttachmentDao networkAttachmentDao) {
-        super(interfaceDao, vdsStaticDao, networkClusterDao, networkAttachmentDao);
+            NetworkAttachmentDao networkAttachmentDao,
+            VDSBrokerFrontend vdsBrokerFrontend,
+            BackendInternal backendInternal,
+            AuditLogDirector auditLogDirector,
+            ManagementNetworkUtil managementNetworkUtil,
+            HostConnectivityChecker hostConnectivityChecker) {
+        super(interfaceDao, vdsStaticDao, networkClusterDao, networkAttachmentDao,
+                vdsBrokerFrontend, backendInternal, auditLogDirector, managementNetworkUtil, hostConnectivityChecker);
     }
 
     @Override

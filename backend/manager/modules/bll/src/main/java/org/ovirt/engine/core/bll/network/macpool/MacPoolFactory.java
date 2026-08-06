@@ -12,6 +12,7 @@ import org.apache.commons.lang.math.LongRange;
 import org.ovirt.engine.core.common.AuditLogType;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogDirector;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogableImpl;
+import org.ovirt.engine.core.dao.network.VmNicDao;
 import org.ovirt.engine.core.utils.MacAddressRangeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,15 +24,17 @@ public class MacPoolFactory {
 
     @Inject
     private MacsUsedAcrossWholeSystem macsUsedAcrossWholeSystem;
-
     @Inject
     private AuditLogDirector auditLogDirector;
+    @Inject
+    private VmNicDao vmNicDao;
 
     public MacPool createMacPool(org.ovirt.engine.core.common.businessentities.MacPool macPool, boolean engineStartup) {
         MacPoolUsingRanges macPoolUsingRanges = new MacPoolUsingRanges(macPool.getId(),
                 MacAddressRangeUtils.macPoolToRanges(macPool),
                 macPool.isAllowDuplicateMacAddresses(),
-                auditLogDirector);
+                auditLogDirector,
+                vmNicDao);
         macPoolUsingRanges.setMacPoolName(macPool.getName());
 
         macPoolUsingRanges.initialize(engineStartup, macsUsedAcrossWholeSystem.getMacsForMacPool(macPool.getId()));

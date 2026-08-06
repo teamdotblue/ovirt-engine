@@ -3,18 +3,19 @@ package org.ovirt.engine.core.bll.network.macpool;
 import java.util.function.Predicate;
 
 import org.ovirt.engine.core.dao.network.VmNicDao;
-import org.ovirt.engine.core.di.Injector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 class MacAddressGlobalUsageTester implements Predicate<String> {
-    private static final Logger log = LoggerFactory.getLogger(MacAddressGlobalUsageTester.class);
-    private final boolean allowDuplicates;
-    private final VmNicDao vmNicDao;
 
-    MacAddressGlobalUsageTester(boolean allowDuplicates) {
+    private VmNicDao vmNicDao;
+
+    private static final Logger log = LoggerFactory.getLogger(MacAddressGlobalUsageTester.class);
+    private boolean allowDuplicates;
+
+    MacAddressGlobalUsageTester(boolean allowDuplicates, VmNicDao vmNicDao) {
         this.allowDuplicates = allowDuplicates;
-        vmNicDao = Injector.get(VmNicDao.class);
+        this.vmNicDao = vmNicDao;
     }
 
     @Override

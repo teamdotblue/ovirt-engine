@@ -36,6 +36,7 @@ import org.ovirt.engine.core.common.businessentities.network.VmNic;
 import org.ovirt.engine.core.common.businessentities.network.VmNicFilterParameter;
 import org.ovirt.engine.core.common.businessentities.network.VnicProfile;
 import org.ovirt.engine.core.common.errors.EngineMessage;
+import org.ovirt.engine.core.common.osinfo.OsRepository;
 import org.ovirt.engine.core.common.utils.VmDeviceType;
 import org.ovirt.engine.core.common.validation.group.UpdateVmNic;
 import org.ovirt.engine.core.common.vdscommands.VDSCommandType;
@@ -70,13 +71,12 @@ public class UpdateVmInterfaceCommand<T extends AddVmInterfaceParameters> extend
     private InterfaceDao interfaceDao;
     @Inject
     private VnicProfileDao vnicProfileDao;
-
     @Inject
     private ExternalNetworkManagerFactory externalNetworkManagerFactory;
-
     @Inject
     private NetworkHelper networkHelper;
-
+    @Inject
+    private OsRepository osRepository;
     @Inject
     private SnapshotsManager snapshotsManager;
 
@@ -445,6 +445,16 @@ public class UpdateVmInterfaceCommand<T extends AddVmInterfaceParameters> extend
 
         public UpdateVmNicValidator(VmNic nic, Version version, int osId) {
             super(nic, version, osId);
+        }
+
+        @Override
+        public OsRepository getOsRepository() {
+            return osRepository;
+        }
+
+        @Override
+        public NetworkHelper getNetworkHelper() {
+            return networkHelper;
         }
 
         public ValidationResult networkExistsOnHost(Network network) {

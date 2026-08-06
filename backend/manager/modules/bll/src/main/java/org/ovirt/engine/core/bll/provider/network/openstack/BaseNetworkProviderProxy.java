@@ -62,6 +62,9 @@ public abstract class BaseNetworkProviderProxy<P extends OpenstackNetworkProvide
         super(provider);
     }
 
+    public BaseNetworkProviderProxy() {
+    }
+
     private Quantum getClient() {
         if (client == null) {
             client = new Quantum(getProvider().getUrl() + API_VERSION, new CustomizedRESTEasyConnector());

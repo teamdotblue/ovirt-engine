@@ -1,13 +1,17 @@
 package org.ovirt.engine.core.bll.network;
 
+import javax.enterprise.inject.Instance;
+import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import org.ovirt.engine.core.common.businessentities.network.Network;
 import org.ovirt.engine.core.common.businessentities.network.VmNic;
-import org.ovirt.engine.core.di.Injector;
 
 @Singleton
 public class ExternalNetworkManagerFactory {
+
+    @Inject
+    private Instance<ExternalNetworkManager> externalNetworkManagerInstance;
 
     /**
      * Create a manager for the specific vNIC.
@@ -16,7 +20,7 @@ public class ExternalNetworkManagerFactory {
      *            The vNIC to create a manager for.
      */
     public ExternalNetworkManager create(VmNic nic) {
-        return Injector.injectMembers(new ExternalNetworkManager(nic));
+        return externalNetworkManagerInstance.get().init(nic);
     }
 
     /**
@@ -28,6 +32,6 @@ public class ExternalNetworkManagerFactory {
      *            The network to manage.
      */
     public ExternalNetworkManager create(VmNic nic, Network network) {
-        return Injector.injectMembers(new ExternalNetworkManager(nic, network));
+        return externalNetworkManagerInstance.get().init(nic, network);
     }
 }

@@ -33,7 +33,6 @@ import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogDirector;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogable;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogableImpl;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.utils.NetworkUtils;
 import org.ovirt.engine.core.utils.network.function.NicToIpv4AddressFunction;
 import org.ovirt.engine.core.utils.network.function.NicToIpv6AddressFunction;
@@ -42,30 +41,39 @@ import org.ovirt.engine.core.utils.network.predicate.IpAddressPredicate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
 public class NetworkConfigurator {
+
+    private VDSBrokerFrontend vdsBrokerFrontend;
+    private BackendInternal backendInternal;
+    private AuditLogDirector auditLogDirector;
+    private final Network managementNetwork;
+    private HostConnectivityChecker hostConnectivityChecker;
 
     private static final Logger log = LoggerFactory.getLogger(NetworkConfigurator.class);
     private static final String MANAGEMENT_NETWORK_CONFIG_ERR = "Failed to configure management network";
 
-    private final VDS host;
-    private final AuditLogDirector auditLogDirector;
-    private final Network managementNetwork;
+    private VDS host;
     private CommandContext commandContext;
 
-    NetworkConfigurator(VDS host, CommandContext commandContext, AuditLogDirector auditLogDirector) {
+    public NetworkConfigurator(VDS host,
+            CommandContext commandContext,
+            VDSBrokerFrontend vdsBrokerFrontend,
+            BackendInternal backendInternal,
+            AuditLogDirector auditLogDirector,
+            ManagementNetworkUtil managementNetworkUtil,
+            HostConnectivityChecker hostConnectivityChecker) {
         this.host = host;
         this.commandContext = commandContext;
+        this.vdsBrokerFrontend = vdsBrokerFrontend;
+        this.backendInternal = backendInternal;
         this.auditLogDirector = auditLogDirector;
-        this.managementNetwork = getManagementNetworkUtil().getManagementNetwork(host.getClusterId());
-    }
-
-    public NetworkConfigurator(VDS host, CommandContext commandContext) {
-        this(host, commandContext, Injector.get(AuditLogDirector.class));
+        this.managementNetwork = managementNetworkUtil.getManagementNetwork(host.getClusterId());
+        this.hostConnectivityChecker = hostConnectivityChecker;
     }
 
     public void createManagementNetworkIfRequired() {
         if (host == null) {
+            log.info("Host is null weird");
             return;
         }
 
@@ -93,7 +101,7 @@ public class NetworkConfigurator {
         } else {
             final AuditLogable event = createEvent();
             event.addCustomValue("InterfaceName", nic.getName());
-            auditLogDirector.log(event, AuditLogType.INVALID_BOND_INTERFACE_FOR_MANAGEMENT_NETWORK_CONFIGURATION);
+            getAuditLogDirector().log(event, AuditLogType.INVALID_BOND_INTERFACE_FOR_MANAGEMENT_NETWORK_CONFIGURATION);
             throw new NetworkConfiguratorException(MANAGEMENT_NETWORK_CONFIG_ERR);
         }
     }
@@ -120,16 +128,12 @@ public class NetworkConfigurator {
                 .orElse(null);
     }
 
-    private ManagementNetworkUtil getManagementNetworkUtil() {
-        return Injector.get(ManagementNetworkUtil.class);
-    }
-
     public boolean awaitVdsmResponse() {
-        return new HostConnectivityChecker().check(host);
+        return hostConnectivityChecker.check(host);
     }
 
     public void refreshNetworkConfiguration() {
-        Injector.get(VDSBrokerFrontend.class).runVdsCommand(VDSCommandType.CollectVdsNetworkDataAfterInstallation,
+        vdsBrokerFrontend.runVdsCommand(VDSCommandType.CollectVdsNetworkDataAfterInstallation,
                 new CollectHostNetworkDataVdsCommandParameters(host));
     }
 
@@ -151,7 +155,12 @@ public class NetworkConfigurator {
     }
 
     private VdsNetworkInterface findNicToSetupManagementNetwork() {
-
+        //host is not null
+        if (host.getActiveNic() == null) {
+            log.info("nic is null");
+        } else {
+            log.info("nic is not null not the issue");
+        }
         VdsNetworkInterface nic = Entities.entitiesByName(host.getInterfaces()).get(host.getActiveNic());
 
         if (nic == null) {
@@ -172,7 +181,7 @@ public class NetworkConfigurator {
             event.addCustomValue("VlanId", resolveVlanId(nic.getVlanId()));
             event.addCustomValue("MgmtVlanId", resolveVlanId(managementNetwork.getVlanId()));
             event.addCustomValue("InterfaceName", nic.getName());
-            auditLogDirector.log(event, AuditLogType.VLAN_ID_MISMATCH_FOR_MANAGEMENT_NETWORK_CONFIGURATION);
+            getAuditLogDirector().log(event, AuditLogType.VLAN_ID_MISMATCH_FOR_MANAGEMENT_NETWORK_CONFIGURATION);
             throw new NetworkConfiguratorException(MANAGEMENT_NETWORK_CONFIG_ERR);
         }
 
@@ -236,19 +245,23 @@ public class NetworkConfigurator {
                     getBackend().runInternalAction(ActionType.CommitNetworkChanges,
                             new VdsActionParameters(parameters.getVdsId()), cloneContextAndDetachFromParent());
             if (!retVal.getSucceeded()) {
-                auditLogDirector.log(createEvent(), AuditLogType.PERSIST_NETWORK_FAILED_FOR_MANAGEMENT_NETWORK);
+                getAuditLogDirector().log(createEvent(), AuditLogType.PERSIST_NETWORK_FAILED_FOR_MANAGEMENT_NETWORK);
                 throw new NetworkConfiguratorException(MANAGEMENT_NETWORK_CONFIG_ERR);
             }
         }
 
         if (!retVal.getSucceeded()) {
-            auditLogDirector.log(createEvent(), AuditLogType.SETUP_NETWORK_FAILED_FOR_MANAGEMENT_NETWORK_CONFIGURATION);
+            getAuditLogDirector().log(createEvent(), AuditLogType.SETUP_NETWORK_FAILED_FOR_MANAGEMENT_NETWORK_CONFIGURATION);
             throw new NetworkConfiguratorException(MANAGEMENT_NETWORK_CONFIG_ERR);
         }
     }
 
     BackendInternal getBackend() {
-        return Injector.get(BackendInternal.class);
+        return backendInternal;
+    }
+
+    AuditLogDirector getAuditLogDirector() {
+        return auditLogDirector;
     }
 
     private CommandContext cloneContextAndDetachFromParent() {

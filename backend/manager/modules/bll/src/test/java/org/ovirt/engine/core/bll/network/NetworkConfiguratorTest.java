@@ -29,6 +29,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.ovirt.engine.core.bll.context.CommandContext;
+import org.ovirt.engine.core.bll.host.HostConnectivityChecker;
 import org.ovirt.engine.core.bll.interfaces.BackendInternal;
 import org.ovirt.engine.core.bll.network.NetworkConfigurator.NetworkConfiguratorException;
 import org.ovirt.engine.core.bll.network.cluster.ManagementNetworkUtil;
@@ -44,11 +45,11 @@ import org.ovirt.engine.core.common.businessentities.network.Ipv4BootProtocol;
 import org.ovirt.engine.core.common.businessentities.network.Ipv6BootProtocol;
 import org.ovirt.engine.core.common.businessentities.network.Network;
 import org.ovirt.engine.core.common.businessentities.network.VdsNetworkInterface;
+import org.ovirt.engine.core.common.interfaces.VDSBrokerFrontend;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.compat.Version;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogDirector;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogable;
-import org.ovirt.engine.core.utils.InjectedMock;
 import org.ovirt.engine.core.utils.InjectorExtension;
 import org.ovirt.engine.core.utils.MockConfigExtension;
 
@@ -77,17 +78,20 @@ public class NetworkConfiguratorTest {
     private static final String REAL_IPV6_ADDRESS = "fbc::10";
 
     @Mock
-    @InjectedMock
     public ManagementNetworkUtil mockManagementNetworkUtil;
 
     @Mock
     private BackendInternal backend;
     @Mock
     private AuditLogDirector auditLogDirector;
+    @Mock
+    private VDSBrokerFrontend mockVdsBrokerFrontend;
+    @Mock
+    private HostConnectivityChecker mockHostConnectivityChecker;
     @Captor
     private ArgumentCaptor<AuditLogable> auditLogableArgumentCaptor;
 
-    private VDS host;
+    private VDS host = new VDS();
     private VdsNetworkInterface nic = new VdsNetworkInterface();
     private VdsNetworkInterface managementNic = new VdsNetworkInterface();
     private Network managementNetwork = new Network();
@@ -106,13 +110,15 @@ public class NetworkConfiguratorTest {
         managementNic.setNetworkName(MANAGEMENT_NETWORK_NAME);
         managementNic.setName(MANAGEMENT_NIC_NAME);
 
-        host = new VDS();
         host.setVdsName(HOST_NAME);
         host.setClusterId(CLUSTER_ID);
         host.setClusterCompatibilityVersion(Version.v4_3);
         host.getInterfaces().add(nic);
 
-        underTest = new NetworkConfigurator(host, COMMAND_CONTEXT, auditLogDirector);
+        underTest = spy(new NetworkConfigurator(
+            host, COMMAND_CONTEXT, mockVdsBrokerFrontend, backend, auditLogDirector,
+            mockManagementNetworkUtil, mockHostConnectivityChecker));
+        doReturn(auditLogDirector).when(underTest).getAuditLogDirector();
     }
 
     @Test
@@ -160,13 +166,12 @@ public class NetworkConfiguratorTest {
     public void testCreateManagementNetworkIfRequiredFailedOnSetupNetworks() {
         host.setActiveNic(NIC_NAME);
 
-        final NetworkConfigurator spiedUnderTest = spy(underTest);
-        doReturn(backend).when(spiedUnderTest).getBackend();
+        doReturn(backend).when(underTest).getBackend();
         when(backend.runInternalAction(eq(ActionType.HostSetupNetworks), any(), any()))
                 .thenReturn(createReturnValue(false));
 
         verifyAuditLoggableBaseFilledProperly(
-                spiedUnderTest,
+                underTest,
                 AuditLogType.SETUP_NETWORK_FAILED_FOR_MANAGEMENT_NETWORK_CONFIGURATION);
     }
 
@@ -174,15 +179,14 @@ public class NetworkConfiguratorTest {
     public void testCreateManagementNetworkIfRequiredFailedOnCommitNetworkChanges() {
         host.setActiveNic(NIC_NAME);
 
-        final NetworkConfigurator spiedUnderTest = spy(underTest);
-        doReturn(backend).when(spiedUnderTest).getBackend();
+        doReturn(backend).when(underTest).getBackend();
         when(backend.runInternalAction(eq(ActionType.HostSetupNetworks), any(), any()))
                 .thenReturn(createReturnValue(true));
         when(backend.runInternalAction(
                 eq(ActionType.CommitNetworkChanges), any(), any())).thenReturn(createReturnValue(false));
 
         verifyAuditLoggableBaseFilledProperly(
-                spiedUnderTest,
+                underTest,
                 AuditLogType.PERSIST_NETWORK_FAILED_FOR_MANAGEMENT_NETWORK);
     }
 
@@ -207,8 +211,7 @@ public class NetworkConfiguratorTest {
         host.getInterfaces().add(managementNic);
         host.setHostName(REAL_IPV4_ADDRESS);
 
-        final NetworkConfigurator spiedUnderTest = spy(underTest);
-        doReturn(backend).when(spiedUnderTest).getBackend();
+        doReturn(backend).when(underTest).getBackend();
 
         underTest.createManagementNetworkIfRequired();
 
@@ -222,8 +225,7 @@ public class NetworkConfiguratorTest {
         host.getInterfaces().add(managementNic);
         host.setHostName(REAL_IPV6_ADDRESS);
 
-        final NetworkConfigurator spiedUnderTest = spy(underTest);
-        doReturn(backend).when(spiedUnderTest).getBackend();
+        doReturn(backend).when(underTest).getBackend();
 
         underTest.createManagementNetworkIfRequired();
 

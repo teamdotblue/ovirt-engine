@@ -7,12 +7,14 @@ import static org.ovirt.engine.core.bll.validator.ValidationResultMatchers.isVal
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.ovirt.engine.core.bll.network.dc.UpdateNetworkCommand.UpdateNetworkValidator;
 import org.ovirt.engine.core.common.businessentities.network.Network;
 import org.ovirt.engine.core.common.businessentities.network.ProviderNetwork;
 import org.ovirt.engine.core.common.errors.EngineMessage;
 import org.ovirt.engine.core.compat.Guid;
+import org.ovirt.engine.core.dao.network.InterfaceDao;
 
 @ExtendWith(MockitoExtension.class)
 public class UpdateNetworkValidatorTest {
@@ -21,12 +23,15 @@ public class UpdateNetworkValidatorTest {
 
     private Network network;
 
+    @Mock
+    private InterfaceDao interfaceDao;
+
     private UpdateNetworkValidator validator;
 
     @BeforeEach
     public void setup() {
         network = new Network();
-        validator = new UpdateNetworkValidator(network);
+        validator = new UpdateNetworkValidator(network, interfaceDao);
     }
 
     private Network createExternalNetwork() {

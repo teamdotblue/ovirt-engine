@@ -8,6 +8,9 @@ import java.util.Objects;
 
 import javax.inject.Inject;
 
+import org.ovirt.engine.core.bll.host.HostConnectivityChecker;
+import org.ovirt.engine.core.bll.interfaces.BackendInternal;
+import org.ovirt.engine.core.bll.network.cluster.ManagementNetworkUtil;
 import org.ovirt.engine.core.common.action.ActionParametersBase;
 import org.ovirt.engine.core.common.action.PersistentHostSetupNetworksParameters;
 import org.ovirt.engine.core.common.businessentities.VDS;
@@ -19,8 +22,10 @@ import org.ovirt.engine.core.common.businessentities.network.NetworkAttachment;
 import org.ovirt.engine.core.common.businessentities.network.NetworkCluster;
 import org.ovirt.engine.core.common.businessentities.network.NetworkClusterId;
 import org.ovirt.engine.core.common.businessentities.network.VdsNetworkInterface;
+import org.ovirt.engine.core.common.interfaces.VDSBrokerFrontend;
 import org.ovirt.engine.core.common.utils.MapNetworkAttachments;
 import org.ovirt.engine.core.compat.Guid;
+import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogDirector;
 import org.ovirt.engine.core.dao.VdsStaticDao;
 import org.ovirt.engine.core.dao.network.InterfaceDao;
 import org.ovirt.engine.core.dao.network.NetworkAttachmentDao;
@@ -33,6 +38,11 @@ public abstract class HostSetupNetworksParametersBuilder {
     protected VdsStaticDao vdsStaticDao;
     protected NetworkClusterDao networkClusterDao;
     protected NetworkAttachmentDao networkAttachmentDao;
+    private VDSBrokerFrontend vdsBrokerFrontend;
+    private BackendInternal backendInternal;
+    private AuditLogDirector auditLogDirector;
+    private ManagementNetworkUtil managementNetworkUtil;
+    private HostConnectivityChecker hostConnectivityChecker;
     private Map<Guid, List<VdsNetworkInterface>> hostIdToNics = new HashMap<>();
     private Map<Guid, Map<Guid, NetworkAttachment>> networkToAttachmentByHostId = new HashMap<>();
 
@@ -40,11 +50,21 @@ public abstract class HostSetupNetworksParametersBuilder {
     public HostSetupNetworksParametersBuilder(InterfaceDao interfaceDao,
             VdsStaticDao vdsStaticDao,
             NetworkClusterDao networkClusterDao,
-            NetworkAttachmentDao networkAttachmentDao) {
+            NetworkAttachmentDao networkAttachmentDao,
+            VDSBrokerFrontend vdsBrokerFrontend,
+            BackendInternal backendInternal,
+            AuditLogDirector auditLogDirector,
+            ManagementNetworkUtil managementNetworkUtil,
+            HostConnectivityChecker hostConnectivityChecker) {
         this.interfaceDao = interfaceDao;
         this.vdsStaticDao = vdsStaticDao;
         this.networkClusterDao = networkClusterDao;
         this.networkAttachmentDao = networkAttachmentDao;
+        this.vdsBrokerFrontend = vdsBrokerFrontend;
+        this.backendInternal = backendInternal;
+        this.auditLogDirector = auditLogDirector;
+        this.managementNetworkUtil = managementNetworkUtil;
+        this.hostConnectivityChecker = hostConnectivityChecker;
     }
 
     protected PersistentHostSetupNetworksParameters createHostSetupNetworksParameters(Guid hostId) {
@@ -160,7 +180,7 @@ public abstract class HostSetupNetworksParametersBuilder {
         if (!hostIdToNics.containsKey(hostId)) {
             VDS host = new VDS();
             host.setId(hostId);
-            NetworkConfigurator configurator = new NetworkConfigurator(host, null);
+            NetworkConfigurator configurator = new NetworkConfigurator(host, null, vdsBrokerFrontend, backendInternal, auditLogDirector, managementNetworkUtil, hostConnectivityChecker);
             hostIdToNics.put(hostId, configurator.filterBondsWithoutSlaves(interfaceDao.getAllInterfacesForVds(hostId)));
         }
 

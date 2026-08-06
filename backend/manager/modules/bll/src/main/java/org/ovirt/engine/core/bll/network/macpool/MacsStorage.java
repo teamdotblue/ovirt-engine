@@ -12,7 +12,7 @@ import org.ovirt.engine.core.common.errors.EngineException;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogDirector;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogable;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogableImpl;
-import org.ovirt.engine.core.di.Injector;
+import org.ovirt.engine.core.dao.network.VmNicDao;
 
 class MacsStorage {
     private final boolean allowDuplicates;
@@ -20,9 +20,11 @@ class MacsStorage {
     private ObjectCounter<Long> customMacs;
     private int startIndexForEmptyRangeSearch = 0;
     private Predicate<String> skipAllocationPredicate;
+    private AuditLogDirector auditLogDirector;
 
-    public MacsStorage(boolean allowDuplicates) {
-        this(allowDuplicates, new MacAddressGlobalUsageTester(allowDuplicates));
+    public MacsStorage(boolean allowDuplicates, VmNicDao vmNicDao, AuditLogDirector auditLogDirector) {
+        this(allowDuplicates, new MacAddressGlobalUsageTester(allowDuplicates, vmNicDao));
+        this.auditLogDirector = auditLogDirector;
     }
 
     MacsStorage(boolean allowDuplicates, Predicate<String> skipAllocationPredicate) {
@@ -185,6 +187,6 @@ class MacsStorage {
     void auditAllocatingMacsInUse(int countMacsInUse) {
         AuditLogable logable = new AuditLogableImpl();
         logable.addCustomValue("NumberOfMacs", Integer.toString(countMacsInUse));
-        Injector.get(AuditLogDirector.class).log(logable, AuditLogType.MAC_ADDRESS_IN_USE_ALLOCATED);
+        auditLogDirector.log(logable, AuditLogType.MAC_ADDRESS_IN_USE_ALLOCATED);
     }
 }

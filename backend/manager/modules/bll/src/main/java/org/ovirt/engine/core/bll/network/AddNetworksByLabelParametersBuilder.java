@@ -8,12 +8,17 @@ import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 
+import org.ovirt.engine.core.bll.host.HostConnectivityChecker;
+import org.ovirt.engine.core.bll.interfaces.BackendInternal;
+import org.ovirt.engine.core.bll.network.cluster.ManagementNetworkUtil;
 import org.ovirt.engine.core.common.action.PersistentHostSetupNetworksParameters;
 import org.ovirt.engine.core.common.businessentities.network.Network;
 import org.ovirt.engine.core.common.businessentities.network.VdsNetworkInterface;
 import org.ovirt.engine.core.common.errors.EngineError;
 import org.ovirt.engine.core.common.errors.EngineException;
+import org.ovirt.engine.core.common.interfaces.VDSBrokerFrontend;
 import org.ovirt.engine.core.compat.Guid;
+import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogDirector;
 import org.ovirt.engine.core.dao.VdsStaticDao;
 import org.ovirt.engine.core.dao.network.InterfaceDao;
 import org.ovirt.engine.core.dao.network.NetworkAttachmentDao;
@@ -26,8 +31,14 @@ public class AddNetworksByLabelParametersBuilder extends HostSetupNetworksParame
     public AddNetworksByLabelParametersBuilder(InterfaceDao interfaceDao,
             VdsStaticDao vdsStaticDao,
             NetworkClusterDao networkClusterDao,
-            NetworkAttachmentDao networkAttachmentDao) {
-        super(interfaceDao, vdsStaticDao, networkClusterDao, networkAttachmentDao);
+            NetworkAttachmentDao networkAttachmentDao,
+            VDSBrokerFrontend vdsBrokerFrontend,
+            BackendInternal backendInternal,
+            AuditLogDirector auditLogDirector,
+            ManagementNetworkUtil managementNetworkUtil,
+            HostConnectivityChecker hostConnectivityChecker) {
+        super(interfaceDao, vdsStaticDao, networkClusterDao, networkAttachmentDao,
+                vdsBrokerFrontend, backendInternal, auditLogDirector, managementNetworkUtil, hostConnectivityChecker);
     }
 
     /**

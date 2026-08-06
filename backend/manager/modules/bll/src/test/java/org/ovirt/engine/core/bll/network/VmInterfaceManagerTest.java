@@ -8,8 +8,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -26,7 +24,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Answers;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
@@ -68,15 +68,13 @@ public class VmInterfaceManagerTest {
     @Captor
     private ArgumentCaptor<AuditLogable> auditLogableCaptor;
 
-    private VmInterfaceManager vmInterfaceManager;
+    @Spy
+    @InjectMocks
+    private VmInterfaceManager vmInterfaceManager = new VmInterfaceManager(macPool);
 
     @BeforeEach
     @SuppressWarnings("unchecked")
     public void setupMocks() {
-        vmInterfaceManager = spy(new VmInterfaceManager(macPool));
-        doReturn(vmNetworkStatisticsDao).when(vmInterfaceManager).getVmNetworkStatisticsDao();
-        doReturn(vmNicDao).when(vmInterfaceManager).getVmNicDao();
-        doReturn(auditLogDirector).when(vmInterfaceManager).getAuditLogDirector();
         doNothing().when(vmInterfaceManager).removeFromExternalNetworks(any());
     }
 

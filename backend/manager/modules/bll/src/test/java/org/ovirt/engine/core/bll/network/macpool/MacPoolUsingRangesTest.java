@@ -21,6 +21,7 @@ import org.ovirt.engine.core.common.errors.EngineException;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogDirector;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogableImpl;
+import org.ovirt.engine.core.dao.network.VmNicDao;
 import org.ovirt.engine.core.utils.InjectorExtension;
 import org.ovirt.engine.core.utils.MockConfigDescriptor;
 import org.ovirt.engine.core.utils.MockConfigExtension;
@@ -30,6 +31,8 @@ public class MacPoolUsingRangesTest {
     private static final String MAC_ADDRESS = "00:1a:4a:16:01:00";
     @Mock
     private AuditLogDirector auditLogDirector;
+    @Mock
+    private VmNicDao vmNicDao;
 
     public static Stream<MockConfigDescriptor<?>> mockConfiguration() {
         return Stream.of(MockConfigDescriptor.of(ConfigValues.RemainingMacsInPoolWarningThreshold, 5));
@@ -53,6 +56,7 @@ public class MacPoolUsingRangesTest {
         return new MacPoolUsingRanges(Guid.newGuid(),
                 Collections.singletonList(new LongRange(1, 2)),
                 false,
-                auditLogDirector);
+                auditLogDirector,
+                vmNicDao);
     }
 }

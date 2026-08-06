@@ -29,6 +29,7 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogDirector;
+import org.ovirt.engine.core.dao.network.VmNicDao;
 import org.ovirt.engine.core.utils.lock.LockedObjectFactory;
 
 @ExtendWith(MockitoExtension.class)
@@ -49,6 +50,9 @@ public class DecoratedMacPoolFactoryTest {
 
     @Mock
     private LockedObjectFactory lockedObjectFactory;
+
+    @Mock
+    private VmNicDao vmNicDao;
 
     @BeforeEach
     public void setUp() {
@@ -157,7 +161,8 @@ public class DecoratedMacPoolFactoryTest {
         MacPoolUsingRanges underlyingPool = new MacPoolUsingRanges(underlyingPoolId,
                 Collections.singletonList(new LongRange(1, 2)),
                 false,
-                auditLogDirector);
+                auditLogDirector,
+                vmNicDao);
 
         DelegatingMacPoolDecorator decoratorA = new DelegatingMacPoolDecorator();
         DelegatingMacPoolDecorator decoratorB = new DelegatingMacPoolDecorator();
