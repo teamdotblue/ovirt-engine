@@ -2,6 +2,9 @@ package org.ovirt.engine.core.bll.pm;
 
 import java.util.concurrent.TimeUnit;
 
+import javax.enterprise.inject.Instance;
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.common.AuditLogType;
 import org.ovirt.engine.core.common.businessentities.FencingPolicy;
 import org.ovirt.engine.core.common.businessentities.VDS;
@@ -15,7 +18,6 @@ import org.ovirt.engine.core.common.config.ConfigValues;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogDirector;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogable;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogableImpl;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.utils.ThreadUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +35,10 @@ import org.slf4j.LoggerFactory;
 public class SingleAgentFenceActionExecutor implements FenceActionExecutor {
     private static final Logger log = LoggerFactory.getLogger(SingleAgentFenceActionExecutor.class);
 
+    @Inject
     private AuditLogDirector auditLogDirector;
+    @Inject
+    private Instance<FenceAgentExecutor> fenceAgentExecutorInstance;
 
     /**
      * Number of ms to wait after host was fenced to fetch host power status
@@ -101,7 +106,7 @@ public class SingleAgentFenceActionExecutor implements FenceActionExecutor {
      * Returns new instance of {@link FenceAgentExecutor}
      */
     protected FenceAgentExecutor createAgentExecutor() {
-        return Injector.injectMembers(new FenceAgentExecutor(fencedHost, fencingPolicy));
+        return fenceAgentExecutorInstance.get().init(fencedHost, fencingPolicy);
     }
 
     /**
@@ -239,7 +244,7 @@ public class SingleAgentFenceActionExecutor implements FenceActionExecutor {
         auditLogable.addCustomValue("Status", fenceAction.name().toLowerCase());
         auditLogable.setVdsId(fencedHost.getId());
         auditLogable.setVdsName(fencedHost.getName());
-        getAuditLogDirector().log(auditLogable, AuditLogType.VDS_ALERT_FENCE_STATUS_VERIFICATION_FAILED);
+        auditLogDirector.log(auditLogable, AuditLogType.VDS_ALERT_FENCE_STATUS_VERIFICATION_FAILED);
         log.error(
                 "Failed to verify host '{}' status after {} action: have retried {} times with delay of {} seconds"
                         + " between each retry.",
@@ -248,13 +253,5 @@ public class SingleAgentFenceActionExecutor implements FenceActionExecutor {
                 allowedWaitForStatusRetries,
                 delayBetweenRetries);
 
-    }
-
-    // TODO Investigate if injection is possible
-    protected AuditLogDirector getAuditLogDirector() {
-        if (auditLogDirector == null) {
-            auditLogDirector = Injector.get(AuditLogDirector.class);
-        }
-        return auditLogDirector;
     }
 }

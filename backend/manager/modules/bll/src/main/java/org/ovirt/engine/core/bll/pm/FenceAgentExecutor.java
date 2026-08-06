@@ -5,6 +5,7 @@ import static java.util.stream.Collectors.toMap;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.VdsArchitectureHelper;
@@ -29,7 +30,9 @@ import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogDirector;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogable;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogableImpl;
+import org.ovirt.engine.core.dao.FenceAgentDao;
 import org.ovirt.engine.core.dao.StorageDomainDao;
+import org.ovirt.engine.core.dao.VdsDao;
 import org.ovirt.engine.core.dao.VdsSpmIdMapDao;
 import org.ovirt.engine.core.dao.gluster.GlusterServerDao;
 import org.ovirt.engine.core.utils.pm.VdsFenceOptions;
@@ -52,30 +55,40 @@ public class FenceAgentExecutor {
 
     @Inject
     private AuditLogDirector auditLogDirector;
-
     @Inject
-    private ResourceManager resourceManager;
-
+    private Instance<ResourceManager> resourceManagerInstance;
     @Inject
     private VdsSpmIdMapDao vdsSpmIdMapDao;
-
     @Inject
     private StorageDomainDao storageDomainDao;
-
     @Inject
     private GlusterServerDao glusterServerDao;
-
     @Inject
     private VdsArchitectureHelper vdsArchitectureHelper;
+    @Inject
+    private VdsDao vdsDao;
+    @Inject
+    private FenceAgentDao fenceAgentDao;
 
-    private final VDS fencedHost;
-    private final FencingPolicy fencingPolicy;
+    private VDS fencedHost;
+    private FencingPolicy fencingPolicy;
     private FenceProxyLocator proxyLocator;
     private ArchitectureType architectureType;
 
     public FenceAgentExecutor(VDS fencedHost, FencingPolicy fencingPolicy) {
         this.fencedHost = fencedHost;
         this.fencingPolicy = fencingPolicy;
+    }
+
+    public FenceAgentExecutor() {
+        this.fencedHost = null;
+        this.fencingPolicy = null;
+    }
+
+    public FenceAgentExecutor init(VDS fencedHost, FencingPolicy fencingPolicy) {
+        this.fencedHost = fencedHost;
+        this.fencingPolicy = fencingPolicy;
+        return this;
     }
 
     /**
@@ -147,7 +160,7 @@ public class FenceAgentExecutor {
         FenceAgent realAgent = createRealAgent(agent, proxyHost);
         auditFenceActionExecution(action, realAgent, proxyHost);
 
-        VDSReturnValue retVal = resourceManager.runVdsCommand(
+        VDSReturnValue retVal = resourceManagerInstance.get().runVdsCommand(
                 VDSCommandType.FenceVds,
                 new FenceVdsVDSCommandParameters(
                         proxyHost.getId(),
@@ -286,7 +299,9 @@ public class FenceAgentExecutor {
         if (proxyLocator == null) {
             proxyLocator = new FenceProxyLocator(
                     fencedHost,
-                    fencingPolicy);
+                    fencingPolicy,
+                    vdsDao,
+                    fenceAgentDao);
         }
         return proxyLocator;
     }
