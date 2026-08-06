@@ -1,5 +1,6 @@
 package org.ovirt.engine.core.bll.validator;
 
+import javax.enterprise.inject.Typed;
 import javax.inject.Inject;
 
 import org.apache.commons.lang.StringUtils;
@@ -13,23 +14,28 @@ import org.ovirt.engine.core.common.businessentities.VDSStatus;
 import org.ovirt.engine.core.common.businessentities.VDSType;
 import org.ovirt.engine.core.common.errors.EngineMessage;
 import org.ovirt.engine.core.dao.provider.ProviderDao;
-import org.ovirt.engine.core.di.Injector;
 
+@Typed(UpdateHostValidator.class)
 public class UpdateHostValidator extends HostValidator {
 
-    private final VDS oldHost;
-    private final boolean installHost;
+    private VDS oldHost;
+    private boolean installHost;
 
     @Inject
     private ProviderDao providerDao;
-
     @Inject
     private VdsHandler vdsHandler;
 
     private Provider<?> provider;
 
-    public static UpdateHostValidator createInstance(VDS oldHost, VDS updatedHost, boolean installHost) {
-        return Injector.injectMembers(new UpdateHostValidator(oldHost, updatedHost, installHost));
+    public UpdateHostValidator() {
+    }
+
+    public UpdateHostValidator createInstance(VDS oldHost, VDS updatedHost, boolean installHost) {
+        super.createInstance(updatedHost);
+        this.oldHost = oldHost;
+        this.installHost = installHost;
+        return this;
     }
 
     public UpdateHostValidator(VDS oldHost, VDS updatedHost, boolean installHost) {

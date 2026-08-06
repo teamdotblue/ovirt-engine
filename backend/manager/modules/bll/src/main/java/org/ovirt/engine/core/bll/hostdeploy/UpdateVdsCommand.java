@@ -7,6 +7,7 @@ import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.apache.commons.lang.StringUtils;
@@ -59,19 +60,14 @@ public class UpdateVdsCommand<T extends UpdateVdsActionParameters> extends VdsCo
 
     @Inject
     private AuditLogDirector auditLogDirector;
-
     @Inject
-    private ResourceManager resourceManager;
-
+    private Instance<ResourceManager> resourceManagerInstance;
     @Inject
     private HostedEngineHelper hostedEngineHelper;
-
     @Inject
     private VdsHandler vdsHandler;
-
     @Inject
     private NetworkClusterHelper networkClusterHelper;
-
     @Inject
     private AffinityValidator affinityValidator;
 
@@ -98,6 +94,8 @@ public class UpdateVdsCommand<T extends UpdateVdsActionParameters> extends VdsCo
     private AffinityGroupDao affinityGroupDao;
     @Inject
     private LabelDao labelDao;
+    @Inject
+    private Instance<UpdateHostValidator> updateHostValidatorInstance;
 
     private BiConsumer<AuditLogable, AuditLogDirector> affinityGroupLoggingMethod = (a, b) -> { };
 
@@ -159,7 +157,7 @@ public class UpdateVdsCommand<T extends UpdateVdsActionParameters> extends VdsCo
     }
 
     UpdateHostValidator getUpdateHostValidator(VDS oldHost, VDS updatedHost, boolean installHost) {
-        return UpdateHostValidator.createInstance(
+        return updateHostValidatorInstance.get().createInstance(
                 oldHost,
                 updatedHost,
                 installHost);
