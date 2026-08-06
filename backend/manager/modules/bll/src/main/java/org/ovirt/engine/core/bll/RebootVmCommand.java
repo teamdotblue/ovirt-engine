@@ -1,5 +1,6 @@
 package org.ovirt.engine.core.bll;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.context.CommandContext;
@@ -23,7 +24,7 @@ import org.ovirt.engine.core.vdsbroker.VmManager;
 public class RebootVmCommand<T extends RebootVmParameters> extends VmOperationCommandBase<T> {
 
     @Inject
-    private ResourceManager resourceManager;
+    private Instance<ResourceManager> resourceManagerInstance;
     @Inject
     private KubevirtMonitoring kubevirt;
     @Inject
@@ -51,7 +52,7 @@ public class RebootVmCommand<T extends RebootVmParameters> extends VmOperationCo
             setSucceeded(true);
             return;
         }
-        VmManager vmManager = resourceManager.getVmManager(getVmId());
+        VmManager vmManager = resourceManagerInstance.get().getVmManager(getVmId());
         if (isColdReboot()) {
             vmManager.lockVm();
             try {
@@ -60,7 +61,7 @@ public class RebootVmCommand<T extends RebootVmParameters> extends VmOperationCo
                 setReturnValue(returnValue);
                 setSucceeded(returnValue.getSucceeded());
                 if (getSucceeded()) {
-                    resourceManager.getVmManager(getVmId()).setColdReboot(true);
+                    resourceManagerInstance.get().getVmManager(getVmId()).setColdReboot(true);
                     vmDynamicDao.updateStatus(getVm().getId(), VMStatus.RebootInProgress);
                 }
             } finally {

@@ -40,7 +40,6 @@ import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogableImpl;
 import org.ovirt.engine.core.dao.VmDao;
 import org.ovirt.engine.core.dao.VmPoolDao;
 import org.ovirt.engine.core.dao.VmStaticDao;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.utils.threadpool.ThreadPools;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,6 +55,8 @@ public class VmPoolMonitor implements BackendService {
 
     private final Set<Guid> startingVms = ConcurrentHashMap.newKeySet();
 
+    @Inject
+    private AuditLogDirector auditLogDirector;
     @Inject
     private VmPoolHandler vmPoolHandler;
     @Inject
@@ -243,7 +244,7 @@ public class VmPoolMonitor implements BackendService {
 
             AuditLogable log = new AuditLogableImpl();
             log.addCustomValue("VmPoolName", poolName);
-            Injector.get(AuditLogDirector.class).log(log, AuditLogType.VM_FAILED_TO_PRESTART_IN_POOL);
+            auditLogDirector.log(log, AuditLogType.VM_FAILED_TO_PRESTART_IN_POOL);
         }
 
         log.info("Running VM '{}' as {} {}",

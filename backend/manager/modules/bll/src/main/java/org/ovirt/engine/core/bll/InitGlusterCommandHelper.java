@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -44,7 +45,6 @@ import org.slf4j.LoggerFactory;
 @Singleton
 public class InitGlusterCommandHelper {
 
-    private final ResourceManager resourceManager;
     private final GlusterServerDao glusterServerDao;
     private final AuditLogDirector auditLogDirector;
     private static Integer MAX_RETRIES_GLUSTER_PROBE_STATUS;
@@ -54,21 +54,21 @@ public class InitGlusterCommandHelper {
     private Logger log = LoggerFactory.getLogger(getClass());
 
     @Inject
+    private Instance<ResourceManager> resourceManagerInstance;
+    @Inject
     private GlusterUtil glusterUtil;
 
     @Inject
-    public InitGlusterCommandHelper(ResourceManager resourceManager,
+    public InitGlusterCommandHelper(
             GlusterServerDao glusterServerDao,
             VdsDao vdsDao,
             BackendInternal backend,
             AuditLogDirector auditLogDirector) {
-        Validate.notNull(resourceManager, "resourceManager can not be null");
         Validate.notNull(glusterServerDao, "glusterServerDao can not be null");
         Validate.notNull(vdsDao, "vdsDao can not be null");
         Validate.notNull(auditLogDirector, "auditLogDirector can not be null");
         Validate.notNull(backend, "backend can not be null");
 
-        this.resourceManager = resourceManager;
         this.glusterServerDao = glusterServerDao;
         this.vdsDao = vdsDao;
         this.backend = backend;
@@ -283,11 +283,11 @@ public class InitGlusterCommandHelper {
     }
 
     private VDSReturnValue runVdsCommand(VDSCommandType commandType, VDSParametersBase params) {
-        return resourceManager.runVdsCommand(commandType, params);
+        return resourceManagerInstance.get().runVdsCommand(commandType, params);
     }
 
     private void setNonOperational(VDS host, NonOperationalReason reason, Map<String, String> customLogValues) {
-        resourceManager.getEventListener().vdsNonOperational(host.getId(), reason, true, Guid.Empty, customLogValues);
+        resourceManagerInstance.get().getEventListener().vdsNonOperational(host.getId(), reason, true, Guid.Empty, customLogValues);
     }
 
     private static int getMaxRetriesGlusterProbeStatus() {

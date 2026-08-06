@@ -55,6 +55,7 @@ import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogable;
 import org.ovirt.engine.core.dao.ClusterDao;
 import org.ovirt.engine.core.dao.DiskVmElementDao;
 import org.ovirt.engine.core.dao.VmDao;
+import org.ovirt.engine.core.dao.VmIconDao;
 import org.ovirt.engine.core.dao.VmStaticDao;
 import org.ovirt.engine.core.dao.VmTemplateDao;
 import org.ovirt.engine.core.dao.network.VmNicDao;
@@ -65,7 +66,6 @@ public class UpdateVmTemplateCommand<T extends UpdateVmTemplateParameters> exten
 
     @Inject
     private AuditLogDirector auditLogDirector;
-
     @Inject
     private CpuProfileHelper cpuProfileHelper;
     @Inject
@@ -86,6 +86,8 @@ public class UpdateVmTemplateCommand<T extends UpdateVmTemplateParameters> exten
     private OsRepository osRepository;
     @Inject
     private CloudInitHandler cloudInitHandler;
+    @Inject
+    private VmIconDao vmIconDao;
 
     private VmTemplate oldTemplate;
     private List<GraphicsDevice> cachedGraphics;
@@ -193,14 +195,14 @@ public class UpdateVmTemplateCommand<T extends UpdateVmTemplateParameters> exten
         if (getParameters().getVmTemplateData() != null
                 && getParameters().getVmTemplateData().getSmallIconId() != null
                 && getParameters().getVmLargeIcon() == null // icon id is ignored if large icon is sent
-                && !validate(IconValidator.validateIconId(getParameters().getVmTemplateData().getSmallIconId(), "Small"))) {
+                && !validate(IconValidator.validateIconId(getParameters().getVmTemplateData().getSmallIconId(), "Small", vmIconDao))) {
             return false;
         }
 
         if (getParameters().getVmTemplateData() != null
                 && getParameters().getVmTemplateData().getLargeIconId() != null
                 && getParameters().getVmLargeIcon() == null // icon id is ignored if large icon is sent
-                && !validate(IconValidator.validateIconId(getParameters().getVmTemplateData().getLargeIconId(), "Large"))) {
+                && !validate(IconValidator.validateIconId(getParameters().getVmTemplateData().getLargeIconId(), "Large", vmIconDao))) {
             return false;
         }
 
@@ -275,9 +277,9 @@ public class UpdateVmTemplateCommand<T extends UpdateVmTemplateParameters> exten
 
             List<VmNic> interfaces = vmNicDao.getAllForTemplate(getParameters().getVmTemplateData().getId());
             List<DiskVmElement> diskVmElements = diskVmElementDao.getAllForVm(getVmTemplateId());
+            int maxPciSlots = osRepository.getMaxPciDevices(getParameters().getVmTemplateData().getOsId(), getVmTemplate().getCompatibilityVersion());
 
-            if (!validate(VmValidator.checkPciAndIdeLimit(getParameters().getVmTemplateData().getOsId(),
-                    getVmTemplate().getCompatibilityVersion(),
+            if (!validate(VmValidator.checkPciAndIdeLimit(maxPciSlots,
                     getParameters().getVmTemplateData().getNumOfMonitors(),
                     interfaces,
                     diskVmElements,

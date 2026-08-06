@@ -8,9 +8,6 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import javax.annotation.PostConstruct;
-import javax.inject.Inject;
-
 import org.ovirt.engine.core.common.action.ExternalDataStatus;
 import org.ovirt.engine.core.common.businessentities.ArchitectureType;
 import org.ovirt.engine.core.common.businessentities.BiosType;
@@ -39,7 +36,7 @@ import org.slf4j.LoggerFactory;
 
 public class VmManager {
 
-    private final Guid vmId;
+    private Guid vmId;
 
     ///// Static fields ///////
     private String name;
@@ -55,9 +52,9 @@ public class VmManager {
     private BiosType clusterBiosType;
 
     /** Locks the VM for changes of its dynamic properties */
-    private final Lock vmLock;
+    private Lock vmLock;
     /** Locks the VM devices for changes of their dynamic properties (addresses, plugged/unplugged) */
-    private final Lock vmDevicesLock;
+    private Lock vmDevicesLock;
 
     private boolean failedSchedulingDueToLeaseSd;
 
@@ -87,23 +84,35 @@ public class VmManager {
     private VMStatus lastStatusBeforeMigration;
 
     private Set<Guid> devicesBeingHotUnplugged;
-
-    @Inject
     private VmDeviceDao vmDeviceDao;
-    @Inject
     private VmDynamicDao vmDynamicDao;
-    @Inject
     private VmStatisticsDao vmStatisticsDao;
-    @Inject
     private VmNetworkStatisticsDao vmNetworkStatisticsDao;
-    @Inject
     private VmStaticDao vmStaticDao;
-    @Inject
     private ClusterDao clusterDao;
-    @Inject
     private VmOverheadCalculator vmOverheadCalculator;
 
-    VmManager(Guid vmId) {
+    VmManager(Guid vmId,
+            VmDeviceDao vmDeviceDao,
+            VmDynamicDao vmDynamicDao,
+            VmStatisticsDao vmStatisticsDao,
+            VmNetworkStatisticsDao vmNetworkStatisticsDao,
+            VmStaticDao vmStaticDao,
+            ClusterDao clusterDao,
+            VmOverheadCalculator vmOverheadCalculator) {
+        this.vmDeviceDao = vmDeviceDao;
+        this.vmDynamicDao = vmDynamicDao;
+        this.vmStatisticsDao = vmStatisticsDao;
+        this.vmNetworkStatisticsDao = vmNetworkStatisticsDao;
+        this.vmStaticDao = vmStaticDao;
+        this.clusterDao = clusterDao;
+        this.vmOverheadCalculator = vmOverheadCalculator;
+
+        initInstanceState(vmId);
+        init();
+    }
+
+    private void initInstanceState(Guid vmId) {
         this.vmId = vmId;
         vmLock = new ReentrantLock();
         vmDevicesLock = new VmDevicesLock();
@@ -114,8 +123,7 @@ public class VmManager {
         devicesBeingHotUnplugged = new HashSet<>();
     }
 
-    @PostConstruct
-    public void init() {
+    private void init() {
         setPowerOffTimeout(System.nanoTime());
         VmStatic vmStatic = vmStaticDao.get(vmId);
         // vmStatic is null for externally managed VMs

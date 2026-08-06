@@ -3,6 +3,7 @@ package org.ovirt.engine.core.bll;
 import java.util.Collections;
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.context.CommandContext;
@@ -21,7 +22,6 @@ import org.ovirt.engine.core.common.vdscommands.VDSParametersBase;
 import org.ovirt.engine.core.common.vdscommands.VDSReturnValue;
 import org.ovirt.engine.core.compat.CommandStatus;
 import org.ovirt.engine.core.compat.Guid;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.vdsbroker.monitoring.VmJobsMonitoring;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +33,8 @@ public class MergeCommand<T extends MergeParameters>
 
     @Inject
     private VmJobsMonitoring vmJobsMonitoring;
+    @Inject
+    private Instance<MergeCommandCallback> mergeCommandCallback;
 
     public MergeCommand(T parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -105,6 +107,6 @@ public class MergeCommand<T extends MergeParameters>
 
     @Override
     public CommandCallback getCallback() {
-        return Injector.injectMembers(new MergeCommandCallback());
+        return mergeCommandCallback.get();
     }
 }

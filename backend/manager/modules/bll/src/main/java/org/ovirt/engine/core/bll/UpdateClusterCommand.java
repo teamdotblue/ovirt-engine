@@ -15,6 +15,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import javax.enterprise.event.Event;
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.apache.commons.collections.CollectionUtils;
@@ -98,7 +99,7 @@ public class UpdateClusterCommand<T extends ClusterOperationParameters> extends
     @Inject
     private InitGlusterCommandHelper glusterCommandHelper;
     @Inject
-    private ResourceManager resourceManager;
+    private Instance<ResourceManager> resourceManagerInstance;
     @Inject
     private RngDeviceUtils rngDeviceUtils;
     @Inject
@@ -481,7 +482,7 @@ public class UpdateClusterCommand<T extends ClusterOperationParameters> extends
 
     private void updateClusterVersionInVmManagers() {
         for (VmStatic vmStatic : getAllVmsInCluster()) {
-            VmManager vmManager = resourceManager.getVmManager(vmStatic.getId(), false);
+            VmManager vmManager = resourceManagerInstance.get().getVmManager(vmStatic.getId(), false);
             if (vmManager != null) {
                 vmManager.setClusterCompatibilityVersion(getCluster().getCompatibilityVersion());
             }

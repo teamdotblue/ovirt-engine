@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -22,6 +23,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
+
+import javax.enterprise.inject.Instance;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -153,7 +156,7 @@ public class UpdateVmCommandTest extends BaseCommandTest {
     @Mock
     private VdsManager vdsManager;
     @Mock
-    private ResourceManager resourceManager;
+    private Instance<ResourceManager> resourceManagerInstance;
     @Mock
     private VdsCpuUnitPinningHelper vdsCpuUnitPinningHelper;
 
@@ -281,6 +284,9 @@ public class UpdateVmCommandTest extends BaseCommandTest {
         vds.setId(Guid.newGuid());
         command.setVds(vds);
 
+        ResourceManager resourceManager = mock(ResourceManager.class);
+        when(resourceManagerInstance.get()).thenReturn(resourceManager);
+
         when(vdsManager.getCpuTopology()).thenReturn(cpuTopology);
         when(resourceManager.getVdsManager(vds.getId())).thenReturn(vdsManager);
         when(resourceManager.getVdsManager(vds.getId(), false)).thenReturn(vdsManager);
@@ -374,6 +380,7 @@ public class UpdateVmCommandTest extends BaseCommandTest {
     public void testAllowSettingHaOnNonHostedEngine() {
         // given
         prepareVmToPassValidate();
+        mockVmValidator();
         command.initEffectiveCompatibilityVersion();
         vm.setOrigin(OriginType.RHEV);
         vmStatic.setOrigin(OriginType.RHEV);
@@ -502,6 +509,7 @@ public class UpdateVmCommandTest extends BaseCommandTest {
     @Test
     public void testMigrationPolicyChangeVmDown() {
         prepareVmToPassValidate();
+        mockVmValidator();
         vm.setStatus(VMStatus.Down);
         vm.setMigrationSupport(MigrationSupport.PINNED_TO_HOST);
         vmStatic.setMigrationSupport(MigrationSupport.MIGRATABLE);
@@ -516,6 +524,7 @@ public class UpdateVmCommandTest extends BaseCommandTest {
     @Test
     public void testMigrationPolicyChangeVmDown2() {
         prepareVmToPassValidate();
+        mockVmValidator();
         vm.setStatus(VMStatus.Down);
         vm.setMigrationSupport(MigrationSupport.PINNED_TO_HOST);
         vmStatic.setMigrationSupport(MigrationSupport.IMPLICITLY_NON_MIGRATABLE);
@@ -533,6 +542,7 @@ public class UpdateVmCommandTest extends BaseCommandTest {
     @Test
     public void testMigrationPolicyChangeFail() {
         prepareVmToPassValidate();
+        mockVmValidator();
         vm.setStatus(VMStatus.Up);
         vm.setMigrationSupport(MigrationSupport.MIGRATABLE);
         vm.setRunOnVds(GUIDS[1]);
@@ -555,6 +565,7 @@ public class UpdateVmCommandTest extends BaseCommandTest {
     @Test
     public void testMigrationPolicyChangeVmUp() {
         prepareVmToPassValidate();
+        mockVmValidator();
         vm.setStatus(VMStatus.Up);
         vm.setMigrationSupport(MigrationSupport.MIGRATABLE);
         vm.setRunOnVds(GUIDS[2]);
@@ -617,6 +628,7 @@ public class UpdateVmCommandTest extends BaseCommandTest {
     public void testAllowUseHostCpuWithX86Arch() {
         // given
         prepareVmToPassValidate();
+        mockVmValidator();
         command.initEffectiveCompatibilityVersion();
         vm.setClusterArch(ArchitectureType.x86_64);
         vmStatic.setUseHostCpuFlags(true);

@@ -10,8 +10,11 @@ import javax.inject.Inject;
 
 import org.apache.commons.lang.StringUtils;
 import org.ovirt.engine.core.bll.context.CommandContext;
+import org.ovirt.engine.core.bll.host.HostConnectivityChecker;
 import org.ovirt.engine.core.bll.hostedengine.HostedEngineHelper;
+import org.ovirt.engine.core.bll.interfaces.BackendInternal;
 import org.ovirt.engine.core.bll.network.HostSetupNetworksParametersBuilder;
+import org.ovirt.engine.core.bll.network.cluster.ManagementNetworkUtil;
 import org.ovirt.engine.core.bll.utils.ClusterUtils;
 import org.ovirt.engine.core.bll.utils.PermissionSubject;
 import org.ovirt.engine.core.common.AuditLogType;
@@ -35,6 +38,7 @@ import org.ovirt.engine.core.common.businessentities.network.NetworkAttachment;
 import org.ovirt.engine.core.common.businessentities.network.VdsNetworkInterface;
 import org.ovirt.engine.core.common.errors.EngineException;
 import org.ovirt.engine.core.common.errors.EngineMessage;
+import org.ovirt.engine.core.common.interfaces.VDSBrokerFrontend;
 import org.ovirt.engine.core.common.locks.LockingGroup;
 import org.ovirt.engine.core.common.utils.NetworkCommonUtils;
 import org.ovirt.engine.core.common.utils.Pair;
@@ -63,7 +67,6 @@ public class ChangeVDSClusterCommand<T extends ChangeVDSClusterParameters> exten
 
     @Inject
     private AuditLogDirector auditLogDirector;
-
     @Inject
     private NetworkAttachmentDao networkAttachmentDao;
     @Inject
@@ -429,8 +432,14 @@ public class ChangeVDSClusterCommand<T extends ChangeVDSClusterParameters> exten
         public ChangeClusterParametersBuilder(InterfaceDao interfaceDao,
                 VdsStaticDao vdsStaticDao,
                 NetworkClusterDao networkClusterDao,
-                NetworkAttachmentDao networkAttachmentDao) {
-            super(interfaceDao, vdsStaticDao, networkClusterDao, networkAttachmentDao);
+                NetworkAttachmentDao networkAttachmentDao,
+                VDSBrokerFrontend vdsBrokerFrontend,
+                BackendInternal backendInternal,
+                AuditLogDirector auditLogDirector,
+                ManagementNetworkUtil managementNetworkUtil,
+                HostConnectivityChecker hostConnectivityChecker) {
+            super(interfaceDao, vdsStaticDao, networkClusterDao, networkAttachmentDao,
+                    vdsBrokerFrontend, backendInternal, auditLogDirector, managementNetworkUtil, hostConnectivityChecker);
         }
 
         public PersistentHostSetupNetworksParameters buildParameters(Guid hostId,

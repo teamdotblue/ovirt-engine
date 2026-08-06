@@ -4,6 +4,7 @@ import java.util.Collections;
 import java.util.Date;
 
 import javax.ejb.EJB;
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.interfaces.BackendInternal;
@@ -68,7 +69,7 @@ public class HostedEngineImporter {
     @Inject
     private VmHandler vmHandler;
     @Inject
-    private ResourceManager resourceManager;
+    private Instance<ResourceManager> resourceManagerInstance;
 
     /**
      * Import the VM into ovirt engine by removing the old, un-managed VM
@@ -95,7 +96,7 @@ public class HostedEngineImporter {
                 heVmImported = importHEVM(vm, sd);
 
                 if (heVmImported.getSucceeded()) {
-                    resourceManager.getVmManager(vm.getId()).update(vm.getStaticData());
+                    resourceManagerInstance.get().getVmManager(vm.getId()).update(vm.getStaticData());
 
                     log.info("Successfully imported the Hosted Engine VM");
                     auditLogDirector.log(new AuditLogableImpl(), AuditLogType.HOSTED_ENGINE_VM_IMPORT_SUCCEEDED);

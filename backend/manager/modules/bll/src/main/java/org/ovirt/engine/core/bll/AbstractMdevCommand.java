@@ -3,6 +3,7 @@ package org.ovirt.engine.core.bll;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.context.CommandContext;
@@ -19,7 +20,7 @@ import org.ovirt.engine.core.vdsbroker.ResourceManager;
 public abstract class AbstractMdevCommand<T extends MdevParameters> extends CommandBase<T> {
 
     @Inject
-    protected ResourceManager resourceManager;
+    protected Instance<ResourceManager> resourceManagerInstance;
     @Inject
     protected VmDeviceUtils vmDeviceUtils;
 

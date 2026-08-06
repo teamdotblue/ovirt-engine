@@ -36,6 +36,7 @@ import org.ovirt.engine.core.common.config.ConfigValues;
 import org.ovirt.engine.core.common.di.interceptor.InvocationLogger;
 import org.ovirt.engine.core.common.interfaces.FutureVDSCall;
 import org.ovirt.engine.core.common.qualifiers.VmDeleted;
+import org.ovirt.engine.core.common.scheduling.VmOverheadCalculator;
 import org.ovirt.engine.core.common.utils.Pair;
 import org.ovirt.engine.core.common.vdscommands.FutureVDSCommandType;
 import org.ovirt.engine.core.common.vdscommands.VDSAsyncReturnValue;
@@ -47,8 +48,12 @@ import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogDirector;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogable;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogableImpl;
+import org.ovirt.engine.core.dao.ClusterDao;
 import org.ovirt.engine.core.dao.VdsDao;
+import org.ovirt.engine.core.dao.VmDeviceDao;
 import org.ovirt.engine.core.dao.VmDynamicDao;
+import org.ovirt.engine.core.dao.VmStaticDao;
+import org.ovirt.engine.core.dao.VmStatisticsDao;
 import org.ovirt.engine.core.dao.network.VmNetworkStatisticsDao;
 import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.utils.ReflectionUtils;
@@ -81,24 +86,31 @@ public class ResourceManager implements BackendService {
 
     @Inject
     private Instance<IVdsEventListener> eventListener;
-
     @Inject
     private AuditLogDirector auditLogDirector;
-
     @Inject
     private VdsDao hostDao;
-
     @Inject
     private VmDynamicDao vmDynamicDao;
-
     @Inject
     private VmNetworkStatisticsDao vmNetworkStatisticsDao;
-
     @Inject
     Instance<VdsCommandExecutor> commandExecutor;
-
     @Inject
     private VdsManagerFactory vdsManagerFactory;
+    @Inject
+    private VmDeviceDao vmDeviceDao;
+    @Inject
+    private VmStatisticsDao vmStatisticsDao;
+    @Inject
+    private VmStaticDao vmStaticDao;
+    @Inject
+    private ClusterDao clusterDao;
+    @Inject
+    private VmOverheadCalculator vmOverheadCalculator;
+
+    public ResourceManager() {
+    }
 
     @PostConstruct
     private void init() {
@@ -449,7 +461,15 @@ public class ResourceManager implements BackendService {
 
     public VmManager getVmManager(Guid vmId, boolean createIfAbsent) {
         if (createIfAbsent && !vmManagers.containsKey(vmId)) {
-            vmManagers.computeIfAbsent(vmId, guid -> Injector.injectMembers(new VmManager(guid)));
+            vmManagers.computeIfAbsent(vmId, guid -> new VmManager(
+                    guid,
+                    vmDeviceDao,
+                    vmDynamicDao,
+                    vmStatisticsDao,
+                    vmNetworkStatisticsDao,
+                    vmStaticDao,
+                    clusterDao,
+                    vmOverheadCalculator));
         }
         return vmManagers.get(vmId);
     }

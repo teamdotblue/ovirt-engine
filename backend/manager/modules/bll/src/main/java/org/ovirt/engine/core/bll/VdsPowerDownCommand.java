@@ -25,6 +25,8 @@ public class VdsPowerDownCommand<T extends VdsPowerDownParameters> extends VdsCo
 
     @Inject
     private VdsDynamicDao vdsDynamicDao;
+    @Inject
+    private EngineSSHClient sshClient;
 
     public VdsPowerDownCommand(T parameters, CommandContext commandContext) {
         super(parameters, commandContext);
@@ -96,7 +98,6 @@ public class VdsPowerDownCommand<T extends VdsPowerDownParameters> extends VdsCo
     private boolean executeSshPowerDown(String version) {
         boolean ret = false;
         try (
-                final EngineSSHClient sshClient = new EngineSSHClient();
                 final ByteArrayOutputStream cmdOut = new ByteArrayOutputStream();
                 final ByteArrayOutputStream cmdErr = new ByteArrayOutputStream()
         ) {

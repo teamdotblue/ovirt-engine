@@ -83,6 +83,7 @@ import org.ovirt.engine.core.common.vdscommands.VDSReturnValue;
 import org.ovirt.engine.core.compat.CommandStatus;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.compat.TransactionScopeOption;
+import org.ovirt.engine.core.dal.dbbroker.DbFacade;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogDirector;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogable;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogableBase;
@@ -131,46 +132,35 @@ public abstract class CommandBase<T extends ActionParametersBase>
 
     @Inject
     private AuditLogDirector auditLogDirector;
-
     @Inject
     protected LockManager lockManager;
-
     @Inject
     private QuotaManager quotaManager;
-
     @Inject
     private SessionDataContainer sessionDataContainer;
-
     @Inject
     protected BackendInternal backend;
-
     @Inject
     protected VDSBrokerFrontend vdsBroker;
-
     @Inject
     protected ExecutionHandler executionHandler;
-
     @Inject
     private EntityDao entityDao;
-
     @Inject
     private BusinessEntitySnapshotDao businessEntitySnapshotDao;
-
     @Inject
     private PermissionDao permissionDao;
-
     @Inject
     private StepDao stepDao;
-
     @Inject
     private CommandCoordinatorUtil commandCoordinatorUtil;
-
     @Inject
     private CommandCompensator compensator;
-
     @Named
     @Inject
     private Predicate<DbUser> isSystemSuperUserPredicate;
+    @Inject
+    private DbFacade dbFacade;
 
     /** Indicates whether the acquired locks should be released after the execute method or not */
     private boolean releaseLocksAtEndOfExecute = true;
@@ -338,6 +328,7 @@ public abstract class CommandBase<T extends ActionParametersBase>
         defaultContext.setCommandId(commandId);
         defaultContext.setCommandType(getClass().getName());
         defaultContext.setBusinessEntitySnapshotDao(businessEntitySnapshotDao);
+        defaultContext.setDbFacade(dbFacade);
         defaultContext.setSnapshotSerializer(
                 SerializationFactory.getSerializer());
         return defaultContext;

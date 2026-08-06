@@ -3,6 +3,7 @@ package org.ovirt.engine.core.bll;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.context.CommandContext;
@@ -21,8 +22,7 @@ import org.ovirt.engine.core.vdsbroker.ResourceManager;
 public class RefreshHostCapabilitiesCommand<T extends VdsActionParameters> extends RefreshHostInfoCommandBase<T> {
 
     @Inject
-    private ResourceManager resourceManager;
-
+    private Instance<ResourceManager> resourceManagerInstance;
     @Inject
     private HostLocking hostLocking;
 
@@ -38,7 +38,7 @@ public class RefreshHostCapabilitiesCommand<T extends VdsActionParameters> exten
     @Override
     protected void executeCommand() {
         try (EngineLock monitoringLock = acquireMonitorLock("Refresh host capabilities")) {
-            resourceManager.getVdsManager(getVdsId()).refreshHostSync(getVds());
+            resourceManagerInstance.get().getVdsManager(getVdsId()).refreshHostSync(getVds());
             setSucceeded(true);
         }
     }

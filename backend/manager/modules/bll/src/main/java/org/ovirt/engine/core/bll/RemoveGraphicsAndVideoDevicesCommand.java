@@ -55,7 +55,7 @@ public class RemoveGraphicsAndVideoDevicesCommand extends RemoveGraphicsDeviceCo
         VmStatic vmStatic = vmStaticDao.get(getVmBaseId());
         if (vmStatic != null && vmStatic.getDefaultDisplayType() != DisplayType.none) {
             vmStatic.setDefaultDisplayType(DisplayType.none);
-            resourceManager.getVmManager(getVmBaseId()).update(vmStatic);
+            resourceManagerInstance.get().getVmManager(getVmBaseId()).update(vmStatic);
             return true;
         }
         return false;

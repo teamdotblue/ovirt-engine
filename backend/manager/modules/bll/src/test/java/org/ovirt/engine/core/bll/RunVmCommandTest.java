@@ -30,6 +30,8 @@ import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.stream.Stream;
 
+import javax.enterprise.inject.Instance;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -157,7 +159,7 @@ public class RunVmCommandTest extends BaseCommandTest {
     private SchedulingManager schedulingManager;
 
     @Mock
-    private ResourceManager resourceManager;
+    private Instance<ResourceManager> resourceManagerInstance;
 
     private static final String ACTIVE_ISO_PREFIX =
             "/rhev/data-center/mnt/some_computer/f6bccab4-e2f5-4e02-bba0-5748a7bc07b6/images/11111111-1111-1111-1111-111111111111";
@@ -719,6 +721,8 @@ public class RunVmCommandTest extends BaseCommandTest {
         BlockingQueue<Boolean> queue = mock(BlockingQueue.class);
         when(monitor.getQueue()).thenReturn(queue);
         when(vdsManager.getVdsMonitor()).thenReturn(monitor);
+        ResourceManager resourceManager = mock(ResourceManager.class);
+        when(resourceManagerInstance.get()).thenReturn(resourceManager);
         when(resourceManager.getVdsManager(host.getId())).thenReturn(vdsManager);
 
         EngineException thrown = assertThrows(EngineException.class, () -> {

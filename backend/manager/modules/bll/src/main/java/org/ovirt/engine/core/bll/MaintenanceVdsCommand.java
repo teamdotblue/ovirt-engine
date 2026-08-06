@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.apache.commons.lang.StringUtils;
@@ -45,7 +46,6 @@ import org.ovirt.engine.core.compat.Version;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.MessageBundler;
 import org.ovirt.engine.core.dao.VdsDao;
 import org.ovirt.engine.core.dao.VmDao;
-import org.ovirt.engine.core.di.Injector;
 
 @NonTransactiveCommandAttribute
 public class MaintenanceVdsCommand<T extends MaintenanceVdsParameters> extends VdsCommand<T> {
@@ -63,6 +63,8 @@ public class MaintenanceVdsCommand<T extends MaintenanceVdsParameters> extends V
     private VmHandler vmHandler;
     @Inject
     private AnsibleExecutor ansibleExecutor;
+    @Inject
+    private Instance<HostMaintenanceCallback> hostMaintenanceCallbackInstance;
 
     public MaintenanceVdsCommand(T parameters, CommandContext commandContext) {
         super(parameters, commandContext);
@@ -318,7 +320,7 @@ public class MaintenanceVdsCommand<T extends MaintenanceVdsParameters> extends V
     @Override
     public CommandCallback getCallback() {
         if (getVds().getClusterSupportsGlusterService() && getParameters().isStopGlusterService()) {
-            return Injector.injectMembers(new HostMaintenanceCallback());
+            return hostMaintenanceCallbackInstance.get();
         } else {
             return super.getCallback();
         }

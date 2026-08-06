@@ -90,7 +90,6 @@ import org.ovirt.engine.core.dao.VmStaticDao;
 import org.ovirt.engine.core.dao.gluster.GlusterBrickDao;
 import org.ovirt.engine.core.dao.qos.CpuQosDao;
 import org.ovirt.engine.core.dao.qos.StorageQosDao;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.utils.lock.EngineLock;
 import org.ovirt.engine.core.utils.lock.LockManager;
 import org.ovirt.engine.core.utils.threadpool.ThreadPoolUtil;
@@ -155,6 +154,8 @@ public class VdsEventListener implements IVdsEventListener {
     private HostLocking hostLocking;
     @Inject
     private IsoDomainListSynchronizer isoDomainListSynchronizer;
+    @Inject
+    private HostDeviceManager hostDeviceManager;
 
     private static final Logger log = LoggerFactory.getLogger(VdsEventListener.class);
 
@@ -555,7 +556,6 @@ public class VdsEventListener implements IVdsEventListener {
             return;
         }
 
-        HostDeviceManager hostDeviceManager = Injector.get(HostDeviceManager.class);
         if (succeededToRunVms.stream().anyMatch(hostDeviceManager::checkVmNeedsHostDevices) ||
                 movedToDownVms.stream().anyMatch(hostDeviceManager::checkVmNeedsHostDevices)) {
             ThreadPoolUtil.execute(() -> backend.runInternalAction(

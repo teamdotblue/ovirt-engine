@@ -3,6 +3,7 @@ package org.ovirt.engine.core.bll;
 import java.util.Arrays;
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
 import javax.enterprise.inject.Typed;
 import javax.inject.Inject;
 
@@ -43,23 +44,17 @@ public class HostMaintenanceCallback implements CommandCallback {
     private static final Logger log = LoggerFactory.getLogger(HostMaintenanceCallback.class);
 
     @Inject
-    private ResourceManager resourceManager;
-
+    private Instance<ResourceManager> resourceManagerInstance;
     @Inject
     private VdsStaticDao vdsStaticDao;
-
     @Inject
     private VdsDynamicDao vdsDynamicDao;
-
     @Inject
     private GlusterBrickDao glusterBrickDao;
-
     @Inject
     private CommandCoordinatorUtil commandCoordinatorUtil;
-
     @Inject
     private GlusterUtil glusterUtil;
-
     @Inject
     private BackendInternal backend;
 
@@ -139,11 +134,11 @@ public class HostMaintenanceCallback implements CommandCallback {
 
     private void stopGlusterServices(Guid vdsId) {
         // Stop glusterd service first
-        boolean succeeded = resourceManager.runVdsCommand(VDSCommandType.ManageGlusterService,
+        boolean succeeded = resourceManagerInstance.get().runVdsCommand(VDSCommandType.ManageGlusterService,
                 new GlusterServiceVDSParameters(vdsId, Arrays.asList("glusterd"), "stop")).getSucceeded();
         if (succeeded) {
             // Stop other gluster related processes on the node
-            succeeded = resourceManager.runVdsCommand(VDSCommandType.StopGlusterProcesses,
+            succeeded = resourceManagerInstance.get().runVdsCommand(VDSCommandType.StopGlusterProcesses,
                     new VdsIdVDSCommandParametersBase(vdsId)).getSucceeded();
             // Mark the bricks as DOWN on this node
             if (succeeded) {
@@ -161,7 +156,7 @@ public class HostMaintenanceCallback implements CommandCallback {
         }
     }
     private void stopVDOService(Guid vdsId) {
-        boolean succeeded = resourceManager.runVdsCommand(VDSCommandType.ManageGlusterService,
+        boolean succeeded = resourceManagerInstance.get().runVdsCommand(VDSCommandType.ManageGlusterService,
                 new GlusterServiceVDSParameters(vdsId, Arrays.asList("vdo"), "stop")).getSucceeded();
         if (!succeeded) {
             log.error("Failed to stop VDO service while moving the host '{}' to maintenance", getHostName(vdsId));

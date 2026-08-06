@@ -14,6 +14,7 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -54,7 +55,7 @@ public class VMConsoleProxyServlet extends HttpServlet {
     @Inject
     private BackendInternal backend;
     @Inject
-    private ResourceManager resourceManager;
+    private Instance<ResourceManager> resourceManagerInstance;
     @Inject
     private VdsStaticDao vdsStaticDao;
     @Inject
@@ -144,7 +145,7 @@ public class VMConsoleProxyServlet extends HttpServlet {
         Guid vmId = vmToHostname.getKey().getId();
         Map<String, String> jsonVm = new HashMap<>();
         jsonVm.put("vmid", vmId.toString());
-        jsonVm.put("vmname", resourceManager.getVmManager(vmId).getName());
+        jsonVm.put("vmname", resourceManagerInstance.get().getVmManager(vmId).getName());
         jsonVm.put("host", vmToHostname.getValue());
         /* there is only one serial console, no need and no way to distinguish them */
         jsonVm.put("console", "default");

@@ -5,6 +5,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.context.CommandContext;
@@ -66,7 +67,7 @@ public class ProcessDownVmCommand<T extends ProcessDownVmParameters> extends Com
     @Inject
     private NetworkDeviceHelper networkDeviceHelper;
     @Inject
-    private ResourceManager resourceManager;
+    private Instance<ResourceManager> resourceManagerInstance;
     @Inject
     private SnapshotsManager snapshotsManager;
     @Inject
@@ -144,7 +145,7 @@ public class ProcessDownVmCommand<T extends ProcessDownVmParameters> extends Com
 
         if (!removingVmPool) {
             removeStatelessVmUnmanagedDevices();
-            VmManager vmManager = resourceManager.getVmManager(getVmId(), false);
+            VmManager vmManager = resourceManagerInstance.get().getVmManager(getVmId(), false);
             if (vmManager != null) {
                 vmManager.rebootCleanup();
             }
@@ -158,7 +159,7 @@ public class ProcessDownVmCommand<T extends ProcessDownVmParameters> extends Com
         }
 
         if (getParameters().getHostId() != null) {
-            VdsManager vdsManager = resourceManager.getVdsManager(getParameters().getHostId(), false);
+            VdsManager vdsManager = resourceManagerInstance.get().getVdsManager(getParameters().getHostId(), false);
             if (vdsManager != null) {
                 vdsManager.unpinVmCpus(getVm().getId());
             }

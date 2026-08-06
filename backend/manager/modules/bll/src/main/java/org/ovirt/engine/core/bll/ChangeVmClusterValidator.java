@@ -22,45 +22,44 @@ import org.ovirt.engine.core.dao.ClusterDao;
 import org.ovirt.engine.core.dao.network.NetworkDao;
 import org.ovirt.engine.core.dao.network.VmNicDao;
 import org.ovirt.engine.core.dao.profiles.CpuProfileDao;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.utils.ReplacementUtils;
 
 public class ChangeVmClusterValidator {
 
     @Inject
     private ClusterDao clusterDao;
-
     @Inject
     private VmNicDao vmNicDao;
-
     @Inject
     private CpuProfileDao cpuProfileDao;
-
     @Inject
     private NetworkDao networkDao;
-
     @Inject
     private VmDeviceUtils vmDeviceUtils;
-
     @Inject
     private VmHandler vmHandler;
-
     @Inject
     private NetworkHelper networkHelper;
-
     @Inject
     private OsRepository osRepository;
 
     private VM vm;
-    private final Guid targetClusterId;
+    private Guid targetClusterId;
     private Version vmCompatibilityVersion;
     private Guid userId;
 
-    public static ChangeVmClusterValidator create(VM vm,
+    public ChangeVmClusterValidator create(VM vm,
             Guid targetClusterId,
             Version vmCompatibilityVersion,
             Guid userId) {
-        return Injector.injectMembers(new ChangeVmClusterValidator(vm, targetClusterId, vmCompatibilityVersion, userId));
+        this.vm = vm;
+        this.targetClusterId = targetClusterId;
+        this.vmCompatibilityVersion = vmCompatibilityVersion;
+        this.userId = userId;
+        return this;
+    }
+
+    public ChangeVmClusterValidator() {
     }
 
     ChangeVmClusterValidator(VM vm,

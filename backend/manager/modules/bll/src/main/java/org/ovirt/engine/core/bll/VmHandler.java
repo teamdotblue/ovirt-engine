@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 import javax.annotation.PostConstruct;
 import javax.enterprise.concurrent.ManagedScheduledExecutorService;
 import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.apache.commons.collections.CollectionUtils;
@@ -160,91 +161,62 @@ public class VmHandler implements BackendService {
 
     @Inject
     private CpuFlagsManagerHandler cpuFlagsManagerHandler;
-
     @Inject
     private VmDeviceUtils vmDeviceUtils;
-
     @Inject
     private LockManager lockManager;
-
     @Inject
     private AuditLogDirector auditLogDirector;
-
     @Inject
-    private ResourceManager resourceManager;
-
+    private Instance<ResourceManager> resourceManagerInstance;
     @Inject
     private VDSBrokerFrontend vdsBrokerFrontend;
-
     @Inject
     private IsoDomainListSynchronizer isoDomainListSynchronizer;
-
     @Inject
     private VdsDao vdsDao;
-
     @Inject
     private VdsStaticDao vdsStaticDao;
-
     @Inject
     private VmDynamicDao vmDynamicDao;
-
     @Inject
     private VmNumaNodeDao vmNumaNodeDao;
-
     @Inject
     private VmDao vmDao;
-
     @Inject
     private VmInitDao vmInitDao;
-
     @Inject
     private VmNetworkInterfaceDao vmNetworkInterfaceDao;
-
     @Inject
     private DiskDao diskDao;
-
     @Inject
     private DiskImageDao diskImageDao;
-
     @Inject
     private DiskVmElementDao diskVmElementDao;
-
     @Inject
     private SnapshotDao snapshotDao;
-
     @Inject
     private StoragePoolDao storagePoolDao;
-
     @Inject
     protected SnapshotVmConfigurationHelper snapshotVmConfigurationHelper;
-
     @Inject
     private SnapshotsManager snapshotsManager;
-
     @Inject
     private BackendInternal backend;
-
     @Inject
     private VmValidationUtils vmValidationUtils;
-
     @Inject
     private OsRepository osRepository;
-
     @Inject
     private VirtioWinLoader virtioWinLoader;
-
     @Inject
     private VdsDynamicDao vdsDynamicDao;
-
     @Inject
     private VdsNumaNodeDao vdsNumaNodeDao;
-
     @Inject
     private DiskHandler diskHandler;
-
     @Inject
     VmInfoBuildUtils vmInfoBuildUtils;
-
     @Inject
     @ThreadPools(ThreadPools.ThreadPoolType.EngineScheduledThreadPool)
     private ManagedScheduledExecutorService executor;
@@ -669,7 +641,7 @@ public class VmHandler implements BackendService {
     }
 
     public void updateOperationProgress(final VM vm) {
-        VmManager vmManager = resourceManager.getVmManager(vm.getId(), false);
+        VmManager vmManager = resourceManagerInstance.get().getVmManager(vm.getId(), false);
         if (vmManager != null) {
             vm.setBackgroundOperationDescription(vmManager.getConvertOperationDescription());
             vm.setBackgroundOperationProgress(vmManager.getConvertOperationProgress());
@@ -680,7 +652,7 @@ public class VmHandler implements BackendService {
     }
 
     public void updateVmStatistics(final VM vm) {
-        VmManager vmManager = resourceManager.getVmManager(vm.getId(), false);
+        VmManager vmManager = resourceManagerInstance.get().getVmManager(vm.getId(), false);
         if (vmManager != null) {
             vm.setStatisticsData(vmManager.getStatistics());
         }
@@ -1355,7 +1327,7 @@ public class VmHandler implements BackendService {
     }
 
     public String createNumaPinningForExclusiveCpuPinning(VM vm, Guid vdsId) {
-        List<VdsCpuUnit> cpuUnits = resourceManager.getVdsManager(vdsId)
+        List<VdsCpuUnit> cpuUnits = resourceManagerInstance.get().getVdsManager(vdsId)
                 .getCpuTopology()
                 .stream()
                 .filter(cpuUnit -> cpuUnit.getVmIds().contains(vm.getId()))
@@ -1696,7 +1668,7 @@ public class VmHandler implements BackendService {
         }
 
         if (forceVmStaticUpdate || oldVm.getBiosType() != newVm.getBiosType()) {
-            VmManager vmManager = resourceManager.getVmManager(newVm.getId());
+            VmManager vmManager = resourceManagerInstance.get().getVmManager(newVm.getId());
             vmManager.update(newVm);
 
             if (oldVm.getBiosType().getChipsetType() != newVm.getBiosType().getChipsetType()) {

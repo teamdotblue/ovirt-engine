@@ -13,6 +13,7 @@ import java.util.concurrent.TimeUnit;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.concurrent.ManagedScheduledExecutorService;
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -42,13 +43,10 @@ public class CertificationValidityChecker implements BackendService {
 
     @Inject
     private AuditLogDirector auditLogDirector;
-
     @Inject
     private VdsDao hostDao;
-
     @Inject
-    private ResourceManager resourceManager;
-
+    private Instance<ResourceManager> resourceManagerInstance;
     @Inject
     @ThreadPools(ThreadPools.ThreadPoolType.EngineScheduledThreadPool)
     private ManagedScheduledExecutorService executor;
@@ -105,7 +103,7 @@ public class CertificationValidityChecker implements BackendService {
     }
 
     private void checkHostCertificateValidity(VDS host) {
-        VdsManager hostManager = resourceManager.getVdsManager(host.getId());
+        VdsManager hostManager = resourceManagerInstance.get().getVdsManager(host.getId());
         List<Certificate> peerCertificates = hostManager.getVdsProxy().getPeerCertificates();
 
         if (peerCertificates == null || peerCertificates.isEmpty()) {

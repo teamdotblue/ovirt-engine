@@ -52,7 +52,7 @@ public class AddGraphicsAndVideoDevicesCommand extends AddGraphicsDeviceCommand 
         }
         if (vmStatic.getDefaultDisplayType() == DisplayType.none) {
             vmStatic.setDefaultDisplayType(DisplayType.vga);
-            resourceManager.getVmManager(getVmBaseId()).update(vmStatic);
+            resourceManagerInstance.get().getVmManager(getVmBaseId()).update(vmStatic);
         }
 
         vmDeviceUtils.addVideoDevicesOnlyIfNoVideoDeviceExists(vmStatic);

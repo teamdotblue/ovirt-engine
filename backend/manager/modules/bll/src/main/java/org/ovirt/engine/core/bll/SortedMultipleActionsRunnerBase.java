@@ -12,6 +12,9 @@ public abstract class SortedMultipleActionsRunnerBase extends PrevalidatingMulti
         super(actionType, parameters, commandContext, isInternal);
     }
 
+    public SortedMultipleActionsRunnerBase() {
+    }
+
     protected abstract void sortCommands();
 
     @Override

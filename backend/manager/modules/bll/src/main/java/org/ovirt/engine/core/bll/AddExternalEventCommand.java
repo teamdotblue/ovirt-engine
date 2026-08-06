@@ -2,6 +2,7 @@ package org.ovirt.engine.core.bll;
 
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.apache.commons.lang.StringUtils;
@@ -20,7 +21,6 @@ import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogableBase;
 import org.ovirt.engine.core.dao.AuditLogDao;
 import org.ovirt.engine.core.dao.StorageDomainDynamicDao;
 import org.ovirt.engine.core.dao.VdsDynamicDao;
-import org.ovirt.engine.core.di.Injector;
 
 public class AddExternalEventCommand<T extends AddExternalEventParameters> extends ExternalEventCommandBase<T> {
 
@@ -33,6 +33,8 @@ public class AddExternalEventCommand<T extends AddExternalEventParameters> exten
     private VdsDynamicDao vdsDynamicDao;
     @Inject
     private StorageDomainDynamicDao storageDomainDynamicDao;
+    @Inject
+    private Instance<AuditLogableBase> auditLogableBaseInstance;
 
     public AddExternalEventCommand(T parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -61,7 +63,7 @@ public class AddExternalEventCommand<T extends AddExternalEventParameters> exten
 
     @Override
     protected void executeCommand() {
-        AuditLogableBase event = Injector.injectMembers(new AuditLogableBase(getParameters().getEvent()));
+        AuditLogableBase event = auditLogableBaseInstance.get().createWithAuditLog(getParameters().getEvent());
         event.setExternal(true);
         String message =
                 StringUtils.abbreviate(getEvent().getMessage(), Config.getValue(ConfigValues.MaxAuditLogMessageLength));

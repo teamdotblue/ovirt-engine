@@ -1,10 +1,16 @@
 package org.ovirt.engine.core.bll;
 
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.bll.context.EngineContext;
 import org.ovirt.engine.core.bll.utils.EngineSSHClient;
 import org.ovirt.engine.core.common.queries.ServerParameters;
 
 public class GetServerSSHPublicKeyQuery <P extends ServerParameters> extends QueriesCommandBase<P> {
+
+    @Inject
+    private EngineSSHClient sshClient;
+
     public GetServerSSHPublicKeyQuery(P parameters, EngineContext engineContext) {
         super(parameters, engineContext);
     }
@@ -35,7 +41,7 @@ public class GetServerSSHPublicKeyQuery <P extends ServerParameters> extends Que
 
     //visible for unit test
     protected EngineSSHClient getEngineSSHClient() {
-        return new EngineSSHClient();
+        return sshClient;
     }
 
 }

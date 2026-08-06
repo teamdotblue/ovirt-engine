@@ -59,7 +59,7 @@ public class AddUnmanagedVmsCommand<T extends AddUnmanagedVmsParameters> extends
     @Inject
     private VmDevicesMonitoring vmDevicesMonitoring;
     @Inject
-    private ResourceManager resourceManager;
+    private Instance<ResourceManager> resourceManagerInstance;
     @Inject
     private VmStaticDao vmStaticDao;
     @Inject
@@ -208,7 +208,7 @@ public class AddUnmanagedVmsCommand<T extends AddUnmanagedVmsParameters> extends
             log.debug("Failed adding Externally managed VM '{}'", vmStatic.getName());
             return;
         }
-        resourceManager.getVmManager(vmStatic.getId()).update(vmStatic);
+        resourceManagerInstance.get().getVmManager(vmStatic.getId()).update(vmStatic);
     }
 
     // Visible for testing

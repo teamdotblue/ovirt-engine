@@ -6,6 +6,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.context.CommandContext;
@@ -44,14 +45,15 @@ public class ChangeVMClusterCommand<T extends ChangeVMClusterParameters> extends
     @Inject
     private VmNicDao vmNicDao;
     @Inject
-    private ResourceManager resourceManager;
+    private Instance<ResourceManager> resourceManagerInstance;
     @Inject
     private AffinityGroupDao affinityGroupDao;
     @Inject
     private LabelDao labelDao;
-
     @Inject
     private NetworkHelper networkHelper;
+    @Inject
+    private Instance<ChangeVmClusterValidator> changeVmClusterValidatorInstance;
 
     private boolean dedicatedHostWasCleared;
 
@@ -95,7 +97,7 @@ public class ChangeVMClusterCommand<T extends ChangeVMClusterParameters> extends
             }
         }
 
-        ChangeVmClusterValidator validator = ChangeVmClusterValidator.create(getVm(),
+        ChangeVmClusterValidator validator = changeVmClusterValidatorInstance.get().create(getVm(),
                 getClusterId(),
                 getParameters().getVmCustomCompatibilityVersion(),
                 getUserId());
@@ -131,7 +133,7 @@ public class ChangeVMClusterCommand<T extends ChangeVMClusterParameters> extends
         vm.setClusterId(getClusterId());
         clearDedicatedHosts(vm);
         setCpuProfileFromNewCluster(vm);
-        resourceManager.getVmManager(getVmId()).update(vm.getStaticData());
+        resourceManagerInstance.get().getVmManager(getVmId()).update(vm.getStaticData());
     }
 
     private void setCpuProfileFromNewCluster(VM vm) {

@@ -3,6 +3,7 @@ package org.ovirt.engine.core.bll;
 import java.util.List;
 import java.util.Objects;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.apache.commons.lang.StringUtils;
@@ -35,9 +36,8 @@ public class SetVmTicketCommand<T extends SetVmTicketParameters> extends VmOpera
 
     @Inject
     private VmDynamicDao vmDynamicDao;
-
     @Inject
-    private ResourceManager resourceManager;
+    private Instance<ResourceManager> resourceManagerInstance;
 
     private String ticket;
     // This flag is calculated during the authorization phase and indicates if
@@ -144,7 +144,7 @@ public class SetVmTicketCommand<T extends SetVmTicketParameters> extends VmOpera
 
         final DbUser user = getCurrentUser();
 
-        VmManager vmManager = resourceManager.getVmManager(getParameters().getVmId());
+        VmManager vmManager = resourceManagerInstance.get().getVmManager(getParameters().getVmId());
         vmManager.lockVm();
         try {
             var vm = vmDynamicDao.get(getVm().getId());

@@ -58,6 +58,7 @@ import org.ovirt.engine.core.compat.Version;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogDirector;
 import org.ovirt.engine.core.dao.AsyncTaskDao;
 import org.ovirt.engine.core.dao.ClusterDao;
+import org.ovirt.engine.core.dao.DiskImageDao;
 import org.ovirt.engine.core.dao.ImageTransferDao;
 import org.ovirt.engine.core.dao.StepDao;
 import org.ovirt.engine.core.dao.VdsDao;
@@ -106,6 +107,8 @@ public class MaintenanceNumberOfVdssCommand<T extends MaintenanceNumberOfVdssPar
     private Instance<ConcurrentChildCommandsExecutionCallback> callbackProvider;
     @Inject
     private AuditLogDirector auditLogDirector;
+    @Inject
+    private DiskImageDao diskImageDao;
 
     public MaintenanceNumberOfVdssCommand(T parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -350,7 +353,7 @@ public class MaintenanceNumberOfVdssCommand<T extends MaintenanceNumberOfVdssPar
                             // The non migratable VM names will be comma separated
                             log.error("VDS '{}' contains non migratable VMs", vdsId);
                             result = false;
-                        } else if (!validate(new MultipleVmsValidator(vms)
+                        } else if (!validate(new MultipleVmsValidator(vms, diskImageDao)
                                 .vmNotHavingPluggedDiskSnapshots(EngineMessage.VDS_CANNOT_MAINTENANCE_VM_HAS_PLUGGED_DISK_SNAPSHOT))) {
                             hostsWithVmsWithPluggedDiskSnapshots.add(vds.getName());
                             result = false;

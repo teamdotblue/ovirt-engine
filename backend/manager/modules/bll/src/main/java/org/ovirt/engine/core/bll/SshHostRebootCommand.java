@@ -3,6 +3,8 @@ package org.ovirt.engine.core.bll;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.bll.context.CommandContext;
 import org.ovirt.engine.core.bll.utils.EngineSSHClient;
 import org.ovirt.engine.core.common.AuditLogType;
@@ -13,6 +15,9 @@ import org.ovirt.engine.core.common.config.ConfigValues;
 
 @NonTransactiveCommandAttribute
 public class SshHostRebootCommand<T extends SshHostRebootParameters> extends VdsCommand<T> {
+
+    @Inject
+    private EngineSSHClient sshClient;
 
     public SshHostRebootCommand(T parameters, CommandContext commandContext) {
         super(parameters, commandContext);
@@ -50,7 +55,6 @@ public class SshHostRebootCommand<T extends SshHostRebootParameters> extends Vds
      */
     private boolean executeSshReboot(String version) {
         try (
-                final EngineSSHClient sshClient = new EngineSSHClient();
                 final ByteArrayOutputStream cmdOut = new ByteArrayOutputStream();
                 final ByteArrayOutputStream cmdErr = new ByteArrayOutputStream()
         ) {
