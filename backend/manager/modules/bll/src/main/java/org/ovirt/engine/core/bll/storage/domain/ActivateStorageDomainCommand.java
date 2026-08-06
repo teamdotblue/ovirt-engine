@@ -8,6 +8,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.LockMessagesMatchUtil;
@@ -50,6 +51,8 @@ public class ActivateStorageDomainCommand<T extends StorageDomainPoolParametersB
     private StoragePoolIsoMapDao storagePoolIsoMapDao;
     @Inject
     private CINDERStorageHelper cinderStorageHelper;
+    @Inject
+    private Instance<RefreshPoolSingleAsyncOperationFactory> refreshPoolSingleAsyncOperationFactoryInstance;
 
     public ActivateStorageDomainCommand(T parameters, CommandContext commandContext) {
         super(parameters, commandContext);
@@ -173,7 +176,7 @@ public class ActivateStorageDomainCommand<T extends StorageDomainPoolParametersB
         getEventQueue().submitEventSync(
                 new Event(getParameters().getStoragePoolId(), getParameters().getStorageDomainId(), null, EventType.POOLREFRESH, ""),
                 () -> {
-                    runSynchronizeOperation(new RefreshPoolSingleAsyncOperationFactory(), vdsIdsToSetNonOperational);
+                    runSynchronizeOperation(refreshPoolSingleAsyncOperationFactoryInstance.get(), vdsIdsToSetNonOperational);
                     return null;
                 }
         );

@@ -23,6 +23,10 @@ public class DisconnectStoragePoolAsyncOperation extends ActivateDeactivateSingl
         super(vdss, null, storagePool);
     }
 
+    public DisconnectStoragePoolAsyncOperation createInstance(List<VDS> vdss, StoragePool storagePool) {
+        return (DisconnectStoragePoolAsyncOperation) init(vdss, null, storagePool);
+    }
+
     @Override
     public void execute(int iterationId) {
         try {

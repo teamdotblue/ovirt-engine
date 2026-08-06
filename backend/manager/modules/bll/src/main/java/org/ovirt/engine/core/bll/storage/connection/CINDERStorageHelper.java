@@ -35,6 +35,7 @@ import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogable;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogableImpl;
 import org.ovirt.engine.core.dao.LibvirtSecretDao;
+import org.ovirt.engine.core.dao.StorageDomainStaticDao;
 import org.ovirt.engine.core.dao.StoragePoolIsoMapDao;
 import org.ovirt.engine.core.dao.VdsDao;
 import org.ovirt.engine.core.dao.provider.ProviderDao;
@@ -56,6 +57,8 @@ public class CINDERStorageHelper extends StorageHelperBase {
     private VdsDao vdsDao;
     @Inject
     private StoragePoolIsoMapDao storagePoolIsoMapDao;
+    @Inject
+    private StorageDomainStaticDao storageDomainStaticDao;
 
     @Override
     public Collection<StorageType> getTypes() {
@@ -201,7 +204,7 @@ public class CINDERStorageHelper extends StorageHelperBase {
 
     public void activateCinderDomain(Guid storageDomainId, Guid storagePoolId) {
         OpenStackVolumeProviderProxy proxy =
-                OpenStackVolumeProviderProxy.getFromStorageDomainId(storageDomainId, providerProxyFactory);
+                OpenStackVolumeProviderProxy.getFromStorageDomainId(storageDomainId, providerProxyFactory, storageDomainStaticDao, providerDao);
         if (proxy == null) {
             log.error("Couldn't create an OpenStackVolumeProviderProxy for storage domain ID: {}", storageDomainId);
             return;

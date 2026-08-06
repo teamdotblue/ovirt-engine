@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.InternalCommandAttribute;
@@ -17,7 +18,6 @@ import org.ovirt.engine.core.common.businessentities.storage.CinderDisk;
 import org.ovirt.engine.core.common.utils.Pair;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dao.ImageDao;
-import org.ovirt.engine.core.di.Injector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,6 +28,8 @@ public class ExtendCinderDiskCommand<T extends UpdateDiskParameters> extends Upd
 
     @Inject
     private ImageDao imageDao;
+    @Inject
+    private Instance<ExtendCinderDiskCommandCallback> extendCinderDiskCommandCallback;
 
     public ExtendCinderDiskCommand(T parameters, CommandContext commandContext) {
         super(parameters, commandContext);
@@ -51,7 +53,7 @@ public class ExtendCinderDiskCommand<T extends UpdateDiskParameters> extends Upd
 
     @Override
     public CommandCallback getCallback() {
-        return Injector.injectMembers(new ExtendCinderDiskCommandCallback());
+        return extendCinderDiskCommandCallback.get();
     }
 
     @Override

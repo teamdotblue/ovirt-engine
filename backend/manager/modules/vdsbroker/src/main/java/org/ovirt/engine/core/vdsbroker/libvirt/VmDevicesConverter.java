@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -48,7 +49,7 @@ public class VmDevicesConverter {
     @Inject
     private DiskLunMapDao diskLunMapDao;
     @Inject
-    private ResourceManager resourceManager;
+    private Instance<ResourceManager> resourceManagerInstance;
 
     protected final Logger log = LoggerFactory.getLogger(getClass());
 
@@ -115,7 +116,7 @@ public class VmDevicesConverter {
     @SuppressWarnings("unchecked")
     private Map<String, Object>[] parseDevices(Guid vmId, Guid hostId, XmlDocument document) throws Exception {
         List<VmDevice> devices = vmDeviceDao.getVmDeviceByVmId(vmId);
-        OriginType vmOrigin = resourceManager.getVmManager(vmId).getOrigin();
+        OriginType vmOrigin = resourceManagerInstance.get().getVmManager(vmId).getOrigin();
         boolean isHostedEngine = OriginType.HOSTED_ENGINE == vmOrigin || OriginType.MANAGED_HOSTED_ENGINE == vmOrigin;
         MemoizingSupplier<Map<Map<String, String>, HostDevice>> addressToHostDeviceSupplier =
                 new MemoizingSupplier<>(() -> hostDeviceDao.getHostDevicesByHostId(hostId)

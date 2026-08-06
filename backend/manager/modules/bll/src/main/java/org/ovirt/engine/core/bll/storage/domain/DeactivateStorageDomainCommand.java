@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.apache.commons.lang.StringUtils;
@@ -70,7 +71,6 @@ public class DeactivateStorageDomainCommand<T extends StorageDomainPoolParameter
 
     @Inject
     private AuditLogDirector auditLogDirector;
-
     @Inject
     private CommandEntityDao commandEntityDao;
     @Inject
@@ -97,6 +97,10 @@ public class DeactivateStorageDomainCommand<T extends StorageDomainPoolParameter
     private ManagedBlockStorageHelper managedBlockStorageHelper;
     @Inject
     private ImageTransferDao imageTransferDao;
+    @Inject
+    private Instance<DisconnectStoragePoolAsyncOperationFactory> disconnectStoragePoolAsyncOperationFactory;
+    @Inject
+    private Instance<AfterDeactivateSingleAsyncOperationFactory> afterDeactivateSingleAsyncOperationFactoryInstance;
 
     private boolean isLastMaster;
 
@@ -394,14 +398,14 @@ public class DeactivateStorageDomainCommand<T extends StorageDomainPoolParameter
                         new DisconnectStoragePoolVDSCommandParameters(spm.getId(),
                                 getStoragePool().getId(), spm.getVdsSpmId()));
             }
-            runSynchronizeOperation(new DisconnectStoragePoolAsyncOperationFactory());
+            runSynchronizeOperation(disconnectStoragePoolAsyncOperationFactory.get());
         }
 
         if (!getParameters().isInactive()) {
             getEventQueue().submitEventSync(
                     new Event(getParameters().getStoragePoolId(), getParameters().getStorageDomainId(), null, EventType.POOLREFRESH, ""),
                     () -> {
-                        runSynchronizeOperation(new AfterDeactivateSingleAsyncOperationFactory(),
+                        runSynchronizeOperation(afterDeactivateSingleAsyncOperationFactoryInstance.get(),
                                 isLastMaster,
                                 newMasterId);
                         return null;

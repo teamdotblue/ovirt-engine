@@ -3,6 +3,7 @@ package org.ovirt.engine.core.bll.storage.disk.cinder;
 import java.util.Collection;
 import java.util.Collections;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.InternalCommandAttribute;
@@ -25,7 +26,6 @@ import org.ovirt.engine.core.dao.DiskImageDao;
 import org.ovirt.engine.core.dao.DiskImageDynamicDao;
 import org.ovirt.engine.core.dao.ImageDao;
 import org.ovirt.engine.core.dao.ImageStorageDomainMapDao;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.utils.transaction.TransactionSupport;
 
 @InternalCommandAttribute
@@ -43,6 +43,8 @@ public class CloneSingleCinderDiskCommand<T extends ImagesContainterParametersBa
     private ImageStorageDomainMapDao imageStorageDomainMapDao;
     @Inject
     private DiskImageDao diskImageDao;
+    @Inject
+    private Instance<CloneSingleCinderDiskCommandCallback> cloneSingleCinderDiskCommandCallback;
 
     public CloneSingleCinderDiskCommand(T parameters, CommandContext commandContext) {
         super(parameters, commandContext);
@@ -119,7 +121,7 @@ public class CloneSingleCinderDiskCommand<T extends ImagesContainterParametersBa
 
     @Override
     public CommandCallback getCallback() {
-        return Injector.injectMembers(new CloneSingleCinderDiskCommandCallback());
+        return cloneSingleCinderDiskCommandCallback.get();
     }
 
     @Override

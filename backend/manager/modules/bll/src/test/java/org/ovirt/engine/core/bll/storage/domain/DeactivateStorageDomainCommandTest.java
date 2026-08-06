@@ -11,6 +11,8 @@ import static org.mockito.Mockito.when;
 import java.util.Collections;
 import java.util.EnumSet;
 
+import javax.enterprise.inject.Instance;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -23,6 +25,7 @@ import org.ovirt.engine.core.bll.ValidateTestUtils;
 import org.ovirt.engine.core.bll.context.CommandContext;
 import org.ovirt.engine.core.bll.context.CompensationContext;
 import org.ovirt.engine.core.bll.storage.connection.IStorageHelper;
+import org.ovirt.engine.core.bll.storage.pool.DisconnectStoragePoolAsyncOperationFactory;
 import org.ovirt.engine.core.bll.storage.pool.StoragePoolStatusHandler;
 import org.ovirt.engine.core.common.action.StorageDomainPoolParametersBase;
 import org.ovirt.engine.core.common.businessentities.StorageDomain;
@@ -73,6 +76,8 @@ public class DeactivateStorageDomainCommandTest extends BaseCommandTest {
     private StoragePoolStatusHandler storagePoolStatusHandler;
     @Mock
     private ImageTransferDao imageTransferDao;
+    @Mock
+    private Instance<DisconnectStoragePoolAsyncOperationFactory> disconnectStoragePoolAsyncOperationFactory;
 
     private StoragePoolIsoMap map;
     private StorageDomain domain;
@@ -87,6 +92,7 @@ public class DeactivateStorageDomainCommandTest extends BaseCommandTest {
     @BeforeEach
     public void setup() {
         map = new StoragePoolIsoMap();
+        when(disconnectStoragePoolAsyncOperationFactory.get()).thenReturn(mock(DisconnectStoragePoolAsyncOperationFactory.class));
         cmd.init();
     }
 

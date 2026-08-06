@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.Map;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.InternalCommandAttribute;
@@ -30,7 +31,6 @@ import org.ovirt.engine.core.dao.BaseDiskDao;
 import org.ovirt.engine.core.dao.DiskImageDynamicDao;
 import org.ovirt.engine.core.dao.ImageDao;
 import org.ovirt.engine.core.dao.ImageStorageDomainMapDao;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.utils.transaction.TransactionSupport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,7 +42,6 @@ public class AddCinderDiskCommand<T extends AddDiskParameters> extends AddDiskCo
 
     @Inject
     private AuditLogDirector auditLogDirector;
-
     @Inject
     private BaseDiskDao baseDiskDao;
     @Inject
@@ -51,6 +50,8 @@ public class AddCinderDiskCommand<T extends AddDiskParameters> extends AddDiskCo
     private ImageStorageDomainMapDao imageStorageDomainMapDao;
     @Inject
     private DiskImageDynamicDao diskImageDynamicDao;
+    @Inject
+    private Instance<AddCinderDiskCommandCallback> addCinderDiskCommandCallback;
 
     public AddCinderDiskCommand(T parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -150,7 +151,7 @@ public class AddCinderDiskCommand<T extends AddDiskParameters> extends AddDiskCo
 
     @Override
     public CommandCallback getCallback() {
-        return Injector.injectMembers(new AddCinderDiskCommandCallback());
+        return addCinderDiskCommandCallback.get();
     }
 
     @Override

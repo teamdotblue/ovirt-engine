@@ -2,6 +2,8 @@ package org.ovirt.engine.core.bll.provider.storage;
 
 import java.util.List;
 
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.bll.context.ChildCompensationWrapper;
 import org.ovirt.engine.core.bll.context.CommandContext;
 import org.ovirt.engine.core.bll.provider.ProviderProxy;
@@ -21,7 +23,6 @@ import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dao.StorageDomainDao;
 import org.ovirt.engine.core.dao.StorageDomainDynamicDao;
 import org.ovirt.engine.core.dao.StorageDomainStaticDao;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.utils.transaction.TransactionSupport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,6 +35,13 @@ import com.woorea.openstack.base.client.OpenStackTokenProvider;
 import com.woorea.openstack.keystone.utils.KeystoneTokenProvider;
 
 public abstract class AbstractOpenStackStorageProviderProxy<C extends OpenStackClient, T extends OpenStackProviderProperties, V extends ProviderValidator> implements ProviderProxy<V> {
+
+    @Inject
+    private StorageDomainStaticDao storageDomainStaticDao;
+    @Inject
+    private StorageDomainDynamicDao storageDomainDynamicDao;
+    @Inject
+    private StorageDomainDao storageDomainDao;
 
     protected C client;
 
@@ -97,7 +105,7 @@ public abstract class AbstractOpenStackStorageProviderProxy<C extends OpenStackC
         domainStaticEntry.setWipeAfterDelete(false);
         domainStaticEntry.setDiscardAfterDelete(false);
         TransactionSupport.executeInNewTransaction(() -> {
-            Injector.get(StorageDomainStaticDao.class).save(domainStaticEntry);
+            storageDomainStaticDao.save(domainStaticEntry);
             context.getCompensationContext().snapshotNewEntity(domainStaticEntry);
             context.getCompensationContext().stateChanged();
             return null;
@@ -108,7 +116,7 @@ public abstract class AbstractOpenStackStorageProviderProxy<C extends OpenStackC
         domainDynamicEntry.setId(domainStaticEntry.getId());
 
         TransactionSupport.executeInNewTransaction(() -> {
-            Injector.get(StorageDomainDynamicDao.class).save(domainDynamicEntry);
+            storageDomainDynamicDao.save(domainDynamicEntry);
             context.getCompensationContext().snapshotNewEntity(domainDynamicEntry);
             context.getCompensationContext().stateChanged();
             return null;
@@ -121,12 +129,12 @@ public abstract class AbstractOpenStackStorageProviderProxy<C extends OpenStackC
     public void onModification() {
         // updating storage domain information
         Guid storageDomainId = getProviderStorageDomain().getId();
-        StorageDomainStatic domainStaticEntry = Injector.get(StorageDomainStaticDao.class).get(storageDomainId);
+        StorageDomainStatic domainStaticEntry = storageDomainStaticDao.get(storageDomainId);
         TransactionSupport.executeInNewTransaction(() -> {
             context.getCompensationContext().snapshotEntityUpdated(domainStaticEntry);
             domainStaticEntry.setStorageName(provider.getName());
             domainStaticEntry.setDescription(provider.getDescription());
-            Injector.get(StorageDomainStaticDao.class).update(domainStaticEntry);
+            storageDomainStaticDao.update(domainStaticEntry);
             context.getCompensationContext().stateChanged();
             return null;
         });
@@ -135,12 +143,12 @@ public abstract class AbstractOpenStackStorageProviderProxy<C extends OpenStackC
     @Override
     public void onRemoval() {
         List<StorageDomain> storageDomains =
-                Injector.get(StorageDomainDao.class).getAllByConnectionId(provider.getId());
+                storageDomainDao.getAllByConnectionId(provider.getId());
 
         // removing the static and dynamic storage domain entries
         StorageDomain storageDomainEntry = storageDomains.get(0);
-        Injector.get(StorageDomainDynamicDao.class).remove(storageDomainEntry.getId());
-        Injector.get(StorageDomainStaticDao.class).remove(storageDomainEntry.getId());
+        storageDomainDynamicDao.remove(storageDomainEntry.getId());
+        storageDomainStaticDao.remove(storageDomainEntry.getId());
     }
 
     @Override
@@ -154,7 +162,7 @@ public abstract class AbstractOpenStackStorageProviderProxy<C extends OpenStackC
     protected StorageDomain getProviderStorageDomain() {
         if (storageDomain == null) {
             List<StorageDomain> storageDomains =
-                    Injector.get(StorageDomainDao.class).getAllByConnectionId(provider.getId());
+                    storageDomainDao.getAllByConnectionId(provider.getId());
             storageDomain = storageDomains.get(0);
         }
         return storageDomain;

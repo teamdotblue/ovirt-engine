@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.InternalCommandAttribute;
@@ -20,7 +21,6 @@ import org.ovirt.engine.core.common.businessentities.storage.VolumeType;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dao.DiskDao;
 import org.ovirt.engine.core.dao.ImageDao;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.utils.transaction.TransactionSupport;
 
 @InternalCommandAttribute
@@ -30,6 +30,8 @@ public class TryBackToCinderSnapshotCommand<T extends CreateCinderSnapshotParame
     private DiskDao diskDao;
     @Inject
     private ImageDao imageDao;
+    @Inject
+    private Instance<CloneSingleCinderDiskCommandCallback> cloneSingleCinderDiskCommandCallback;
 
     private CinderDisk oldActiveDisk;
 
@@ -113,7 +115,7 @@ public class TryBackToCinderSnapshotCommand<T extends CreateCinderSnapshotParame
 
     @Override
     public CommandCallback getCallback() {
-        return Injector.injectMembers(new CloneSingleCinderDiskCommandCallback());
+        return cloneSingleCinderDiskCommandCallback.get();
     }
 
     @Override

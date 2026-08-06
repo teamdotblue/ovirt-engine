@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.function.Function;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.apache.commons.lang.StringUtils;
@@ -59,6 +60,7 @@ import org.ovirt.engine.core.dao.StorageDomainDynamicDao;
 import org.ovirt.engine.core.dao.StorageDomainStaticDao;
 import org.ovirt.engine.core.dao.StoragePoolIsoMapDao;
 import org.ovirt.engine.core.dao.VmDao;
+import org.ovirt.engine.core.dao.provider.ProviderDao;
 import org.ovirt.engine.core.utils.threadpool.ThreadPoolUtil;
 import org.ovirt.engine.core.utils.transaction.TransactionMethod;
 import org.ovirt.engine.core.utils.transaction.TransactionSupport;
@@ -86,7 +88,10 @@ public abstract class StorageDomainCommandBase<T extends StorageDomainParameters
     protected StorageDomainStaticDao storageDomainStaticDao;
     @Inject
     protected VmDao vmDao;
-
+    @Inject
+    private ProviderDao providerDao;
+    @Inject
+    private Instance<RefreshStoragePoolAndDisconnectAsyncOperationFactory> refreshStoragePoolAndDisconnectAsyncOperationFactory;
     @Inject
     protected ImagesHandler imagesHandler;
     @Inject
@@ -138,7 +143,7 @@ public abstract class StorageDomainCommandBase<T extends StorageDomainParameters
         if (getStorageDomain().getStorageType() != StorageType.CINDER) {
             return true;
         }
-        return validate(OpenStackVolumeProviderProxy.getFromStorageDomainId(getStorageDomainId(), providerProxyFactory)
+        return validate(OpenStackVolumeProviderProxy.getFromStorageDomainId(getStorageDomainId(), providerProxyFactory, storageDomainStaticDao, providerDao)
                 .getProviderValidator()
                 .isCinderHasNoImages());
     }
@@ -297,7 +302,7 @@ public abstract class StorageDomainCommandBase<T extends StorageDomainParameters
                         EventType.POOLREFRESH,
                         ""),
                 () -> {
-                    runSynchronizeOperation(new RefreshStoragePoolAndDisconnectAsyncOperationFactory());
+                    runSynchronizeOperation(refreshStoragePoolAndDisconnectAsyncOperationFactory.get());
                     return null;
                 });
     }

@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -41,33 +42,25 @@ import org.ovirt.engine.core.vdsbroker.ResourceManager;
 
 @Singleton
 public class OvfUpdateProcessHelper {
+
     @Inject
     private VmDeviceUtils vmDeviceUtils;
-
     @Inject
     private VmTemplateDao vmTemplateDao;
-
     @Inject
     private VmNetworkInterfaceDao vmNetworkInterfaceDao;
-
     @Inject
     private DiskVmElementDao diskVmElementDao;
-
     @Inject
     private DiskImageDao diskImageDao;
-
     @Inject
-    private ResourceManager resourceManager;
-
+    private Instance<ResourceManager> resourceManagerInstance;
     @Inject
     private OvfManager ovfManager;
-
     @Inject
     private ClusterUtils clusterUtils;
-
     @Inject
     private DbUserDao dbUserDao;
-
     @Inject
     private OvfHelper ovfHelper;
     /**
@@ -162,14 +155,14 @@ public class OvfUpdateProcessHelper {
                                                   Guid storageDomainId) {
         UpdateVMVDSCommandParameters tempVar = new UpdateVMVDSCommandParameters(storagePoolId, metaDictionary);
         tempVar.setStorageDomainId(storageDomainId);
-        return resourceManager.runVdsCommand(VDSCommandType.UpdateVM, tempVar).getSucceeded();
+        return resourceManagerInstance.get().runVdsCommand(VDSCommandType.UpdateVM, tempVar).getSucceeded();
     }
 
     /**
      * Removes the ovf of the vm/template with the given id from the given storage pool/storage domain.
      */
     protected boolean executeRemoveVmInSpm(Guid storagePoolId, Guid id, Guid storageDomainId) {
-        return resourceManager.runVdsCommand(VDSCommandType.RemoveVM,
+        return resourceManagerInstance.get().runVdsCommand(VDSCommandType.RemoveVM,
                 new RemoveVMVDSCommandParameters(storagePoolId, id, storageDomainId)).getSucceeded();
     }
 }

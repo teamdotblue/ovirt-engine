@@ -37,7 +37,6 @@ import org.ovirt.engine.core.dal.job.ExecutionMessageDirector;
 import org.ovirt.engine.core.dao.StepDao;
 import org.ovirt.engine.core.dao.StepSubjectEntityDao;
 import org.ovirt.engine.core.dao.VdsDao;
-import org.ovirt.engine.core.di.Injector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,18 +47,16 @@ public class VdsCommandsHelper {
 
     @Inject
     private BackendInternal backend;
-
     @Inject
     private VDSBrokerFrontend resourceManager;
-
     @Inject
     private VdsDao vdsDao;
-
     @Inject
     private StepDao stepDao;
-
     @Inject
     private StepSubjectEntityDao stepSubjectEntityDao;
+    @Inject
+    private AuditLogDirector auditLogDirector;
 
     private VdsCommandsHelper() {
     }
@@ -194,7 +191,7 @@ public class VdsCommandsHelper {
             return;
         }
         jobProperties.entrySet().forEach(entry -> cmd.addCustomValue(entry.getKey(), entry.getValue()));
-        Injector.get(AuditLogDirector.class).log(cmd, logType);
+        auditLogDirector.log(cmd, logType);
     }
 
     private static String getStepWithHostname(CommandBase<?> cmd) {

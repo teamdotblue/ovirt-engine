@@ -5,6 +5,7 @@ import static java.util.stream.Collectors.toList;
 import java.util.Collection;
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -29,8 +30,7 @@ public class BlockStorageDomainHelper {
     private static final Logger log = LoggerFactory.getLogger(BlockStorageDomainHelper.class);
 
     @Inject
-    private ResourceManager resourceManager;
-
+    private Instance<ResourceManager> resourceManagerInstance;
     @Inject
     protected AuditLogDirector auditLogDirector;
 
@@ -41,7 +41,7 @@ public class BlockStorageDomainHelper {
         try {
             @SuppressWarnings("unchecked")
             StorageDomainStatic domainFromIrs =
-                    ((Pair<StorageDomainStatic, Guid>) resourceManager.runVdsCommand(
+                    ((Pair<StorageDomainStatic, Guid>) resourceManagerInstance.get().runVdsCommand(
                             VDSCommandType.HSMGetStorageDomainInfo,
                             new HSMGetStorageDomainInfoVDSCommandParameters(vdsId,
                                     storageDomainStatic.getId()))
@@ -65,7 +65,7 @@ public class BlockStorageDomainHelper {
     @SuppressWarnings("unchecked")
     public List<LUNs> getVgLUNsInfo(StorageDomainStatic storageDomain, Guid vdsId) {
         try {
-            return (List<LUNs>) resourceManager.runVdsCommand(VDSCommandType.GetVGInfo,
+            return (List<LUNs>) resourceManagerInstance.get().runVdsCommand(VDSCommandType.GetVGInfo,
                     new GetVGInfoVDSCommandParameters(vdsId, storageDomain.getStorage()))
                     .getReturnValue();
         } catch (Exception e) {

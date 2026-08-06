@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.InternalCommandAttribute;
@@ -18,7 +19,6 @@ import org.ovirt.engine.core.common.businessentities.storage.ImageStatus;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dao.DiskImageDao;
 import org.ovirt.engine.core.dao.ImageDao;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.utils.transaction.TransactionRollbackListener;
 import org.ovirt.engine.core.utils.transaction.TransactionSupport;
 
@@ -29,6 +29,8 @@ public class RemoveCinderSnapshotDiskCommand<T extends ImagesContainterParameter
     private ImageDao imageDao;
     @Inject
     private DiskImageDao diskImageDao;
+    @Inject
+    private Instance<RemoveCinderSnapshotCommandCallback> removeCinderSnapshotCommandCallback;
 
     public RemoveCinderSnapshotDiskCommand(T parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -83,7 +85,7 @@ public class RemoveCinderSnapshotDiskCommand<T extends ImagesContainterParameter
 
     @Override
     public CommandCallback getCallback() {
-        return Injector.injectMembers(new RemoveCinderSnapshotCommandCallback());
+        return removeCinderSnapshotCommandCallback.get();
     }
 
     @Override

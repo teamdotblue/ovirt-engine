@@ -26,8 +26,8 @@ public abstract class StorageServerConnectionExtensionCommandBase<T extends Acti
 
     @Inject
     private StorageServerConnectionExtensionDao storageServerConnectionExtensionDao;
-
-    private StorageServerConnectionExtensionValidator connectionExtensionValidator = new StorageServerConnectionExtensionValidator();
+    @Inject
+    private StorageServerConnectionExtensionValidator connectionExtensionValidator;
 
     public StorageServerConnectionExtensionCommandBase(T parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);

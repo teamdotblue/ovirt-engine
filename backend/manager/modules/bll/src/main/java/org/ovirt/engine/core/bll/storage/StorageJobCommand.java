@@ -3,6 +3,7 @@ package org.ovirt.engine.core.bll.storage;
 import java.util.Collections;
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.CommandBase;
@@ -17,16 +18,16 @@ import org.ovirt.engine.core.common.action.StorageJobCommandParameters;
 import org.ovirt.engine.core.common.businessentities.HostJobInfo.HostJobStatus;
 import org.ovirt.engine.core.common.errors.EngineError;
 import org.ovirt.engine.core.compat.Guid;
-import org.ovirt.engine.core.di.Injector;
 
 public abstract class StorageJobCommand<T extends StorageJobCommandParameters> extends CommandBase<T>
         implements HostJobCommand {
 
     @Inject
     protected ImagesHandler imagesHandler;
-
     @Inject
     protected VdsCommandsHelper vdsCommandsHelper;
+    @Inject
+    private Instance<StorageJobCallback> storageJobCallback;
 
     public StorageJobCommand(T parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -41,7 +42,7 @@ public abstract class StorageJobCommand<T extends StorageJobCommandParameters> e
 
     @Override
     public CommandCallback getCallback() {
-        return Injector.injectMembers(new StorageJobCallback());
+        return storageJobCallback.get();
     }
 
     @Override
