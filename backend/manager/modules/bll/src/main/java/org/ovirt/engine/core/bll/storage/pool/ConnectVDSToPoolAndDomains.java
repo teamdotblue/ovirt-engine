@@ -2,7 +2,7 @@ package org.ovirt.engine.core.bll.storage.pool;
 
 import java.util.List;
 
-import javax.annotation.PostConstruct;
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.storage.connection.StorageHelperDirector;
@@ -28,23 +28,24 @@ public class ConnectVDSToPoolAndDomains extends ActivateDeactivateSingleAsyncOpe
     private List<StoragePoolIsoMap> storagePoolIsoMap;
 
     @Inject
-    private ResourceManager resourceManager;
-
+    private Instance<ResourceManager> resourceManagerInstance;
     @Inject
     private StorageDomainDao storageDomainDao;
-
     @Inject
     private StoragePoolIsoMapDao storagePoolIsoMapDao;
-
     @Inject
     private StorageHelperDirector storageHelperDirector;
 
-    public ConnectVDSToPoolAndDomains(List<VDS> vdss, StorageDomain domain, StoragePool storagePool) {
-        super(vdss, domain, storagePool);
+    public ConnectVDSToPoolAndDomains() {
     }
 
-    @PostConstruct
-    private void init() {
+    public ConnectVDSToPoolAndDomains createInstance(List<VDS> vdss, StorageDomain domain, StoragePool storagePool) {
+        init(vdss, domain, storagePool);
+        initStoragePoolData();
+        return this;
+    }
+
+    private void initStoragePoolData() {
         masterStorageDomainId = storageDomainDao.getMasterStorageDomainIdForPool(getStoragePool().getId());
         storagePoolIsoMap = storagePoolIsoMapDao.getAllForStoragePool(getStoragePool().getId());
     }
@@ -57,7 +58,7 @@ public class ConnectVDSToPoolAndDomains extends ActivateDeactivateSingleAsyncOpe
                     storageHelperDirector.getItem(getStorageDomain().getStorageType())
                             .connectStorageToDomainByVdsId(getStorageDomain(), vds.getId());
             if (isConnectSucceeded) {
-                resourceManager.runVdsCommand(
+                resourceManagerInstance.get().runVdsCommand(
                         VDSCommandType.ConnectStoragePool,
                         new ConnectStoragePoolVDSCommandParameters(
                                 vds, getStoragePool(), masterStorageDomainId, storagePoolIsoMap));

@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.LockMessagesMatchUtil;
@@ -42,7 +43,6 @@ import org.ovirt.engine.core.dao.VdsDao;
 import org.ovirt.engine.core.dao.network.NetworkDao;
 import org.ovirt.engine.core.dao.network.VmNicDao;
 import org.ovirt.engine.core.dao.network.VnicProfileDao;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.utils.ISingleAsyncOperation;
 import org.ovirt.engine.core.utils.SynchronizeNumberOfAsyncOperations;
 import org.ovirt.engine.core.utils.transaction.TransactionSupport;
@@ -62,6 +62,10 @@ public class RemoveStoragePoolCommand<T extends StoragePoolParametersBase> exten
     private VmNicDao vmNicDao;
     @Inject
     private VdsDao vdsDao;
+    @Inject
+    private Instance<ConnectVDSToPoolAndDomains> connectVDSToPoolAndDomainsProvider;
+    @Inject
+    private Instance<DisconnectStoragePoolAsyncOperationFactory> disconnectStoragePoolAsyncOperationFactory;
 
     private Map<String, Pair<String, String>> sharedLocks;
 
@@ -180,7 +184,7 @@ public class RemoveStoragePoolCommand<T extends StoragePoolParametersBase> exten
         }
 
         masterDomainDetachWithDestroyPool(masterDomain);
-        runSynchronizeOperation(new DisconnectStoragePoolAsyncOperationFactory());
+        runSynchronizeOperation(disconnectStoragePoolAsyncOperationFactory.get());
 
         setSucceeded(true);
 
@@ -340,8 +344,7 @@ public class RemoveStoragePoolCommand<T extends StoragePoolParametersBase> exten
 
                     @Override
                     public ISingleAsyncOperation createSingleAsyncOperation() {
-                        return Injector.injectMembers(
-                                new ConnectVDSToPoolAndDomains(vdsList, masterDomain, storagePool));
+                        return connectVDSToPoolAndDomainsProvider.get().createInstance(vdsList, masterDomain, storagePool);
                     }
 
                     @Override
