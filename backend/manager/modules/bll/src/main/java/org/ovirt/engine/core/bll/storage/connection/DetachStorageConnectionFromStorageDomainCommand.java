@@ -3,6 +3,7 @@ package org.ovirt.engine.core.bll.storage.connection;
 import java.util.Collection;
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.apache.commons.collections.CollectionUtils;
@@ -26,6 +27,8 @@ public class DetachStorageConnectionFromStorageDomainCommand<T extends AttachDet
     private StorageServerConnectionLunMapDao storageServerConnectionLunMapDao;
     @Inject
     private LunDao lunDao;
+    @Inject
+    private Instance<StorageConnectionValidator> storageConnectionValidatorInstance;
 
     public DetachStorageConnectionFromStorageDomainCommand(T parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -50,7 +53,7 @@ public class DetachStorageConnectionFromStorageDomainCommand<T extends AttachDet
         String connectionId = getParameters().getStorageConnectionId();
         StorageServerConnections connection = storageServerConnectionDao.get(connectionId);
 
-        return new StorageConnectionValidator(connection);
+        return storageConnectionValidatorInstance.get().init(connection);
     }
 
     @Override

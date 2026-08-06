@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.LockMessagesMatchUtil;
@@ -31,6 +32,8 @@ public class AttachStorageConnectionToStorageDomainCommand<T extends AttachDetac
     private StorageServerConnectionLunMapDao storageServerConnectionLunMapDao;
     @Inject
     private LunDao lunDao;
+    @Inject
+    private Instance<StorageConnectionValidator> storageConnectionValidatorInstance;
 
     public AttachStorageConnectionToStorageDomainCommand(T parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -55,7 +58,7 @@ public class AttachStorageConnectionToStorageDomainCommand<T extends AttachDetac
         String connectionId = getParameters().getStorageConnectionId();
         StorageServerConnections connection = storageServerConnectionDao.get(connectionId);
 
-        return new StorageConnectionValidator(connection);
+        return storageConnectionValidatorInstance.get().init(connection);
     }
 
     @Override

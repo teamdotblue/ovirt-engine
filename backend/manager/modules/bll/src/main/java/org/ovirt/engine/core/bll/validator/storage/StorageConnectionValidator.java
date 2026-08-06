@@ -2,6 +2,8 @@ package org.ovirt.engine.core.bll.validator.storage;
 
 import java.util.List;
 
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.bll.ValidationResult;
 import org.ovirt.engine.core.common.businessentities.StorageDomain;
 import org.ovirt.engine.core.common.businessentities.StorageDomainSharedStatus;
@@ -11,15 +13,26 @@ import org.ovirt.engine.core.common.businessentities.storage.StorageType;
 import org.ovirt.engine.core.common.errors.EngineMessage;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dao.StorageServerConnectionDao;
-import org.ovirt.engine.core.di.Injector;
 
 public class StorageConnectionValidator {
+
+    @Inject
+    private StorageServerConnectionDao storageServerConnectionDao;
+
     private static final String STORAGE_DOMAIN_NAME_REPLACEMENT = "$domainNames %1$s";
 
     private StorageServerConnections connection;
 
     public StorageConnectionValidator(StorageServerConnections connection) {
         this.connection = connection;
+    }
+
+    public StorageConnectionValidator() {
+    }
+
+    public StorageConnectionValidator init(StorageServerConnections connection) {
+        this.connection = connection;
+        return this;
     }
 
     public ValidationResult isConnectionExists() {
@@ -85,6 +98,6 @@ public class StorageConnectionValidator {
     }
 
     protected StorageServerConnectionDao getStorageServerConnectionDao() {
-        return Injector.get(StorageServerConnectionDao.class);
+        return storageServerConnectionDao;
     }
 }
