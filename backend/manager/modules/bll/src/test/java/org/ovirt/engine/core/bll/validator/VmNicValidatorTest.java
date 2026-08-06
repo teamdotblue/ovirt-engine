@@ -74,6 +74,7 @@ public class VmNicValidatorTest {
     @BeforeEach
     public void setup() {
         validator = spy(new VmNicValidator(nic, version));
+        doReturn(osRepository).when(validator).getOsRepository();
         vm = new VM();
         cluster = new Cluster();
     }
@@ -96,6 +97,7 @@ public class VmNicValidatorTest {
 
     private void isCompatibleWithOsTest(Matcher<ValidationResult> matcher, int vmInterfaceType) {
         VmNicValidator validator = spy(new VmNicValidator(nic, version, 0));
+        doReturn(osRepository).when(validator).getOsRepository();
         when(osRepository.getNetworkDevices(anyInt(), any())).thenReturn(NETWORK_DEVICES);
         when(nic.getType()).thenReturn(vmInterfaceType);
 

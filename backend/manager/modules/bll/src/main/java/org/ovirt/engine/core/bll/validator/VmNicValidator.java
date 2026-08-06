@@ -3,6 +3,8 @@ package org.ovirt.engine.core.bll.validator;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.bll.ValidationResult;
 import org.ovirt.engine.core.bll.network.cluster.NetworkHelper;
 import org.ovirt.engine.core.common.businessentities.Cluster;
@@ -16,12 +18,16 @@ import org.ovirt.engine.core.common.network.SwitchType;
 import org.ovirt.engine.core.common.osinfo.OsRepository;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.compat.Version;
-import org.ovirt.engine.core.di.Injector;
 
 /**
  * A class that can validate a {@link VmNic} is valid from certain aspects.
  */
 public class VmNicValidator {
+
+    @Inject
+    private OsRepository osRepository;
+    @Inject
+    private NetworkHelper networkHelper;
 
     protected VmNic nic;
 
@@ -42,6 +48,22 @@ public class VmNicValidator {
         this.nic = nic;
         this.version = version;
         this.osId = osId;
+    }
+
+    public VmNicValidator() {
+    }
+
+    public VmNicValidator init(VmNic nic, Version version, int osId) {
+        this.nic = nic;
+        this.version = version;
+        this.osId = osId;
+        return this;
+    }
+
+    public VmNicValidator init(VmNic nic, Version version) {
+        this.nic = nic;
+        this.version = version;
+        return this;
     }
 
     /**
@@ -83,7 +105,7 @@ public class VmNicValidator {
      *         system.
      */
     public ValidationResult isCompatibleWithOs() {
-        List<String> networkDevices = Injector.get(OsRepository.class).getNetworkDevices(osId, version);
+        List<String> networkDevices = getOsRepository().getNetworkDevices(osId, version);
         List<VmInterfaceType> interfaceTypes = new ArrayList<>();
 
         for (String networkDevice : networkDevices) {
@@ -123,8 +145,12 @@ public class VmNicValidator {
         return getNetworkHelper().getVnicProfile(vnicProfileId);
     }
 
-    private NetworkHelper getNetworkHelper() {
-        return Injector.get(NetworkHelper.class);
+    public OsRepository getOsRepository() {
+        return osRepository;
+    }
+
+    public NetworkHelper getNetworkHelper() {
+        return networkHelper;
     }
 
     protected Network getNetwork() {

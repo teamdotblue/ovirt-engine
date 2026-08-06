@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.apache.commons.lang.StringUtils;
@@ -20,6 +21,7 @@ import org.ovirt.engine.core.common.businessentities.VmDeviceId;
 import org.ovirt.engine.core.common.businessentities.VmEntityType;
 import org.ovirt.engine.core.common.businessentities.network.VmNic;
 import org.ovirt.engine.core.common.errors.EngineMessage;
+import org.ovirt.engine.core.common.osinfo.OsRepository;
 import org.ovirt.engine.core.common.utils.VmDeviceType;
 import org.ovirt.engine.core.common.validation.group.UpdateEntity;
 import org.ovirt.engine.core.compat.Version;
@@ -33,6 +35,10 @@ public class UpdateVmTemplateInterfaceCommand<T extends AddVmTemplateInterfacePa
     private VmNicDao vmNicDao;
     @Inject
     private VmDeviceDao vmDeviceDao;
+    @Inject
+    private OsRepository osRepository;
+    @Inject
+    private Instance<VmNicValidator> vmNicValidatorInstance;
 
     public UpdateVmTemplateInterfaceCommand(T parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -83,7 +89,7 @@ public class UpdateVmTemplateInterfaceCommand<T extends AddVmTemplateInterfacePa
         // not relevant for instance types - will be checked when a VM will be created out of it
         if (getVmTemplate().getTemplateType() != VmEntityType.INSTANCE_TYPE) {
             Version clusterCompatibilityVersion = getCluster().getCompatibilityVersion();
-            VmNicValidator nicValidator = new VmNicValidator(getParameters().getInterface(), clusterCompatibilityVersion, getVmTemplate().getOsId());
+            VmNicValidator nicValidator = vmNicValidatorInstance.get().init(getParameters().getInterface(), clusterCompatibilityVersion, getVmTemplate().getOsId());
             if (!validate(nicValidator.isCompatibleWithOs())
                     || !validate(nicValidator.profileValid(getVmTemplate().getClusterId()))
                     || !validate(nicValidator.typeMatchesProfile())
@@ -118,9 +124,9 @@ public class UpdateVmTemplateInterfaceCommand<T extends AddVmTemplateInterfacePa
 
         interfaces.remove(oldIface);
         interfaces.add(getParameters().getInterface());
+        int maxPciSlots = osRepository.getMaxPciDevices(getVmTemplate().getOsId(), clusterCompatibilityVersion);
 
-        return validate(VmValidator.checkPciAndIdeLimit(getVmTemplate().getOsId(),
-                clusterCompatibilityVersion,
+        return validate(VmValidator.checkPciAndIdeLimit(maxPciSlots,
                 getVmTemplate().getNumOfMonitors(),
                 interfaces,
                 getTemplateDiskVmElements(),

@@ -3,6 +3,7 @@ package org.ovirt.engine.core.bll.network.vm;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.apache.commons.lang.StringUtils;
@@ -43,6 +44,8 @@ public class AddVmInterfaceCommand<T extends AddVmInterfaceParameters> extends A
     private VmNetworkStatisticsDao vmNetworkStatisticsDao;
     @Inject
     private VmDynamicDao vmDynamicDao;
+    @Inject
+    private Instance<VmNicValidator> vmNicValidatorInstance;
 
     private MacPool macPool;
 
@@ -160,7 +163,7 @@ public class AddVmInterfaceCommand<T extends AddVmInterfaceParameters> extends A
         }
 
         Version compatibilityVersion = getVm().getClusterCompatibilityVersion();
-        VmNicValidator nicValidator = new VmNicValidator(getInterface(), compatibilityVersion, getVm().getOs());
+        VmNicValidator nicValidator = vmNicValidatorInstance.get().init(getInterface(), compatibilityVersion, getVm().getOs());
         if (!validate(nicValidator.isCompatibleWithOs())
                 || !validate(nicValidator.isNetworkSupportedByClusterSwitchType(getCluster()))
                 || !validate(nicValidator.profileValid(getVm().getClusterId()))

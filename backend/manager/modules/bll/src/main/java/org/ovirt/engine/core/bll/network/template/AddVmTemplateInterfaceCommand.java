@@ -3,6 +3,7 @@ package org.ovirt.engine.core.bll.network.template;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.ValidationResult;
@@ -18,6 +19,7 @@ import org.ovirt.engine.core.common.businessentities.network.VmInterfaceType;
 import org.ovirt.engine.core.common.businessentities.network.VmNetworkInterface;
 import org.ovirt.engine.core.common.businessentities.network.VmNic;
 import org.ovirt.engine.core.common.errors.EngineMessage;
+import org.ovirt.engine.core.common.osinfo.OsRepository;
 import org.ovirt.engine.core.common.validation.group.CreateEntity;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.compat.Version;
@@ -28,6 +30,10 @@ public class AddVmTemplateInterfaceCommand<T extends AddVmTemplateInterfaceParam
 
     @Inject
     private VmNicDao vmNicDao;
+    @Inject
+    private OsRepository osRepository;
+    @Inject
+    private Instance<VmNicValidator> vmNicValidatorInstance;
 
     public AddVmTemplateInterfaceCommand(T parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -74,8 +80,8 @@ public class AddVmTemplateInterfaceCommand<T extends AddVmTemplateInterfaceParam
 
             List<VmNic> interfacesForCheckPciLimit = new ArrayList<>(interfaces);
             interfacesForCheckPciLimit.add(getParameters().getInterface());
-            if (!validate(VmValidator.checkPciAndIdeLimit(getVmTemplate().getOsId(),
-                    getCluster().getCompatibilityVersion(),
+            int maxPciSlots = osRepository.getMaxPciDevices(getVmTemplate().getOsId(), getCluster().getCompatibilityVersion());
+            if (!validate(VmValidator.checkPciAndIdeLimit(maxPciSlots,
                     getVmTemplate().getNumOfMonitors(),
                     interfacesForCheckPciLimit,
                     getTemplateDiskVmElements(),
@@ -86,7 +92,7 @@ public class AddVmTemplateInterfaceCommand<T extends AddVmTemplateInterfaceParam
             }
 
             Version clusterCompatibilityVersion = getCluster().getCompatibilityVersion();
-            VmNicValidator nicValidator = new VmNicValidator(getParameters().getInterface(), clusterCompatibilityVersion, getVmTemplate().getOsId());
+            VmNicValidator nicValidator = vmNicValidatorInstance.get().init(getParameters().getInterface(), clusterCompatibilityVersion, getVmTemplate().getOsId());
 
             return validate(nicValidator.isCompatibleWithOs())
                     && validate(nicValidator.profileValid(getVmTemplate().getClusterId()))
