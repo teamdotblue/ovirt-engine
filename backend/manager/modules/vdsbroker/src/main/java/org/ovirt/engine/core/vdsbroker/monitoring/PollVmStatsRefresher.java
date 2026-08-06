@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javax.enterprise.concurrent.ManagedScheduledExecutorService;
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.apache.commons.lang.exception.ExceptionUtils;
@@ -41,13 +42,21 @@ public class PollVmStatsRefresher extends VmStatsRefresher {
     @ThreadPools(ThreadPools.ThreadPoolType.EngineScheduledThreadPool)
     private ManagedScheduledExecutorService schedulerService;
     @Inject
-    private ResourceManager resourceManager;
+    private Instance<ResourceManager> resourceManagerInstance;
     @Inject
     protected VmDynamicDao vmDynamicDao;
     private ScheduledFuture vmsMonitoringJob;
 
     public PollVmStatsRefresher(VdsManager vdsManager) {
         super(vdsManager);
+    }
+
+    public PollVmStatsRefresher() {
+    }
+
+    public PollVmStatsRefresher createInstance(VdsManager vdsManager) {
+        init(vdsManager);
+        return this;
     }
 
     public void poll() {
@@ -177,7 +186,7 @@ public class PollVmStatsRefresher extends VmStatsRefresher {
     }
 
     protected VDSReturnValue getAllVmStats() {
-        return resourceManager.runVdsCommand(
+        return resourceManagerInstance.get().runVdsCommand(
                 VDSCommandType.GetAllVmStats,
                 new VdsIdVDSCommandParametersBase(vdsManager.getVdsId()));
     }

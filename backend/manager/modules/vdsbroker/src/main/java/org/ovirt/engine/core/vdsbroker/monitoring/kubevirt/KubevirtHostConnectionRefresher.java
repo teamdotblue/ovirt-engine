@@ -20,7 +20,6 @@ public class KubevirtHostConnectionRefresher implements HostConnectionRefresherI
 
     @Inject
     private ProviderDao providerDao;
-
     @Inject
     private SharedInformerFactoryProducer sharedInformerFactoryProducer;
 
@@ -30,6 +29,14 @@ public class KubevirtHostConnectionRefresher implements HostConnectionRefresherI
 
     public KubevirtHostConnectionRefresher(VdsManager vdsManager) {
         this.vdsManager = vdsManager;
+    }
+
+    public KubevirtHostConnectionRefresher() {
+    }
+
+    public KubevirtHostConnectionRefresher createInstance(VdsManager vdsManager) {
+        this.vdsManager = vdsManager;
+        return this;
     }
 
     @PostConstruct

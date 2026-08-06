@@ -6,6 +6,7 @@ import java.util.Objects;
 import java.util.concurrent.Flow;
 import java.util.stream.Collectors;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.apache.commons.lang.exception.ExceptionUtils;
@@ -14,7 +15,6 @@ import org.ovirt.engine.core.common.businessentities.VmDynamic;
 import org.ovirt.engine.core.common.utils.Pair;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dao.VmDynamicDao;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.utils.ObjectDescriptor;
 import org.ovirt.engine.core.vdsbroker.ResourceManager;
 import org.ovirt.engine.core.vdsbroker.VdsManager;
@@ -31,14 +31,26 @@ public class EventVmStatsRefresher extends VmStatsRefresher {
     private VmDynamicDao vmDynamicDao;
     @Inject
     private VdsBrokerObjectsBuilder vdsBrokerObjectsBuilder;
-    private final ResourceManager resourceManager;
-    private final PollVmStatsRefresher allVmStatsOnlyRefresher;
+    @Inject
+    private Instance<PollVmStatsRefresher> pollVmStatsRefresherInstance;
+    private ResourceManager resourceManager;
+    private PollVmStatsRefresher allVmStatsOnlyRefresher;
 
     public EventVmStatsRefresher(VdsManager manager, ResourceManager resourceManager) {
         super(manager);
         // we still want to fetch GetAllVmStats as we did before
-        allVmStatsOnlyRefresher = Injector.injectMembers(new PollVmStatsRefresher(vdsManager));
+        allVmStatsOnlyRefresher = pollVmStatsRefresherInstance.get().createInstance(vdsManager);
         this.resourceManager = resourceManager;
+    }
+
+    public EventVmStatsRefresher() {
+    }
+
+    public EventVmStatsRefresher createInstance(VdsManager manager, ResourceManager resourceManager) {
+        init(manager);
+        allVmStatsOnlyRefresher = pollVmStatsRefresherInstance.get().createInstance(vdsManager);
+        this.resourceManager = resourceManager;
+        return this;
     }
 
     @Override

@@ -9,6 +9,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.enterprise.inject.Typed;
 import javax.inject.Inject;
 
 import org.apache.commons.lang.StringUtils;
@@ -52,6 +53,7 @@ import kubevirt.io.V1VirtualMachineInstanceMigration;
 import kubevirt.io.V1VirtualMachineInstanceMigrationState;
 import kubevirt.io.V1VirtualMachineInstanceStatus;
 
+@Typed(KubevirtVmStatsRefresher.class)
 public class KubevirtVmStatsRefresher extends PollVmStatsRefresher {
     private static Logger log = LoggerFactory.getLogger(KubevirtVmStatsRefresher.class);
 
@@ -73,6 +75,14 @@ public class KubevirtVmStatsRefresher extends PollVmStatsRefresher {
 
     public KubevirtVmStatsRefresher(VdsManager vdsManager) {
         super(vdsManager);
+    }
+
+    public KubevirtVmStatsRefresher() {
+    }
+
+    public KubevirtVmStatsRefresher createInstance(VdsManager vdsManager) {
+        init(vdsManager);
+        return this;
     }
 
     @Override
