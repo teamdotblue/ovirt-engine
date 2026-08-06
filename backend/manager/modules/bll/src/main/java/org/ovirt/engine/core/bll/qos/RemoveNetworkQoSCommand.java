@@ -1,5 +1,8 @@
 package org.ovirt.engine.core.bll.qos;
 
+import javax.enterprise.inject.Instance;
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.bll.context.CommandContext;
 import org.ovirt.engine.core.bll.validator.NetworkQosValidator;
 import org.ovirt.engine.core.common.AuditLogType;
@@ -8,6 +11,9 @@ import org.ovirt.engine.core.common.businessentities.network.NetworkQoS;
 import org.ovirt.engine.core.dao.qos.QosDao;
 
 public class RemoveNetworkQoSCommand extends RemoveQosCommandBase<NetworkQoS, NetworkQosValidator> {
+
+    @Inject
+    private Instance<NetworkQosValidator> networkQosValidatorInstance;
 
     public RemoveNetworkQoSCommand(QosParametersBase<NetworkQoS> parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -20,7 +26,7 @@ public class RemoveNetworkQoSCommand extends RemoveQosCommandBase<NetworkQoS, Ne
 
     @Override
     protected NetworkQosValidator getQosValidator(NetworkQoS qos) {
-        return new NetworkQosValidator(qos);
+        return networkQosValidatorInstance.get().init(qos);
     }
 
     @Override

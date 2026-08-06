@@ -1,5 +1,6 @@
 package org.ovirt.engine.core.bll.qos;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.VmSlaPolicyUtils;
@@ -14,6 +15,8 @@ public class UpdateNetworkQoSCommand extends UpdateQosCommandBase<NetworkQoS, Ne
 
     @Inject
     VmSlaPolicyUtils vmSlaPolicyUtils;
+    @Inject
+    private Instance<NetworkQosValidator> networkQosValidatorInstance;
 
     public UpdateNetworkQoSCommand(QosParametersBase<NetworkQoS> parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -26,7 +29,7 @@ public class UpdateNetworkQoSCommand extends UpdateQosCommandBase<NetworkQoS, Ne
 
     @Override
     protected NetworkQosValidator getQosValidator(NetworkQoS qos) {
-        return new NetworkQosValidator(qos);
+        return networkQosValidatorInstance.get().init(qos);
     }
 
 

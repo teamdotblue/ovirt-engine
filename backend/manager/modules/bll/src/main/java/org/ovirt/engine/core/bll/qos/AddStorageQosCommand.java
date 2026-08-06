@@ -1,5 +1,8 @@
 package org.ovirt.engine.core.bll.qos;
 
+import javax.enterprise.inject.Instance;
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.bll.context.CommandContext;
 import org.ovirt.engine.core.bll.validator.QosValidator;
 import org.ovirt.engine.core.bll.validator.storage.StorageQosValidator;
@@ -8,6 +11,9 @@ import org.ovirt.engine.core.common.businessentities.qos.StorageQos;
 import org.ovirt.engine.core.dao.qos.QosDao;
 
 public class AddStorageQosCommand extends AddQosCommand<StorageQos, QosValidator<StorageQos>> {
+
+    @Inject
+    private Instance<StorageQosValidator> storageQosValidatorInstance;
 
     public AddStorageQosCommand(QosParametersBase<StorageQos> parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -20,7 +26,7 @@ public class AddStorageQosCommand extends AddQosCommand<StorageQos, QosValidator
 
     @Override
     protected QosValidator<StorageQos> getQosValidator(StorageQos qos) {
-        return new StorageQosValidator(qos);
+        return storageQosValidatorInstance.get().init(qos);
     }
 
 }

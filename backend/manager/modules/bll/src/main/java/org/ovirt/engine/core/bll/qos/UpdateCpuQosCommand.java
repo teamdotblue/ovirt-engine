@@ -1,5 +1,6 @@
 package org.ovirt.engine.core.bll.qos;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.VmSlaPolicyUtils;
@@ -14,6 +15,8 @@ public class UpdateCpuQosCommand extends UpdateQosCommandBase<CpuQos, QosValidat
 
     @Inject
     VmSlaPolicyUtils vmSlaPolicyUtils;
+    @Inject
+    private Instance<CpuQosValidator> cpuQosValidatorInstance;
 
     public UpdateCpuQosCommand(QosParametersBase<CpuQos> parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -26,7 +29,7 @@ public class UpdateCpuQosCommand extends UpdateQosCommandBase<CpuQos, QosValidat
 
     @Override
     protected QosValidator<CpuQos> getQosValidator(CpuQos qos) {
-        return new CpuQosValidator(qos);
+        return cpuQosValidatorInstance.get().init(qos);
     }
 
     @Override

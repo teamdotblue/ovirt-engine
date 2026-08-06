@@ -10,12 +10,20 @@ import org.ovirt.engine.core.dao.qos.QosDao;
 
 public abstract class QosValidator<T extends QosBase> {
 
-    private final T qos;
+    private T qos;
     private T oldQos;
     private List<T> allQos;
 
     public QosValidator(T qos) {
         this.qos = qos;
+    }
+
+    public QosValidator() {
+    }
+
+    public QosValidator<T> init(T qos) {
+        this.qos = qos;
+        return this;
     }
 
     protected T getQos() {

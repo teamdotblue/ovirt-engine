@@ -1,21 +1,33 @@
 package org.ovirt.engine.core.bll.validator;
 
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.bll.ValidationResult;
 import org.ovirt.engine.core.common.businessentities.qos.CpuQos;
 import org.ovirt.engine.core.common.errors.EngineMessage;
 import org.ovirt.engine.core.dao.qos.CpuQosDao;
 import org.ovirt.engine.core.dao.qos.QosDao;
-import org.ovirt.engine.core.di.Injector;
 
 public class CpuQosValidator extends QosValidator<CpuQos> {
+
+    @Inject
+    private CpuQosDao cpuQosDao;
 
     public CpuQosValidator(CpuQos qos) {
         super(qos);
     }
 
+    public CpuQosValidator() {
+    }
+
+    public CpuQosValidator init(CpuQos qos) {
+        super.init(qos);
+        return this;
+    }
+
     @Override
     protected QosDao<CpuQos> getQosDao() {
-        return Injector.get(CpuQosDao.class);
+        return cpuQosDao;
     }
 
     @Override

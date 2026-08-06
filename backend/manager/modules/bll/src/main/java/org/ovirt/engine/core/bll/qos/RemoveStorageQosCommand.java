@@ -3,6 +3,7 @@ package org.ovirt.engine.core.bll.qos;
 import java.util.List;
 import java.util.Map;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.VmSlaPolicyUtils;
@@ -19,6 +20,8 @@ public class RemoveStorageQosCommand extends RemoveQosCommandBase<StorageQos, Qo
 
     @Inject
     VmSlaPolicyUtils vmSlaPolicyUtils;
+    @Inject
+    private Instance<StorageQosValidator> storageQosValidatorInstance;
 
     public RemoveStorageQosCommand(QosParametersBase<StorageQos> parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -31,7 +34,7 @@ public class RemoveStorageQosCommand extends RemoveQosCommandBase<StorageQos, Qo
 
     @Override
     protected QosValidator<StorageQos> getQosValidator(StorageQos qos) {
-        return new StorageQosValidator(qos);
+        return storageQosValidatorInstance.get().init(qos);
     }
 
     @Override
