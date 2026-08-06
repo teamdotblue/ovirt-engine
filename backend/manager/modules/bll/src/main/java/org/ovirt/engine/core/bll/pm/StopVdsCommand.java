@@ -4,6 +4,7 @@ import static org.ovirt.engine.core.common.errors.EngineMessage.VAR__ACTION__STO
 
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.NonTransactiveCommandAttribute;
@@ -44,6 +45,8 @@ public class StopVdsCommand<T extends FenceVdsActionParameters> extends FenceVds
     private VdsDao vdsDao;
     @Inject
     private VdsDynamicDao vdsDynamicDao;
+    @Inject
+    private Instance<RestartVdsVmsOperation> restartVdsVmsOperationInstance;
 
     public StopVdsCommand(T parameters, CommandContext commandContext) {
         super(parameters, commandContext);
@@ -107,7 +110,7 @@ public class StopVdsCommand<T extends FenceVdsActionParameters> extends FenceVds
     protected void handleSpecificCommandActions() {
         List<VM> vmList = getVmList();
         if (vmList.size() > 0) {
-            RestartVdsVmsOperation restartVmsOper = new RestartVdsVmsOperation(
+            RestartVdsVmsOperation restartVmsOper = restartVdsVmsOperationInstance.get().init(
                     getContext(),
                     getVds()
             );

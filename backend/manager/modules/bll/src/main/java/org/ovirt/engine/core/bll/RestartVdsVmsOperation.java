@@ -3,6 +3,9 @@ package org.ovirt.engine.core.bll;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.bll.context.CommandContext;
 import org.ovirt.engine.core.bll.interfaces.BackendInternal;
 import org.ovirt.engine.core.bll.job.ExecutionHandler;
@@ -21,7 +24,6 @@ import org.ovirt.engine.core.common.vdscommands.VDSReturnValue;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogDirector;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogableBase;
-import org.ovirt.engine.core.di.Injector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,6 +32,18 @@ import org.slf4j.LoggerFactory;
  * on it
  */
 public class RestartVdsVmsOperation {
+
+    @Inject
+    private AuditLogDirector auditLogDirector;
+    @Inject
+    private VDSBrokerFrontend vdsBrokerFrontend;
+    @Inject
+    private BackendInternal backendInternal;
+    @Inject
+    private HaAutoStartVmsRunner hasAutoStartVmsRunner;
+    @Inject
+    private Instance<AuditLogableBase> auditLogableBaseInstance;
+
     private static final Logger log = LoggerFactory.getLogger(RestartVdsVmsOperation.class);
 
     /**
@@ -53,6 +67,15 @@ public class RestartVdsVmsOperation {
         this.vds = vds;
     }
 
+    public RestartVdsVmsOperation() {
+    }
+
+    public RestartVdsVmsOperation init(CommandContext commandContext, VDS vds) {
+        this.commandContext = commandContext;
+        this.vds = vds;
+        return this;
+    }
+
     /**
      * Destroys VM migration to another host
      * @param vm vm migrated to another host
@@ -61,7 +84,7 @@ public class RestartVdsVmsOperation {
         if (vm.getStatus() == VMStatus.MigratingFrom) {
             try {
                 if (vm.getMigratingToVds() != null) {
-                    Injector.get(VDSBrokerFrontend.class).runVdsCommand(
+                    vdsBrokerFrontend.runVdsCommand(
                             VDSCommandType.DestroyVm,
                             new DestroyVmVDSCommandParameters(vm.getMigratingToVds(), vm.getId())
                     );
@@ -94,7 +117,7 @@ public class RestartVdsVmsOperation {
         // restart all running vms of a failed vds.
         for (VM vm : vms) {
             destroyVmOnDestination(vm);
-            VDSReturnValue returnValue = Injector.get(VDSBrokerFrontend.class).runVdsCommand(
+            VDSReturnValue returnValue = vdsBrokerFrontend.runVdsCommand(
                     VDSCommandType.SetVmStatus,
                     new SetVmStatusVDSCommandParameters(
                             vm.getId(),
@@ -104,17 +127,13 @@ public class RestartVdsVmsOperation {
             );
             // Write that this VM was shut down by host reboot or manual fence
             if (returnValue != null && returnValue.getSucceeded()) {
-                Injector.get(AuditLogDirector.class).log(
-                        Injector.injectMembers(
-                            new AuditLogableBase(
-                                    vds.getId(),
-                                    vm.getId()
-                            )
-                        ),
+                auditLogDirector.log(
+                        auditLogableBaseInstance.get().createWithvdsIdAndVmId(vds.getId(), vm.getId()),
+
                         AuditLogType.VM_WAS_SET_DOWN_DUE_TO_HOST_REBOOT_OR_MANUAL_FENCE
                 );
             }
-            Injector.get(BackendInternal.class).runInternalAction(
+            backendInternal.runInternalAction(
                     ActionType.ProcessDownVm,
                     new ProcessDownVmParameters(vm.getId(), true, vds.getId()),
                     ExecutionHandler.createDefaultContextForTasks(commandContext)
@@ -127,7 +146,7 @@ public class RestartVdsVmsOperation {
         }
 
         if (!autoStartVmIdsToRerun.isEmpty()) {
-            Injector.get(HaAutoStartVmsRunner.class).addVmsToRun(autoStartVmIdsToRerun);
+            hasAutoStartVmsRunner.addVmsToRun(autoStartVmIdsToRerun);
         }
     }
 }

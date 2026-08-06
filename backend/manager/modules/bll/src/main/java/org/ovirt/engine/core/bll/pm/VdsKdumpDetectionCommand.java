@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.HostLocking;
@@ -42,13 +43,14 @@ public class VdsKdumpDetectionCommand<T extends VdsActionParameters> extends Vds
 
     @Inject
     private AuditLogDirector auditLogDirector;
-
     @Inject
     private VdsKdumpStatusDao vdsKdumpStatusDao;
     @Inject
     private VmDao vmDao;
     @Inject
     private HostLocking hostLocking;
+    @Inject
+    private Instance<RestartVdsVmsOperation> restartVdsVmsOperationInstance;
 
     /**
      * Name of external variable to store fence_kdump listener heartbeat
@@ -94,7 +96,7 @@ public class VdsKdumpDetectionCommand<T extends VdsActionParameters> extends Vds
     private void restartVdsVms() {
         List<VM> vms = vmDao.getAllRunningForVds(getVdsId());
         if (!vms.isEmpty()) {
-            RestartVdsVmsOperation restartVmsOper = new RestartVdsVmsOperation(
+            RestartVdsVmsOperation restartVmsOper = restartVdsVmsOperationInstance.get().init(
                     getContext(),
                     getVds()
             );
