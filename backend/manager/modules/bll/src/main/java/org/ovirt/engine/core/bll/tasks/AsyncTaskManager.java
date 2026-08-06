@@ -46,7 +46,6 @@ import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogDirector;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogable;
 import org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogableImpl;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.utils.threadpool.ThreadPoolUtil;
 import org.ovirt.engine.core.utils.threadpool.ThreadPools;
 import org.ovirt.engine.core.utils.transaction.TransactionSupport;
@@ -62,18 +61,16 @@ public final class AsyncTaskManager implements BackendService {
     @Inject
     @ThreadPools(ThreadPools.ThreadPoolType.EngineScheduledThreadPool)
     private ManagedScheduledExecutorService schedulerService;
-
     @Inject
     private AsyncTaskFactory asyncTaskFactory;
-
     @Inject
     private AsyncTaskUtils asyncTaskUtils;
-
     @Inject
     private CommandCoordinator coco;
+    @Inject
+    private AuditLogDirector auditLogDirector;
 
     private static final Logger log = LoggerFactory.getLogger(AsyncTaskManager.class);
-    private final AuditLogDirector auditLogDirector = Injector.get(AuditLogDirector.class);
 
     /** Map which consist all tasks that currently are monitored **/
     private ConcurrentMap<Guid, SPMTask> tasks;

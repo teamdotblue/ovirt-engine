@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.common.businessentities.gluster.BlockStats;
 import org.ovirt.engine.core.common.businessentities.gluster.BrickProfileDetails;
 import org.ovirt.engine.core.common.businessentities.gluster.FopStats;
@@ -22,12 +24,14 @@ import org.ovirt.engine.core.common.utils.TimeConverter;
 import org.ovirt.engine.core.common.utils.gluster.GlusterCoreUtil;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dao.gluster.GlusterVolumeDao;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.vdsbroker.irsbroker.StatusReturn;
 import org.ovirt.engine.core.vdsbroker.vdsbroker.Status;
 
 @SuppressWarnings("unchecked")
 public final class GlusterVolumeProfileInfoReturn extends StatusReturn {
+
+    @Inject
+    private GlusterVolumeDao glusterVolumeDao;
 
     private static final String STATUS = "status";
     private static final String PROFILE_INFO = "profileInfo";
@@ -67,7 +71,7 @@ public final class GlusterVolumeProfileInfoReturn extends StatusReturn {
         Map<String, Object> profileInfo = (Map<String, Object>) innerMap.get(PROFILE_INFO);
         if (profileInfo != null) {
             String volumeName = (String) profileInfo.get(VOLUME_NAME);
-            GlusterVolumeEntity volume = getGlusterVolumeDao().getByName(clusterId, volumeName);
+            GlusterVolumeEntity volume = glusterVolumeDao.getByName(clusterId, volumeName);
 
             glusterVolumeProfileInfo.setVolumeId(volume.getId());
             if (profileInfo.containsKey(BRICKS)) {
@@ -169,10 +173,6 @@ public final class GlusterVolumeProfileInfoReturn extends StatusReturn {
             blockStatsList.add(blockStats);
         }
         return blockStatsList;
-    }
-
-    protected GlusterVolumeDao getGlusterVolumeDao() {
-        return Injector.get(GlusterVolumeDao.class);
     }
 
     private GlusterBrickEntity getBrick(List<GlusterBrickEntity> bricksList,

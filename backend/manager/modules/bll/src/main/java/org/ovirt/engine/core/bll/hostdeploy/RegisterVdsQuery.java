@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.apache.commons.lang.StringUtils;
@@ -37,7 +38,6 @@ import org.ovirt.engine.core.dao.VdsDao;
 import org.ovirt.engine.core.dao.VdsDynamicDao;
 import org.ovirt.engine.core.dao.VdsStaticDao;
 import org.ovirt.engine.core.dao.VdsStatisticsDao;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.utils.threadpool.ThreadPoolUtil;
 import org.ovirt.engine.core.utils.transaction.TransactionSupport;
 
@@ -46,25 +46,23 @@ public class RegisterVdsQuery<P extends RegisterVdsParameters> extends QueriesCo
 
     private AuditLogType error = AuditLogType.UNASSIGNED;
     private String strippedVdsUniqueId;
-    private final AuditLogableBase logable;
+    private AuditLogableBase logable;
     private List<VDS> vdssByUniqueId;
 
     private static final Object doubleRegistrationLock = new Object();
 
     @Inject
     private ClusterDao clusterDao;
-
     @Inject
     private VdsDao vdsDao;
-
     @Inject
     private VdsStaticDao vdsStaticDao;
-
     @Inject
     private VdsDynamicDao vdsDynamicDao;
-
     @Inject
     private VdsStatisticsDao vdsStatisticsDao;
+    @Inject
+    private Instance<AuditLogableBase> auditLogableBaseInstance;
 
     /**
      * 'z' has the highest ascii value from the acceptable characters, so the bit set size should be initiated to it.
@@ -87,7 +85,13 @@ public class RegisterVdsQuery<P extends RegisterVdsParameters> extends QueriesCo
 
     public RegisterVdsQuery(P parameters, EngineContext engineContext) {
         super(parameters, engineContext);
-        logable = Injector.injectMembers(new AuditLogableBase(parameters.getVdsId()));
+    }
+
+    private AuditLogableBase getLogable() {
+        if (logable == null) {
+            logable = auditLogableBaseInstance.get().createWithvdsId(getParameters().getVdsId());
+        }
+        return logable;
     }
 
     protected String getStrippedVdsUniqueId() {
@@ -135,7 +139,7 @@ public class RegisterVdsQuery<P extends RegisterVdsParameters> extends QueriesCo
                         hostName
                     )
                 );
-                AuditLogableBase logable = Injector.injectMembers(new AuditLogableBase());
+                AuditLogableBase logable = auditLogableBaseInstance.get();
                 logable.addCustomValue("VdsHostName", hostName);
                 auditLogDirector.log(logable, AuditLogType.VDS_REGISTER_EMPTY_ID);
                 return false;
@@ -225,8 +229,7 @@ public class RegisterVdsQuery<P extends RegisterVdsParameters> extends QueriesCo
 
     private void reportClusterError() {
         log.error("No default or valid cluster was found, host registration failed.");
-        AuditLogableBase logableBase = Injector.injectMembers(new AuditLogableBase());
-        logableBase.setVdsId(getParameters().getVdsId());
+        AuditLogableBase logableBase = auditLogableBaseInstance.get().createWithvdsId(getParameters().getVdsId());
         auditLogDirector.log(logableBase, AuditLogType.HOST_REGISTRATION_FAILED_INVALID_CLUSTER);
     }
 

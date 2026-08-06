@@ -12,6 +12,8 @@ import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import javax.inject.Inject;
+
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.sshd.client.keyverifier.ServerKeyVerifier;
@@ -24,7 +26,6 @@ import org.ovirt.engine.core.common.businessentities.VDS;
 import org.ovirt.engine.core.common.config.Config;
 import org.ovirt.engine.core.common.config.ConfigValues;
 import org.ovirt.engine.core.dao.VdsStaticDao;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.utils.crypt.EngineEncryptionUtils;
 import org.ovirt.engine.core.uutils.ssh.OpenSSHUtils;
 import org.ovirt.engine.core.uutils.ssh.SSHClient;
@@ -36,6 +37,8 @@ import org.slf4j.LoggerFactory;
  */
 public class EngineSSHClient extends SSHClient {
 
+    private VdsStaticDao vdsStaticDao;
+
     private static final Logger log = LoggerFactory.getLogger(EngineSSHClient.class);
 
     private final AtomicReference<VDS> vdsHolder = new AtomicReference<>();
@@ -44,9 +47,11 @@ public class EngineSSHClient extends SSHClient {
     /**
      * Constructor.
      */
-    public EngineSSHClient() {
+    @Inject
+    public EngineSSHClient(VdsStaticDao vdsStaticDao) {
         super();
-        setServerKeyVerifier(new OvirtSshKeyVerifier(vdsHolder, hostPublicKeyHolder));
+        this.vdsStaticDao = vdsStaticDao;
+        setServerKeyVerifier(new OvirtSshKeyVerifier(vdsHolder, hostPublicKeyHolder, vdsStaticDao));
         setHardTimeout(
                 TimeUnit.SECONDS.toMillis(Config.<Integer> getValue(ConfigValues.SSHInactivityHardTimeoutSeconds)));
         setSoftTimeout(
@@ -128,10 +133,12 @@ public class EngineSSHClient extends SSHClient {
 
         private final AtomicReference<VDS> vdsHolder;
         private final AtomicReference<PublicKey> hostPublicKeyHolder;
+        private VdsStaticDao vdsStaticDao;
 
-        public OvirtSshKeyVerifier(AtomicReference<VDS> vdsHolder, AtomicReference<PublicKey> hostPublicKeyHolder) {
+        public OvirtSshKeyVerifier(AtomicReference<VDS> vdsHolder, AtomicReference<PublicKey> hostPublicKeyHolder, VdsStaticDao vdsStaticDao) {
             this.hostPublicKeyHolder = hostPublicKeyHolder;
             this.vdsHolder = vdsHolder;
+            this.vdsStaticDao = vdsStaticDao;
 
         }
 
@@ -170,7 +177,7 @@ public class EngineSSHClient extends SSHClient {
             vdsHolder.get().setSshKeyFingerprint(fingerprint);
             vdsHolder.get().setSshPublicKey(getKeyString(serverKey, null));
             try {
-                Injector.get(VdsStaticDao.class).update(vdsHolder.get().getStaticData());
+                vdsStaticDao.update(vdsHolder.get().getStaticData());
             } catch (Exception e) {
                 throw new SecurityException(
                         String.format(

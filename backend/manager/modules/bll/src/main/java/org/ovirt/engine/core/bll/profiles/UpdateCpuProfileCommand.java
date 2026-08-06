@@ -4,6 +4,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.VmSlaPolicyUtils;
@@ -19,17 +20,17 @@ import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dao.profiles.CpuProfileDao;
 import org.ovirt.engine.core.dao.profiles.ProfilesDao;
 import org.ovirt.engine.core.dao.qos.CpuQosDao;
-import org.ovirt.engine.core.di.Injector;
 
 public class UpdateCpuProfileCommand extends UpdateProfileCommandBase<CpuProfileParameters, CpuProfile, CpuProfileValidator> {
 
     @Inject
     private VmSlaPolicyUtils vmSlaPolicyUtils;
-
     @Inject
     private CpuQosDao cpuQosDao;
     @Inject
     private CpuProfileDao cpuProfileDao;
+    @Inject
+    private Instance<CpuProfileValidator> cpuProfileValidatorInstance;
 
     public UpdateCpuProfileCommand(CpuProfileParameters parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -37,7 +38,7 @@ public class UpdateCpuProfileCommand extends UpdateProfileCommandBase<CpuProfile
 
     @Override
     protected CpuProfileValidator getProfileValidator() {
-        return Injector.injectMembers(new CpuProfileValidator(getProfile()));
+        return cpuProfileValidatorInstance.get().createWithProfile(getProfile());
     }
 
     @Override

@@ -22,7 +22,6 @@ import org.ovirt.engine.core.bll.ValidationResult;
 import org.ovirt.engine.core.common.errors.EngineMessage;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dao.VmIconDao;
-import org.ovirt.engine.core.di.Injector;
 
 public class IconValidator {
 
@@ -60,8 +59,8 @@ public class IconValidator {
         return new IconValidator(iconType, dataUrl).getValidationResult();
     }
 
-    public static ValidationResult validateIconId(Guid iconId, String nameForErrorMessage) {
-        if (Injector.get(VmIconDao.class).exists(iconId)) {
+    public static ValidationResult validateIconId(Guid iconId, String nameForErrorMessage, VmIconDao vmIconDao) {
+        if (vmIconDao.exists(iconId)) {
             return ValidationResult.VALID;
         }
         return new ValidationResult(EngineMessage.ICON_OF_PROVIDED_ID_DOES_NOT_EXIST,

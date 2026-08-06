@@ -40,7 +40,6 @@ import org.ovirt.engine.core.common.vdscommands.VDSReturnValue;
 import org.ovirt.engine.core.compat.CommandStatus;
 import org.ovirt.engine.core.compat.DateTime;
 import org.ovirt.engine.core.compat.Guid;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.vdsbroker.ResourceManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,6 +61,8 @@ public class CommandCoordinatorImpl implements BackendService, CommandCoordinato
     private Instance<CommandExecutor> commandExecutorInstance;
     @Inject
     private VDSBrokerFrontend resourceManager;
+    @Inject
+    private Instance<ResourceManager> vdsResourceManagerInstance;
 
     public <P extends ActionParametersBase> CommandBase<P> createCommand(ActionType action, P parameters) {
         return CommandsFactory.createCommand(action, parameters);
@@ -357,12 +358,7 @@ public class CommandCoordinatorImpl implements BackendService, CommandCoordinato
     public void subscribe(String eventKey, CommandEntity commandEntity) {
         commandsRepositoryInstance.get().persistCommand(commandEntity);
         CoCoEventSubscriber subscriber = new CoCoEventSubscriber(eventKey, commandEntity, commandsRepositoryInstance.get());
-        getResourceManager().subscribe(subscriber);
+        vdsResourceManagerInstance.get().subscribe(subscriber);
         commandsRepositoryInstance.get().addEventSubscription(commandEntity, subscriber);
     }
-
-    private ResourceManager getResourceManager() {
-        return Injector.get(ResourceManager.class);
-    }
-
 }

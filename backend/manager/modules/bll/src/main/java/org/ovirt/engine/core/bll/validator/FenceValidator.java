@@ -16,6 +16,7 @@ import org.ovirt.engine.core.common.config.Config;
 import org.ovirt.engine.core.common.config.ConfigValues;
 import org.ovirt.engine.core.common.errors.EngineMessage;
 import org.ovirt.engine.core.dao.FenceAgentDao;
+import org.ovirt.engine.core.dao.VdsDao;
 import org.ovirt.engine.core.utils.pm.FenceConfigHelper;
 
 @Singleton
@@ -24,6 +25,8 @@ public class FenceValidator {
     private BackendInternal backend;
     @Inject
     private FenceAgentDao fenceAgentDao;
+    @Inject
+    private VdsDao vdsDao;
 
     public boolean isProxyHostAvailable(VDS vds, List<String> messages) {
         FenceProxyLocator proxyHostLocator = getProxyLocator(vds);
@@ -106,6 +109,6 @@ public class FenceValidator {
     }
 
     protected FenceProxyLocator getProxyLocator(VDS vds) {
-        return new FenceProxyLocator(vds);
+        return new FenceProxyLocator(vds, null, vdsDao, fenceAgentDao);
     }
 }

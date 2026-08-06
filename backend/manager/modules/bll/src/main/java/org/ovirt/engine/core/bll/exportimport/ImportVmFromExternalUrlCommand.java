@@ -33,7 +33,6 @@ import org.ovirt.engine.core.common.queries.GetVmFromOvaQueryParameters;
 import org.ovirt.engine.core.common.queries.GetVmsFromExternalProviderQueryParameters;
 import org.ovirt.engine.core.common.queries.QueryType;
 import org.ovirt.engine.core.compat.Guid;
-import org.ovirt.engine.core.di.Injector;
 
 @NonTransactiveCommandAttribute
 public class ImportVmFromExternalUrlCommand<P extends ImportVmFromExternalUrlParameters> extends CommandBase<P> {
@@ -102,8 +101,7 @@ public class ImportVmFromExternalUrlCommand<P extends ImportVmFromExternalUrlPar
 
     private ExternalVmImporter getVmImporter() {
         boolean isOvaImport = getParameters().getUrl().startsWith("ova://");
-        return Injector.injectMembers(
-                isOvaImport ? new ExternalOvaVmImporter() : new ExternalVmProviderImporter());
+        return isOvaImport ? new ExternalOvaVmImporter() : new ExternalVmProviderImporter();
     }
 
     private abstract class ExternalVmImporter {

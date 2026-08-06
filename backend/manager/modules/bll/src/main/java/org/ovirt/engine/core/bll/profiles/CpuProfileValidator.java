@@ -24,13 +24,10 @@ public class CpuProfileValidator extends ProfileValidator<CpuProfile> {
 
     @Inject
     private ClusterDao clusterDao;
-
     @Inject
     private CpuProfileDao cpuProfileDao;
-
     @Inject
     private VmTemplateDao vmTemplateDao;
-
     @Inject
     private VmDao vmDao;
 
@@ -40,6 +37,19 @@ public class CpuProfileValidator extends ProfileValidator<CpuProfile> {
 
     public CpuProfileValidator(Guid profileId) {
         super(profileId);
+    }
+
+    public CpuProfileValidator() {
+    }
+
+    public CpuProfileValidator createWithProfile(CpuProfile profile) {
+        initWithProfile(profile);
+        return this;
+    }
+
+    public CpuProfileValidator createWithProfileId(Guid profileId) {
+        initWithProfileId(profileId);
+        return this;
     }
 
     @Override

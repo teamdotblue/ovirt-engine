@@ -6,6 +6,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.bll.interfaces.BackendInternal;
 import org.ovirt.engine.core.bll.job.ExecutionHandler;
 import org.ovirt.engine.core.common.action.ActionType;
@@ -19,11 +21,17 @@ import org.ovirt.engine.core.common.config.ConfigValues;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dao.VdsDao;
 import org.ovirt.engine.core.dao.VdsDynamicDao;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.vdsbroker.attestation.AttestationService;
 import org.ovirt.engine.core.vdsbroker.attestation.AttestationValue;
 
 public class AttestThread extends Thread {
+
+    @Inject
+    private VdsDao vdsDao;
+    @Inject
+    private BackendInternal backendInternal;
+    @Inject
+    private VdsDynamicDao vdsDynamicDao;
 
     private List<String> trustedHostsNames;
     private final int FIRST_STAGE_QUERY_SIZE = Config.<Integer> getValue(ConfigValues.AttestationFirstStageSize);
@@ -55,7 +63,7 @@ public class AttestThread extends Thread {
 
     private void handleValues(List<AttestationValue> values) {
         for (AttestationValue value : values) {
-            List<VDS> vdses = Injector.get(VdsDao.class).getAllForHostname(value.getHostName());
+            List<VDS> vdses = vdsDao.getAllForHostname(value.getHostName());
             if (vdses != null && vdses.size() > 0) {
                 VDS vds = vdses.get(0);
                 if (value.getTrustLevel().equals(AttestationResultEnum.TRUSTED)) {
@@ -70,14 +78,14 @@ public class AttestThread extends Thread {
     private void setNonOperational(NonOperationalReason reason, VDS vds, Map<String, String> customLogValues) {
         SetNonOperationalVdsParameters tempVar =
                 new SetNonOperationalVdsParameters(vds.getId(), reason, customLogValues);
-        Injector.get(BackendInternal.class).runInternalAction(ActionType.SetNonOperationalVds, tempVar,
+        backendInternal.runInternalAction(ActionType.SetNonOperationalVds, tempVar,
                 ExecutionHandler.createInternalJobContext());
     }
 
     private void moveVdsToUp(VDS vds) {
         trustedVdses.add(vds.getId());
         vds.setStatus(VDSStatus.Up);
-        Injector.get(VdsDynamicDao.class).update(vds.getDynamicData());
+        vdsDynamicDao.update(vds.getDynamicData());
     }
 
     public static boolean isTrustedVds(Guid vdsId) {

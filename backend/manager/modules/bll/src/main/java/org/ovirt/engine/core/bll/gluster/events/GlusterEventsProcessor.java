@@ -4,10 +4,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.regex.Pattern;
 
+import javax.enterprise.inject.Instance;
+import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import org.ovirt.engine.core.common.businessentities.gluster.GlusterEvent;
-import org.ovirt.engine.core.di.Injector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,13 +20,18 @@ import org.slf4j.LoggerFactory;
 @Singleton
 public class GlusterEventsProcessor {
 
+    @Inject
+    private Instance<GeorepEventSubscriber> georepEventSubscriberInstance;
+    @Inject
+    private Instance<GlusterBrickEventSubscriber> glusterBrickEventSubscriberInstance;
+
     private static final Logger log = LoggerFactory.getLogger(GlusterEventsProcessor.class);
 
     private ConcurrentMap<String, GlusterEventSubscriber> subscribers = new ConcurrentHashMap<>();
 
     public GlusterEventsProcessor() {
-        subscribers.put("EVENT_GEOREP_.*", Injector.injectMembers(new GeorepEventSubscriber()));
-        subscribers.put("BRICK.*", Injector.injectMembers(new GlusterBrickEventSubscriber()));
+        subscribers.put("EVENT_GEOREP_.*", georepEventSubscriberInstance.get());
+        subscribers.put("BRICK.*", glusterBrickEventSubscriberInstance.get());
     }
 
     public void processEvent(GlusterEvent event) {

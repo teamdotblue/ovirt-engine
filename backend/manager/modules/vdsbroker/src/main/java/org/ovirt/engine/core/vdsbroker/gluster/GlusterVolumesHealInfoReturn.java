@@ -3,11 +3,12 @@ package org.ovirt.engine.core.vdsbroker.gluster;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.common.businessentities.gluster.GlusterBrickEntity;
 import org.ovirt.engine.core.common.businessentities.gluster.GlusterServer;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dao.gluster.GlusterDBUtils;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.vdsbroker.irsbroker.StatusReturn;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,7 +26,9 @@ public final class GlusterVolumesHealInfoReturn extends StatusReturn {
     private static final String HOST_UUID = "hostUuid";
 
     private static final Logger log = LoggerFactory.getLogger(GlusterVolumesHealInfoReturn.class);
-    private static final GlusterDBUtils dbUtils = Injector.get(GlusterDBUtils.class);
+
+    @Inject
+    private GlusterDBUtils dbUtils;
 
     private Map<Guid, Integer> unSyncedEntries = new HashMap<>();
 

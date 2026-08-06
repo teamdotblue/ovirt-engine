@@ -1,5 +1,6 @@
 package org.ovirt.engine.core.bll.exportimport;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.NonTransactiveCommandAttribute;
@@ -19,7 +20,7 @@ import org.ovirt.engine.core.vdsbroker.VmManager;
 public class CancelConvertVmCommand<T extends VmOperationParameterBase> extends VmCommand<T> {
 
     @Inject
-    protected ResourceManager resourceManager;
+    protected Instance<ResourceManager> resourceManagerInstance;
 
     public CancelConvertVmCommand(T parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -71,6 +72,6 @@ public class CancelConvertVmCommand<T extends VmOperationParameterBase> extends 
     }
 
     protected VmManager getVmManager() {
-        return resourceManager.getVmManager(getVmId());
+        return resourceManagerInstance.get().getVmManager(getVmId());
     }
 }

@@ -2,6 +2,7 @@ package org.ovirt.engine.core.bll.hostdeploy;
 
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -27,15 +28,12 @@ public class HostUpdatesChecker {
 
     @Inject
     private AuditLogDirector auditLogDirector;
-
     @Inject
     private AvailableUpdatesFinder availableUpdatesFinder;
-
     @Inject
     private VdsDynamicDao vdsDynamicDao;
-
     @Inject
-    private ResourceManager resourceManager;
+    private Instance<ResourceManager> resourceManagerInstance;
 
     public HostUpgradeManagerResult checkForUpdates(VDS host) {
         AuditLogable auditLog = new AuditLogableImpl();
@@ -89,7 +87,7 @@ public class HostUpdatesChecker {
         }
 
         if (updatesResult != null && updatesResult.isUpdatesAvailable() != host.isUpdateAvailable()) {
-            VdsManager hostManager = resourceManager.getVdsManager(host.getId());
+            VdsManager hostManager = resourceManagerInstance.get().getVdsManager(host.getId());
             synchronized (hostManager) {
                 hostManager.updateUpdateAvailable(updatesResult.isUpdatesAvailable());
             }

@@ -34,6 +34,8 @@ public class UpgradeHostInternalCommand<T extends UpgradeHostParameters> extends
     private VdsDynamicDao vdsDynamicDao;
     @Inject
     private Updateable upgradeManager;
+    @Inject
+    private HostConnectivityChecker hostConnectivityChecker;
 
     /**
      * C'tor for compensation purposes
@@ -83,7 +85,7 @@ public class UpgradeHostInternalCommand<T extends UpgradeHostParameters> extends
                     }
                 } else {
                     // letting the host a chance to recover from restarting the VDSM service after the upgrade
-                    if (!new HostConnectivityChecker().check(getVds())) {
+                    if (!hostConnectivityChecker.check(getVds())) {
                         log.warn(
                                 "Engine failed to communicate with VDSM agent on host '{}' with address '{}' ('{}') " +
                                         "after upgrade",

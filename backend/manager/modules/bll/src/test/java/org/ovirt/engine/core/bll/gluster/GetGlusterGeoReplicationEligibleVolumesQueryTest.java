@@ -12,9 +12,7 @@ import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Spy;
 import org.ovirt.engine.core.bll.AbstractQueryTest;
 import org.ovirt.engine.core.bll.utils.GlusterGeoRepUtil;
 import org.ovirt.engine.core.common.businessentities.BusinessEntity;
@@ -38,15 +36,14 @@ public class GetGlusterGeoReplicationEligibleVolumesQueryTest extends AbstractQu
     @Mock
     private GlusterVolumeDao volumeDao;
 
-    @Spy
-    @InjectMocks
+    @Mock
     private GlusterGeoRepUtil geoRepUtil;
 
     private GeoRepCreateEligibilityBaseTest baseTest = new GeoRepCreateEligibilityBaseTest();
 
     @BeforeEach
     public void setupMock() {
-        doReturn(geoRepUtil).when(getQuery()).getGeoRepUtilInstance();
+        // doReturn(geoRepUtil).when(getQuery()).getGeoRepUtilInstance();
         doReturn(Guid.newGuid()).when(geoRepUtil).getUpServerId(any());
         doReturn(true).when(geoRepUtil).checkEmptyGlusterVolume(any(), any());
         doReturn(getExpectedVolumes()).when(getQuery()).getAllGlusterVolumesWithMasterCompatibleVersion(baseTest.getMASTER_VOLUME_ID());

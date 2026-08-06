@@ -2,6 +2,7 @@ package org.ovirt.engine.core.bll.exportimport;
 
 import java.io.File;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.DisableInPrepareMode;
@@ -24,7 +25,6 @@ import org.ovirt.engine.core.common.vdscommands.VdsAndVmIDVDSParametersBase;
 import org.ovirt.engine.core.compat.CommandStatus;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.compat.backendcompat.CommandExecutionStatus;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.vdsbroker.ResourceManager;
 import org.ovirt.engine.core.vdsbroker.VdsManager;
 import org.ovirt.engine.core.vdsbroker.VmManager;
@@ -38,9 +38,11 @@ public class ConvertVmCommand<T extends ConvertVmParameters> extends VmCommand<T
     private static final Logger log = LoggerFactory.getLogger(ConvertVmCommand.class);
 
     @Inject
-    private ResourceManager resourceManager;
+    private Instance<ResourceManager> resourceManagerInstance;
     @Inject
     private CommandCoordinatorUtil commandCoordinatorUtil;
+    @Inject
+    private Instance<ConvertVmCallback> convertVmCallbackInstance;
 
     private ConvertVmCallback cachedCallback;
 
@@ -67,7 +69,7 @@ public class ConvertVmCommand<T extends ConvertVmParameters> extends VmCommand<T
     @Override
     public CommandCallback getCallback() {
         if (cachedCallback == null) {
-            cachedCallback = Injector.injectMembers(new ConvertVmCallback(getCommandId()));
+            cachedCallback = convertVmCallbackInstance.get().init(getCommandId());
             // if the callback is created after the command was executed, it means that the engine restarted
             // so there is no v2v-job in vdsManager and thus we add a new job with unknown status there
             if (getCommandExecutionStatus() == CommandExecutionStatus.EXECUTED) {
@@ -210,11 +212,11 @@ public class ConvertVmCommand<T extends ConvertVmParameters> extends VmCommand<T
     /////////////////////////
 
     protected VmManager getVmManager() {
-        return resourceManager.getVmManager(getVmId());
+        return resourceManagerInstance.get().getVmManager(getVmId());
     }
 
     protected VdsManager getVdsManager() {
-        return resourceManager.getVdsManager(getVdsId());
+        return resourceManagerInstance.get().getVdsManager(getVdsId());
     }
 
     private CommandExecutionStatus getCommandExecutionStatus() {

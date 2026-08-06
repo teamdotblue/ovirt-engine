@@ -20,7 +20,7 @@ public abstract class ProfileValidator<T extends ProfileBase> {
     @Inject
     private StorageQosDao storageQosDao;
 
-    private final Guid profileId;
+    private Guid profileId;
     private T profile;
     private T profileFromDb;
 
@@ -32,6 +32,20 @@ public abstract class ProfileValidator<T extends ProfileBase> {
     public ProfileValidator(Guid profileId) {
         this.profileId = profileId;
     }
+
+    public ProfileValidator() {
+        this.profileId = null;
+        this.profile = null;
+    }
+
+    protected void initWithProfile(T profile) {
+        this.profile = profile;
+    }
+
+    protected void initWithProfileId(Guid profileId) {
+        this.profileId = profileId;
+    }
+
 
     public ValidationResult profileIsSet() {
         return getProfile() == null

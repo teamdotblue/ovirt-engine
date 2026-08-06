@@ -8,12 +8,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.common.businessentities.gluster.GlusterSnapshotStatus;
 import org.ovirt.engine.core.common.businessentities.gluster.GlusterVolumeEntity;
 import org.ovirt.engine.core.common.businessentities.gluster.GlusterVolumeSnapshotEntity;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dao.gluster.GlusterVolumeDao;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.vdsbroker.irsbroker.StatusReturn;
 import org.ovirt.engine.core.vdsbroker.vdsbroker.Status;
 import org.slf4j.Logger;
@@ -21,6 +22,10 @@ import org.slf4j.LoggerFactory;
 
 @SuppressWarnings("unchecked")
 public final class GlusterVolumeSnapshotInfoReturn extends StatusReturn {
+
+    @Inject
+    private GlusterVolumeDao glusterVolumeDao;
+
     private static final String STATUS = "status";
     private static final String SNAPSHOT_LIST = "snapshotList";
     private static final String SNAPSHOTS = "snapshots";
@@ -57,7 +62,7 @@ public final class GlusterVolumeSnapshotInfoReturn extends StatusReturn {
             Map<String, Object> snapshotInfo = (Map<String, Object>) entry.getValue();
 
             Object[] volumeSnapshots = (Object[]) snapshotInfo.get(SNAPSHOTS);
-            GlusterVolumeEntity volumeEntity = getGlusterVolumeDao().getByName(clusterId, volumeName);
+            GlusterVolumeEntity volumeEntity = glusterVolumeDao.getByName(clusterId, volumeName);
 
             for (Object snapshot : volumeSnapshots) {
                 Map<String, Object> individualSnapshot = (Map<String, Object>) snapshot;
@@ -90,10 +95,6 @@ public final class GlusterVolumeSnapshotInfoReturn extends StatusReturn {
         }
 
         return newSnapshotsList;
-    }
-
-    private GlusterVolumeDao getGlusterVolumeDao() {
-        return Injector.get(GlusterVolumeDao.class);
     }
 
     public Status getStatus() {

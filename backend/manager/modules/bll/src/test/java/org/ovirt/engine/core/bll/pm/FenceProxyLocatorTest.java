@@ -33,7 +33,6 @@ import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.compat.Version;
 import org.ovirt.engine.core.dao.FenceAgentDao;
 import org.ovirt.engine.core.dao.VdsDao;
-import org.ovirt.engine.core.utils.InjectedMock;
 import org.ovirt.engine.core.utils.pm.VdsFenceOptions;
 
 /**
@@ -50,11 +49,9 @@ public class FenceProxyLocatorTest extends BaseCommandTest {
     private static Guid OTHER_DATACENTER_ID = new Guid("77777777-7777-7777-7777-777777777777");
 
     @Mock
-    @InjectedMock
     public VdsDao vdsDao;
 
     @Mock
-    @InjectedMock
     public FenceAgentDao fenceAgentDao;
 
     private VdsFenceOptions vdsFenceOptions;
@@ -332,8 +329,10 @@ public class FenceProxyLocatorTest extends BaseCommandTest {
     }
 
     private FenceProxyLocator setupLocator(FencingPolicy fencingPolicy) {
-        FenceProxyLocator fenceProxyLocator = spy(new FenceProxyLocator(fencedHost, fencingPolicy));
+        FenceProxyLocator fenceProxyLocator = spy(new FenceProxyLocator(fencedHost, fencingPolicy, vdsDao, fenceAgentDao));
         doReturn(vdsFenceOptions).when(fenceProxyLocator).createVdsFenceOptions(any());
+        doReturn(vdsDao).when(fenceProxyLocator).getVdsDao();
+        doReturn(fenceAgentDao).when(fenceProxyLocator).getFenceAgentDao();
         doReturn(0L).when(fenceProxyLocator).getDelayBetweenRetries();
         doReturn(1).when(fenceProxyLocator).getFindFenceProxyRetries();
         doReturn(Arrays.asList(FenceProxySourceType.CLUSTER, FenceProxySourceType.DC))

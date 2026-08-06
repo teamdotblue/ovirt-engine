@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.common.businessentities.gluster.GeoRepCrawlStatus;
 import org.ovirt.engine.core.common.businessentities.gluster.GeoRepSessionStatus;
 import org.ovirt.engine.core.common.businessentities.gluster.GlusterBrickEntity;
@@ -13,12 +15,14 @@ import org.ovirt.engine.core.common.businessentities.gluster.GlusterGeoRepSessio
 import org.ovirt.engine.core.common.businessentities.gluster.GlusterServer;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dao.gluster.GlusterDBUtils;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.vdsbroker.irsbroker.StatusReturn;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class GlusterVolumeGeoRepStatus extends StatusReturn {
+
+    @Inject
+    private GlusterDBUtils glusterDBUtils;
 
     protected static final Logger log = LoggerFactory.getLogger(GlusterVolumeGeoRepStatus.class);
 
@@ -46,10 +50,10 @@ public class GlusterVolumeGeoRepStatus extends StatusReturn {
             return null;
         }
         String masterBrickDir = innerMap.containsKey(BRICK_NAME) ? innerMap.get(BRICK_NAME).toString() : null;
-        GlusterServer glusterServer = getDbUtils().getServerByUuid(masterNodeGlusterId);
+        GlusterServer glusterServer = glusterDBUtils.getServerByUuid(masterNodeGlusterId);
         if (glusterServer != null) {
             GlusterBrickEntity brick =
-                    getDbUtils().getGlusterBrickByServerUuidAndBrickDir(glusterServer.getId(), masterBrickDir);
+                    glusterDBUtils.getGlusterBrickByServerUuidAndBrickDir(glusterServer.getId(), masterBrickDir);
             if (brick != null) {
                 details.setMasterBrickId(brick.getId());
             }
@@ -89,10 +93,6 @@ public class GlusterVolumeGeoRepStatus extends StatusReturn {
         geoRepSession.setSessionKey(sessionKey);
         geoRepSession.setMasterVolumeName(masterVolumeName);
         return geoRepSession;
-    }
-
-    private GlusterDBUtils getDbUtils() {
-        return Injector.get(GlusterDBUtils.class);
     }
 
     @SuppressWarnings("unchecked")

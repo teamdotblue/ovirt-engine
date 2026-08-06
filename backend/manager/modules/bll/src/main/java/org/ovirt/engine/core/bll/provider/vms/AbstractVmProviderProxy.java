@@ -36,6 +36,13 @@ public abstract class AbstractVmProviderProxy<P extends VmProviderProperties> im
         this.provider = provider;
     }
 
+    protected AbstractVmProviderProxy() {
+    }
+
+    public void setProvider(Provider<P> provider) {
+        this.provider = provider;
+    }
+
     @Override
     public void testConnection() {
         chooseDcForCheckingIfGetNamesFromExternalProviderSupported();

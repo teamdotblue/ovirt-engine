@@ -11,16 +11,20 @@ import org.ovirt.engine.core.common.businessentities.storage.BaseDisk;
 import org.ovirt.engine.core.common.businessentities.storage.DiskImage;
 import org.ovirt.engine.core.common.errors.EngineMessage;
 import org.ovirt.engine.core.dao.DiskImageDao;
-import org.ovirt.engine.core.di.Injector;
 
 public class MultipleVmsValidator {
+
+    private DiskImageDao diskImageDao;
+
     private Iterable<VM> vms;
 
-    public MultipleVmsValidator(VM vm) {
+    public MultipleVmsValidator(VM vm, DiskImageDao diskImageDao) {
+        this.diskImageDao = diskImageDao;
         this.vms = Collections.singletonList(vm);
     }
 
-    public MultipleVmsValidator(Iterable<VM> vms) {
+    public MultipleVmsValidator(Iterable<VM> vms, DiskImageDao diskImageDao) {
+        this.diskImageDao = diskImageDao;
         this.vms = vms;
     }
 
@@ -31,7 +35,7 @@ public class MultipleVmsValidator {
         List<String> vmPluggedDiskSnapshotsInfo = null;
         for (VM vm : vms) {
             List<DiskImage> pluggedDiskSnapshots =
-                    Injector.get(DiskImageDao.class).getAttachedDiskSnapshotsToVm(vm.getId(), Boolean.TRUE);
+                    diskImageDao.getAttachedDiskSnapshotsToVm(vm.getId(), Boolean.TRUE);
             if (!pluggedDiskSnapshots.isEmpty()) {
                 if (vmPluggedDiskSnapshotsInfo == null) {
                     vmPluggedDiskSnapshotsInfo = new LinkedList<>();

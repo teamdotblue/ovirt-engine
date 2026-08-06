@@ -3,6 +3,7 @@ package org.ovirt.engine.core.bll.profiles;
 import java.util.Collections;
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.context.CommandContext;
@@ -14,12 +15,13 @@ import org.ovirt.engine.core.common.businessentities.profiles.CpuProfile;
 import org.ovirt.engine.core.common.errors.EngineMessage;
 import org.ovirt.engine.core.dao.profiles.CpuProfileDao;
 import org.ovirt.engine.core.dao.profiles.ProfilesDao;
-import org.ovirt.engine.core.di.Injector;
 
 public class RemoveCpuProfileCommand extends RemoveProfileCommandBase<CpuProfileParameters, CpuProfile, CpuProfileValidator> {
 
     @Inject
     private CpuProfileDao cpuProfileDao;
+    @Inject
+    private Instance<CpuProfileValidator> cpuProfileValidatorInstance;
 
     public RemoveCpuProfileCommand(CpuProfileParameters parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -27,7 +29,7 @@ public class RemoveCpuProfileCommand extends RemoveProfileCommandBase<CpuProfile
 
     @Override
     protected CpuProfileValidator getProfileValidator() {
-        return Injector.injectMembers(new CpuProfileValidator(getProfile()));
+        return cpuProfileValidatorInstance.get().createWithProfile(getProfile());
     }
 
     @Override

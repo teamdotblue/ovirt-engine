@@ -9,8 +9,8 @@ import static org.ovirt.engine.core.bll.validator.ValidationResultMatchers.fails
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
@@ -20,22 +20,19 @@ import org.ovirt.engine.core.common.errors.EngineMessage;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dao.StorageServerConnectionExtensionDao;
 import org.ovirt.engine.core.dao.VdsDao;
-import org.ovirt.engine.core.utils.InjectedMock;
 import org.ovirt.engine.core.utils.InjectorExtension;
 
 @ExtendWith({MockitoExtension.class, InjectorExtension.class})
 @MockitoSettings(strictness = Strictness.LENIENT)
 public class StorageServerConnectionExtensionValidatorTest {
     @Mock
-    @InjectedMock
     public VdsDao vdsDao;
 
     @Mock
-    @InjectedMock
     public StorageServerConnectionExtensionDao storageServerConnectionExtensionDao;
 
-    @Spy
-    private StorageServerConnectionExtensionValidator validator;
+    @InjectMocks
+    private StorageServerConnectionExtensionValidator validator = new StorageServerConnectionExtensionValidator();
 
     private StorageServerConnectionExtension conn;
 

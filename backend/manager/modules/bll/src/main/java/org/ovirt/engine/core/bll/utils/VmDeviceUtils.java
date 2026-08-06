@@ -16,6 +16,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import javax.enterprise.context.Dependent;
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.apache.commons.lang.StringUtils;
@@ -100,6 +101,8 @@ public class VmDeviceUtils {
 
     @Inject
     private VmDevicesMonitoring vmDevicesMonitoring;
+    @Inject
+    private Instance<VmInterfaceManager> vmInterfaceManagerInstance;
 
     @Inject
     VmDeviceUtils(VmStaticDao vmStaticDao,
@@ -770,7 +773,7 @@ public class VmDeviceUtils {
 
     private boolean canPlugInterface(VmNic iface, VmBase vmBase) {
         ReadMacPool macPool = macPoolPerCluster.getMacPoolForCluster(vmBase.getClusterId());
-        VmInterfaceManager vmIfaceManager = new VmInterfaceManager();
+        VmInterfaceManager vmIfaceManager = vmInterfaceManagerInstance.get();
 
         if (vmIfaceManager.tooManyPluggedInterfaceWithSameMac(iface, macPool)) {
             vmIfaceManager.auditLogMacInUseUnplug(iface, vmBase.getName());

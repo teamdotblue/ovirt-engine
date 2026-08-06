@@ -8,12 +8,14 @@ import static org.mockito.Mockito.when;
 import java.util.Arrays;
 import java.util.Collections;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.ovirt.engine.core.bll.BaseCommandTest;
 import org.ovirt.engine.core.bll.utils.GlusterUtil;
+import org.ovirt.engine.core.bll.validator.HostValidator;
 import org.ovirt.engine.core.common.action.gluster.CreateBrickParameters;
 import org.ovirt.engine.core.common.businessentities.CacheModeType;
 import org.ovirt.engine.core.common.businessentities.Cluster;
@@ -35,6 +37,14 @@ public class CreateBrickCommandTest extends BaseCommandTest {
 
     @Mock
     private Cluster cluster;
+
+    @Mock
+    private HostValidator hostValidator;
+
+    @BeforeEach
+    public void setUp() {
+        doReturn(hostValidator).when(cmd).getHostValidator();
+    }
 
     /**
      * The command under test.

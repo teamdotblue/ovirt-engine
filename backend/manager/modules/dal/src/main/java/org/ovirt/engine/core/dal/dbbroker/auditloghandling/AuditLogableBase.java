@@ -118,8 +118,28 @@ public class AuditLogableBase implements AuditLogable {
         this.vmId = vmId;
     }
 
+    public AuditLogableBase createWithvdsId(final Guid vdsId) {
+        this.vdsId = vdsId;
+        return this;
+    }
+
+    public AuditLogableBase createWithvdsIdAndVmId(final Guid vdsId, final Guid vmId) {
+        this.vdsId = vdsId;
+        this.vmId = vmId;
+        return this;
+    }
+
+    public AuditLogableBase createWithAuditLog(final AuditLog auditLog) {
+        return init(auditLog);
+    }
+
     public AuditLogableBase(final AuditLog auditLog) {
-        this(auditLog.getVdsId(), auditLog.getVmId());
+        init(auditLog);
+    }
+
+    public AuditLogableBase init(final AuditLog auditLog) {
+        this.vdsId = auditLog.getVdsId();
+        this.vmId = auditLog.getVmId();
         this.storageDomainId = auditLog.getStorageDomainId();
         this.storagePoolId = auditLog.getStoragePoolId();
         this.correlationId = auditLog.getCorrelationId();
@@ -141,6 +161,7 @@ public class AuditLogableBase implements AuditLogable {
         this.callStack = auditLog.getCallStack();
         this.brickId = auditLog.getBrickId();
         this.brickPath = auditLog.getBrickPath();
+        return this;
     }
 
     @Override

@@ -21,6 +21,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.TimeZone;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.naming.AuthenticationException;
@@ -63,7 +64,6 @@ import org.ovirt.engine.core.dao.VdsDao;
 import org.ovirt.engine.core.dao.gluster.GlusterDBUtils;
 import org.ovirt.engine.core.dao.gluster.GlusterServerDao;
 import org.ovirt.engine.core.dao.network.InterfaceDao;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.utils.XmlUtils;
 import org.ovirt.engine.core.utils.lock.EngineLock;
 import org.ovirt.engine.core.utils.lock.LockManager;
@@ -92,33 +92,29 @@ public class GlusterUtil {
     private static final String NETWORK_REMOTE_DIO = "network.remote-dio";
 
     @Inject
-    private ResourceManager resourceManager;
+    private Instance<ResourceManager> resourceManagerInstance;
     @Inject
     private VdsDao vdsDao;
-
     @Inject
     private GlusterServerDao glusterServerDao;
-
     @Inject
     private AuditLogDao auditLogDao;
-
     @Inject
     private BackendInternal backend;
-
     @Inject
     private GlusterAuditLogUtil glusterAuditLogUtil;
-
     @Inject
     private GlusterDBUtils glusterDBUtils;
-
     @Inject
     private AlertDirector alertDirector;
-
     @Inject
     private InterfaceDao interfaceDao;
-
     @Inject
     private ClusterDao clusterDao;
+    @Inject
+    private LockManager lockManager;
+    @Inject
+    private EngineSSHClient sshClient;
 
     /**
      * Returns a server that is in {@link VDSStatus#Up} status.<br>
@@ -353,7 +349,7 @@ public class GlusterUtil {
     }
 
     protected SSHClient getSSHClient() {
-        return new EngineSSHClient();
+        return sshClient;
     }
 
     public EngineLock acquireGlusterLockWait(Guid clusterId) {
@@ -362,7 +358,7 @@ public class GlusterUtil {
                 LockMessagesMatchUtil.makeLockingPair(LockingGroup.GLUSTER,
                         EngineMessage.ACTION_TYPE_FAILED_GLUSTER_OPERATION_INPROGRESS));
         EngineLock lock = new EngineLock(exclusiveLocks, null);
-        Injector.get(LockManager.class).acquireLockWait(lock);
+        lockManager.acquireLockWait(lock);
         return lock;
     }
 
@@ -520,7 +516,7 @@ public class GlusterUtil {
      * @return GlusterStatus
      */
     public GlusterStatus isVDORunning(Guid vdsId) {
-        VDSReturnValue returnValue = resourceManager.runVdsCommand(VDSCommandType.ManageGlusterService,
+        VDSReturnValue returnValue = resourceManagerInstance.get().runVdsCommand(VDSCommandType.ManageGlusterService,
                 new GlusterServiceVDSParameters(vdsId, Arrays.asList("vdo"), "status"));
         if (!returnValue.getSucceeded()) {
             log.error("Failed to check VDO running status of host : '{}' ", vdsId);
@@ -547,7 +543,7 @@ public class GlusterUtil {
      * @return GlusterStatus
      */
     public GlusterStatus isGlusterRunning(Guid vdsId) {
-        VDSReturnValue result = resourceManager.runVdsCommand(VDSCommandType.ManageGlusterService,
+        VDSReturnValue result = resourceManagerInstance.get().runVdsCommand(VDSCommandType.ManageGlusterService,
                 new GlusterServiceVDSParameters(vdsId, Arrays.asList("glusterd"), "status"));
 
         if (result.getSucceeded()) {

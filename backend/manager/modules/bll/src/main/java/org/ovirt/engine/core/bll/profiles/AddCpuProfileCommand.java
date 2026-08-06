@@ -3,6 +3,7 @@ package org.ovirt.engine.core.bll.profiles;
 import java.util.Collections;
 import java.util.List;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.MultiLevelAdministrationHandler;
@@ -21,13 +22,14 @@ import org.ovirt.engine.core.common.errors.EngineMessage;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dao.profiles.CpuProfileDao;
 import org.ovirt.engine.core.dao.profiles.ProfilesDao;
-import org.ovirt.engine.core.di.Injector;
 
 @ValidateSupportsTransaction
 public class AddCpuProfileCommand extends AddProfileCommandBase<CpuProfileParameters, CpuProfile, CpuProfileValidator> {
 
     @Inject
     private CpuProfileDao cpuProfileDao;
+    @Inject
+    private Instance<CpuProfileValidator> cpuProfileValidatorInstance;
 
     public AddCpuProfileCommand(CpuProfileParameters parameters, CommandContext cmdContext) {
         super(parameters, cmdContext);
@@ -35,7 +37,7 @@ public class AddCpuProfileCommand extends AddProfileCommandBase<CpuProfileParame
 
     @Override
     protected CpuProfileValidator getProfileValidator() {
-        return Injector.injectMembers(new CpuProfileValidator(getProfile()));
+        return cpuProfileValidatorInstance.get().createWithProfile(getProfile());
     }
 
     @Override

@@ -43,7 +43,6 @@ public class GetNonEligibilityReasonsOfVolumeForGeoRepSessionQueryTest extends A
 
     @BeforeEach
     public void setupMock() {
-        doReturn(geoRepUtil).when(getQuery()).getGeoRepUtilInstance();
         baseTest.setupMock(geoRepDao, clusterDao);
     }
 

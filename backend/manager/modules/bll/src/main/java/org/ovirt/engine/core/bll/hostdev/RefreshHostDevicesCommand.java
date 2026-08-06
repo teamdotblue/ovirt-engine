@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Stack;
 import java.util.stream.Collectors;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.HostLocking;
@@ -39,23 +40,17 @@ import org.ovirt.engine.core.vdsbroker.vdsbroker.VdsProperties;
 public class RefreshHostDevicesCommand<T extends VdsActionParameters> extends RefreshHostInfoCommandBase<T> {
 
     @Inject
-    private ResourceManager resourceManager;
-
+    private Instance<ResourceManager> resourceManagerInstance;
     @Inject
     private HostDeviceDao hostDeviceDao;
-
     @Inject
     private HostLocking hostLocking;
-
     @Inject
     private HostNicVfsConfigDao hostNicVfsConfigDao;
-
     @Inject
     private NetworkDeviceHelper networkDeviceHelper;
-
     @Inject
     private VmDeviceDao vmDeviceDao;
-
     @Inject
     private InterfaceDao interfaceDao;
 
@@ -68,7 +63,7 @@ public class RefreshHostDevicesCommand<T extends VdsActionParameters> extends Re
 
     @Override
     protected void executeCommand() {
-        VDSReturnValue vdsReturnValue = resourceManager.runVdsCommand(VDSCommandType.HostDevListByCaps, new VdsIdAndVdsVDSCommandParametersBase(getVds()));
+        VDSReturnValue vdsReturnValue = resourceManagerInstance.get().runVdsCommand(VDSCommandType.HostDevListByCaps, new VdsIdAndVdsVDSCommandParametersBase(getVds()));
 
         if (!vdsReturnValue.getSucceeded()) {
             return;

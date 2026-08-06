@@ -30,6 +30,14 @@ public class ConvertVmCallback implements CommandCallback {
         this.cmdId = cmdId;
     }
 
+    protected ConvertVmCallback() {
+    }
+
+    public ConvertVmCallback init(Guid cmdId) {
+        this.cmdId = cmdId;
+        return this;
+    }
+
     @Override
     public void doPolling(Guid cmdId, List<Guid> childCmdIds) {
         V2VJobInfo jobInfo = getV2VJobInfo();

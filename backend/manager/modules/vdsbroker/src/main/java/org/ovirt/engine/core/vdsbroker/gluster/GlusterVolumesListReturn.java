@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import javax.inject.Inject;
+
 import org.ovirt.engine.core.common.businessentities.VdsStatic;
 import org.ovirt.engine.core.common.businessentities.gluster.GlusterBrickEntity;
 import org.ovirt.engine.core.common.businessentities.gluster.GlusterServer;
@@ -21,7 +23,6 @@ import org.ovirt.engine.core.dao.VdsStaticDao;
 import org.ovirt.engine.core.dao.gluster.GlusterDBUtils;
 import org.ovirt.engine.core.dao.network.InterfaceDao;
 import org.ovirt.engine.core.dao.network.NetworkDao;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.vdsbroker.irsbroker.StatusReturn;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +32,16 @@ import org.slf4j.LoggerFactory;
  * correct host can be identified when populating the bricks of a volume
  */
 public final class GlusterVolumesListReturn extends StatusReturn {
+
+    @Inject
+    private GlusterDBUtils dbUtils;
+    @Inject
+    private VdsStaticDao vdsStaticDao;
+    @Inject
+    private NetworkDao networkDao;
+    @Inject
+    private InterfaceDao interfaceDao;
+
     private static final String VOLUMES = "volumes";
     private static final String VOLUME_NAME = "volumeName";
     private static final String UUID = "uuid";
@@ -50,7 +61,6 @@ public final class GlusterVolumesListReturn extends StatusReturn {
     private static final String HOST_UUID = "hostUuid";
 
     private static final Logger log = LoggerFactory.getLogger(GlusterVolumesListReturn.class);
-    private static final GlusterDBUtils dbUtils = Injector.get(GlusterDBUtils.class);
 
     private Guid clusterId;
     private final Map<Guid, GlusterVolumeEntity> volumes = new HashMap<>();
@@ -210,7 +220,7 @@ public final class GlusterVolumesListReturn extends StatusReturn {
             log.warn("Could not add brick '{}' to volume '{}' - server uuid '{}' not found in cluster '{}'", brickName, volumeId, hostUuid, clusterId);
             return null;
         }
-        VdsStatic server = Injector.get(VdsStaticDao.class).get(glusterServer.getId());
+        VdsStatic server = vdsStaticDao.get(glusterServer.getId());
         String networkAddress = null;
         Guid networkId = null;
         if (!server.getHostName().equals(hostAddress)) {
@@ -252,7 +262,7 @@ public final class GlusterVolumesListReturn extends StatusReturn {
     }
 
     private Network getGlusterNetworkId(VdsStatic server, String networkAddress) {
-        List<Network> allNetworksInCluster = Injector.get(NetworkDao.class).getAllForCluster(server.getClusterId());
+        List<Network> allNetworksInCluster = networkDao.getAllForCluster(server.getClusterId());
 
         for (Network network : allNetworksInCluster) {
             if (network.getCluster().isGluster()
@@ -264,7 +274,7 @@ public final class GlusterVolumesListReturn extends StatusReturn {
     }
 
     private Boolean isSameNetworkAddress(Guid hostId, String glusterNetworkName, String networkAddress) {
-        final List<VdsNetworkInterface> nics = Injector.get(InterfaceDao.class).getAllInterfacesForVds(hostId);
+        final List<VdsNetworkInterface> nics = interfaceDao.getAllInterfacesForVds(hostId);
         String brickAddress = null;
         try {
             brickAddress = InetAddress.getByName(networkAddress).getHostAddress();

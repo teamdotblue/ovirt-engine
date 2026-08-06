@@ -17,9 +17,11 @@ import org.ovirt.engine.core.bll.LockMessagesMatchUtil;
 import org.ovirt.engine.core.bll.NonTransactiveCommandAttribute;
 import org.ovirt.engine.core.bll.VdsCommand;
 import org.ovirt.engine.core.bll.context.CommandContext;
+import org.ovirt.engine.core.bll.host.HostConnectivityChecker;
 import org.ovirt.engine.core.bll.hostedengine.HostedEngineHelper;
 import org.ovirt.engine.core.bll.job.ExecutionHandler;
 import org.ovirt.engine.core.bll.network.NetworkConfigurator;
+import org.ovirt.engine.core.bll.network.cluster.ManagementNetworkUtil;
 import org.ovirt.engine.core.bll.network.cluster.NetworkHelper;
 import org.ovirt.engine.core.bll.utils.EngineSSHClient;
 import org.ovirt.engine.core.bll.utils.GlusterUtil;
@@ -86,15 +88,18 @@ public class InstallVdsInternalCommand<T extends InstallVdsParameters> extends V
     private InterfaceDao interfaceDao;
     @Inject
     private GlusterUtil glusterUtil;
-
     @Inject
     private AnsibleExecutor ansibleExecutor;
-
     @Inject
     private AnsibleRunnerClient runnerClient;
-
     @Inject
     private NetworkHelper networkHelper;
+    @Inject
+    private EngineSSHClient sshClient;
+    @Inject
+    private ManagementNetworkUtil managementNetworkUtil;
+    @Inject
+    private HostConnectivityChecker hostConnectivityChecker;
 
     private EngineLocalConfig config = EngineLocalConfig.getInstance();
 
@@ -520,7 +525,9 @@ public class InstallVdsInternalCommand<T extends InstallVdsParameters> extends V
     }
 
     private void configureManagementNetwork() {
-        final NetworkConfigurator networkConfigurator = new NetworkConfigurator(getVds(), getContext());
+        final NetworkConfigurator networkConfigurator = new NetworkConfigurator(
+                getVds(), getContext(), vdsBroker, backend, auditLogDirector,
+                managementNetworkUtil, hostConnectivityChecker);
         if (!networkConfigurator.awaitVdsmResponse()) {
             throw new VdsInstallException(
                 VDSStatus.NonResponsive,
@@ -584,7 +591,6 @@ public class InstallVdsInternalCommand<T extends InstallVdsParameters> extends V
                         + " && cat >> .ssh/authorized_keys || exit 1 ; "
                         + "if type restorecon >/dev/null 2>&1 ; then restorecon -F .ssh .ssh/authorized_keys ; fi'";
         try (
-                final EngineSSHClient sshClient = new EngineSSHClient();
                 final ByteArrayInputStream cmdIn = new ByteArrayInputStream(
                         EngineEncryptionUtils.getEngineSSHPublicKey().getBytes());
                 final ByteArrayOutputStream cmdOut = new ByteArrayOutputStream();

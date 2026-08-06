@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import javax.inject.Inject;
+
 import org.apache.commons.lang.StringUtils;
 import org.ovirt.engine.core.common.businessentities.gluster.BrickDetails;
 import org.ovirt.engine.core.common.businessentities.gluster.BrickProperties;
@@ -25,7 +27,6 @@ import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.dao.gluster.GlusterBrickDao;
 import org.ovirt.engine.core.dao.gluster.GlusterDBUtils;
 import org.ovirt.engine.core.dao.gluster.GlusterVolumeDao;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.vdsbroker.irsbroker.StatusReturn;
 import org.ovirt.engine.core.vdsbroker.vdsbroker.Status;
 import org.slf4j.Logger;
@@ -33,6 +34,14 @@ import org.slf4j.LoggerFactory;
 
 @SuppressWarnings("unchecked")
 public class GlusterVolumeStatusReturn extends StatusReturn {
+
+    @Inject
+    private GlusterVolumeDao glusterVolumeDao;
+    @Inject
+    private GlusterDBUtils glusterDBUtils;
+    @Inject
+    private GlusterBrickDao glusterBrickDao;
+
     private static final String STATUS = "status";
     private static final String VOLUME_STATUS = "volumeStatus";
     private static final String VOLUME_STATUS_INFO = "volumeStatsInfo";
@@ -94,7 +103,7 @@ public class GlusterVolumeStatusReturn extends StatusReturn {
 
         if (statusInfo != null) {
             String volumeName = (String) statusInfo.get(VOLUME_NAME);
-            GlusterVolumeEntity volume = getGlusterVolumeDao().getByName(clusterId, volumeName);
+            GlusterVolumeEntity volume = glusterVolumeDao.getByName(clusterId, volumeName);
 
             volumeAdvancedDetails.setVolumeId(volume.getId());
             List<BrickDetails> brickDetails = prepareBrickDetails(volume, (Object[]) statusInfo.get(BRICKS));
@@ -261,7 +270,7 @@ public class GlusterVolumeStatusReturn extends StatusReturn {
         String glusterHostUuid = (String) brick.get(HOST_UUID);
         if (!StringUtils.isEmpty(glusterHostUuid)) {
             GlusterServer glusterServer =
-                    Injector.get(GlusterDBUtils.class).getServerByUuid(Guid.createGuidFromString(glusterHostUuid));
+                    glusterDBUtils.getServerByUuid(Guid.createGuidFromString(glusterHostUuid));
             if (glusterServer == null) {
                 log.warn("Could not update brick '{}' to volume '{}' - server uuid '{}' not found",
                         brickName, volume.getName(), glusterHostUuid);
@@ -273,7 +282,7 @@ public class GlusterVolumeStatusReturn extends StatusReturn {
                 return null;
             }
             String brickDir = brickParts[1];
-            return Injector.get(GlusterBrickDao.class).getBrickByServerIdAndDirectory(glusterServer.getId(), brickDir);
+            return glusterBrickDao.getBrickByServerIdAndDirectory(glusterServer.getId(), brickDir);
         }
         return GlusterCoreUtil.getBrickByQualifiedName(volume.getBricks(), brickName);
     }
@@ -326,10 +335,6 @@ public class GlusterVolumeStatusReturn extends StatusReturn {
             clientInfoList.add(clientInfo);
         }
         return clientInfoList;
-    }
-
-    protected GlusterVolumeDao getGlusterVolumeDao() {
-        return Injector.get(GlusterVolumeDao.class);
     }
 
     public Status getStatus() {

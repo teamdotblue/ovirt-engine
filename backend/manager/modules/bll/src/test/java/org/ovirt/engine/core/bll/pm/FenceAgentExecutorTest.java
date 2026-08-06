@@ -4,9 +4,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import javax.enterprise.inject.Instance;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,7 +47,7 @@ public class FenceAgentExecutorTest {
     private FenceProxyLocator proxyLocator;
 
     @Mock
-    private ResourceManager resourceManager;
+    private Instance<ResourceManager> resourceManagerInstance;
 
     @Mock
     private FenceAgent realAgent;
@@ -182,6 +185,9 @@ public class FenceAgentExecutorTest {
     private void mockFenceVdsResult(FenceOperationResult result1, FenceOperationResult result2) {
         VDSReturnValue retVal1 = createVdsReturnValue(result1);
         VDSReturnValue retVal2 = result2 == null ? null : createVdsReturnValue(result2);
+        ResourceManager resourceManager = mock(ResourceManager.class);
+        when(resourceManagerInstance.get()).thenReturn(resourceManager);
+
         when(resourceManager.runVdsCommand(eq(VDSCommandType.FenceVds), any())).thenReturn(retVal1).thenReturn(retVal2);
     }
 

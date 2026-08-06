@@ -20,7 +20,6 @@ import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.compat.Version;
 import org.ovirt.engine.core.dao.FenceAgentDao;
 import org.ovirt.engine.core.dao.VdsDao;
-import org.ovirt.engine.core.di.Injector;
 import org.ovirt.engine.core.utils.ThreadUtils;
 import org.ovirt.engine.core.utils.pm.VdsFenceOptions;
 import org.slf4j.Logger;
@@ -30,16 +29,22 @@ import org.slf4j.LoggerFactory;
  * It manages selection of fence proxy for specified host and fencing policy
  */
 public class FenceProxyLocator {
+
+    private VdsDao vdsDao;
+    private FenceAgentDao fenceAgentDao;
+
     private static final Logger log = LoggerFactory.getLogger(FenceProxyLocator.class);
 
-    private final VDS fencedHost;
+    private VDS fencedHost;
     private FencingPolicy fencingPolicy;
 
-    public FenceProxyLocator(VDS fencedHost) {
-        this(fencedHost, null);
+    public FenceProxyLocator(VDS fencedHost, VdsDao vdsDao, FenceAgentDao fenceAgentDao) {
+        this(fencedHost, null, vdsDao, fenceAgentDao);
     }
 
-    public FenceProxyLocator(VDS fencedHost, FencingPolicy fencingPolicy) {
+    public FenceProxyLocator(VDS fencedHost, FencingPolicy fencingPolicy, VdsDao vdsDao, FenceAgentDao fenceAgentDao) {
+        this.vdsDao = vdsDao;
+        this.fenceAgentDao = fenceAgentDao;
         this.fencedHost = fencedHost;
         this.fencingPolicy = fencingPolicy;
     }
@@ -93,7 +98,7 @@ public class FenceProxyLocator {
     }
 
     protected VDS selectBestProxy(FenceProxySourceType fenceProxySource, Guid excludedHostId) {
-        return Injector.get(VdsDao.class).getAll().stream()
+        return getVdsDao().getAll().stream()
                 .peek(vds -> log.debug("Evaluating host '{}'", vds.getHostName()))
                 .filter(vds -> !Objects.equals(vds.getId(), fencedHost.getId()))
                 .filter(vds -> !isHostExcluded(vds, excludedHostId))
@@ -141,7 +146,7 @@ public class FenceProxyLocator {
     protected boolean areAgentsVersionCompatible(VDS proxyCandidate) {
         VdsFenceOptions options = createVdsFenceOptions(proxyCandidate.getClusterCompatibilityVersion().getValue());
         boolean compatible = true;
-        for (FenceAgent agent : Injector.get(FenceAgentDao.class).getFenceAgentsForHost(fencedHost.getId())) {
+        for (FenceAgent agent : getFenceAgentDao().getFenceAgentsForHost(fencedHost.getId())) {
             if (!options.isAgentSupported(agent.getType())) {
                 compatible = false;
                 break;
@@ -204,5 +209,13 @@ public class FenceProxyLocator {
 
     protected VdsFenceOptions createVdsFenceOptions(String version) {
         return new VdsFenceOptions(version);
+    }
+
+    public VdsDao getVdsDao() {
+        return vdsDao;
+    }
+
+    public FenceAgentDao getFenceAgentDao() {
+        return fenceAgentDao;
     }
 }
