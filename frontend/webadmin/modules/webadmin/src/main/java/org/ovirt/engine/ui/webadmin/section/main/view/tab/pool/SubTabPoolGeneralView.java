@@ -185,6 +185,7 @@ public class SubTabPoolGeneralView extends AbstractSubTabFormView<VmPool, PoolLi
             return;
         }
         biosTypeRenderer.setArchitectureType(getDetailModel().getArchitecture());
+        biosTypeRenderer.setCompatibilityVersion(getDetailModel().getvm().getCompatibilityVersion());
         widgetWithIcon.setIconVisible(
                 getDetailModel().getvm().getBiosType() != getDetailModel().getvm().getClusterBiosType());
         widgetWithIcon.setIconTooltipText(messages.biosTypeWarning(

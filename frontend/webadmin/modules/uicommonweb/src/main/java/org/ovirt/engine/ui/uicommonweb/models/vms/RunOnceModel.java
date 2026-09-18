@@ -505,6 +505,11 @@ public abstract class RunOnceModel extends Model {
         return clusterEmulatedMachine;
     }
 
+    /** The VM this Run-Once dialog was opened for (already available client-side). */
+    public VM getVm() {
+        return vm;
+    }
+
     public void setClusterEmulatedMachine(EntityModel<String> clusterEmulatedMachine) {
         this.clusterEmulatedMachine = clusterEmulatedMachine;
     }

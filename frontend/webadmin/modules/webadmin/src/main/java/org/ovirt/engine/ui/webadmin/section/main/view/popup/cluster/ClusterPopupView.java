@@ -1,5 +1,7 @@
 package org.ovirt.engine.ui.webadmin.section.main.view.popup.cluster;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import org.gwtbootstrap3.client.ui.Row;
@@ -852,6 +854,16 @@ public class ClusterPopupView extends AbstractTabbedModelBoundPopupView<ClusterM
 
     @Override
     public void edit(final ClusterModel object) {
+        if (object != null && object.getVersion() != null) {
+            biosTypeRenderer.setCompatibilityVersion(object.getVersion().getSelectedItem());
+            object.getVersion().getSelectedItemChangedEvent().addListener(
+                    (ev, sender, args) -> {
+                        biosTypeRenderer.setCompatibilityVersion(object.getVersion().getSelectedItem());
+                        // re-render the chipset list so the "(deprecated)" marker follows the level
+                        Collection<BiosType> items = object.getBiosType().getItems();
+                        object.getBiosType().setItems(new ArrayList<>(items));
+                    });
+        }
         driver.edit(object);
         updateMacPool(object.getMacPoolModel());
         customPropertiesSheetEditor.edit(object.getCustomPropertySheet());

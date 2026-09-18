@@ -228,6 +228,7 @@ public class VmGeneralModelForm extends AbstractModelBoundFormWidget<VmGeneralMo
         }
 
         biosTypeRenderer.setArchitectureType(getModel().getArchitecture());
+        biosTypeRenderer.setCompatibilityVersion(getModel().getEntity().getCompatibilityVersion());
         widgetWithIcon.setIconVisible(
                 getModel().getEntity().getBiosType() != getModel().getEntity().getClusterBiosType());
         widgetWithIcon.setIconTooltipText(messages.biosTypeWarning(

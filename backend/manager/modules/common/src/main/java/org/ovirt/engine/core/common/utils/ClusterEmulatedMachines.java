@@ -70,6 +70,20 @@ public class ClusterEmulatedMachines {
     }
 
     /**
+     * Whether the UI should mark i440fx as deprecated for the given effective compatibility
+     * version. Single rule for every surface (chipset dropdown, emulated machine dropdown,
+     * their info tooltips, list views): oVirt deprecates i440fx at level 4.8, where the
+     * cluster default becomes Q35-only and i440fx VMs must pin their machine type. Below
+     * that level i440fx is the supported default chipset, so nothing is marked.
+     *
+     * @param effectiveCompatibilityVersion the VM's (custom-else-cluster) or the cluster's
+     *                                      compatibility version; null marks nothing
+     */
+    public static boolean showI440fxDeprecatedMarker(Version effectiveCompatibilityVersion) {
+        return isI440fxDeprecated(effectiveCompatibilityVersion);
+    }
+
+    /**
      * Propagates a pinned emulated machine onto a pending i440fx configuration that
      * carries none — e.g. a NEXT_RUN snapshot created before the pin was written (the
      * engine-setup migration pins vm_static but not the snapshots table; a cluster raise

@@ -4,8 +4,11 @@ import org.gwtbootstrap3.client.ui.Button;
 import org.gwtbootstrap3.client.ui.Column;
 import org.gwtbootstrap3.client.ui.Container;
 import org.ovirt.engine.core.common.businessentities.BootSequence;
+import org.ovirt.engine.core.common.businessentities.ChipsetType;
 import org.ovirt.engine.core.common.businessentities.VDS;
 import org.ovirt.engine.core.common.businessentities.storage.RepoImage;
+import org.ovirt.engine.core.common.utils.ClusterEmulatedMachines;
+import org.ovirt.engine.core.compat.Version;
 import org.ovirt.engine.ui.common.CommonApplicationConstants;
 import org.ovirt.engine.ui.common.CommonApplicationResources;
 import org.ovirt.engine.ui.common.CommonApplicationTemplates;
@@ -16,6 +19,7 @@ import org.ovirt.engine.ui.common.idhandler.WithElementId;
 import org.ovirt.engine.ui.common.view.popup.AbstractModelBoundPopupView;
 import org.ovirt.engine.ui.common.widget.Align;
 import org.ovirt.engine.ui.common.widget.ComboBox;
+import org.ovirt.engine.ui.common.widget.EntityModelWidgetWithInfo;
 import org.ovirt.engine.ui.common.widget.VisibilityRenderer;
 import org.ovirt.engine.ui.common.widget.dialog.InfoIcon;
 import org.ovirt.engine.ui.common.widget.dialog.SimpleDialogPanel;
@@ -28,6 +32,7 @@ import org.ovirt.engine.ui.common.widget.editor.generic.EntityModelRadioButtonEd
 import org.ovirt.engine.ui.common.widget.editor.generic.StringEntityModelPasswordBoxEditor;
 import org.ovirt.engine.ui.common.widget.editor.generic.StringEntityModelTextBoxEditor;
 import org.ovirt.engine.ui.common.widget.form.key_value.KeyValueWidget;
+import org.ovirt.engine.ui.common.widget.label.EnableableFormLabel;
 import org.ovirt.engine.ui.common.widget.renderer.NameRenderer;
 import org.ovirt.engine.ui.common.widget.renderer.NullSafeRenderer;
 import org.ovirt.engine.ui.common.widget.uicommon.popup.vm.RunOnceVmInitWidget;
@@ -308,10 +313,12 @@ public class VmRunOncePopupView extends AbstractModelBoundPopupView<RunOnceModel
     @WithElementId("defaultHost")
     public ListModelListBoxEditor<VDS> defaultHostEditor;
 
-    @UiField(provided = true)
     @Path(value = "emulatedMachine.selectedItem")
     @WithElementId("emulatedMachine")
     public ListModelTypeAheadChangeableListBoxEditor emulatedMachine;
+
+    @UiField(provided = true)
+    public EntityModelWidgetWithInfo emulatedMachineWithInfo;
 
     @UiField(provided = true)
     @Path(value = "customCpu.selectedItem")
@@ -392,10 +399,23 @@ public class VmRunOncePopupView extends AbstractModelBoundPopupView<RunOnceModel
                         if (data == null || data.trim().isEmpty()) {
                             data = getDefaultEmulatedMachineLabel();
                         }
+                        if (ChipsetType.fromMachineType(data) == ChipsetType.I440FX
+                                && ClusterEmulatedMachines.showI440fxDeprecatedMarker(getEffectiveCompatibilityVersion())) {
+                            data = data + " " + constants.emulatedMachineDeprecatedSuffix(); //$NON-NLS-1$
+                        }
                         return typeAheadNameTemplateNullSafe(data);
                     }
                 },
                 false);
+        emulatedMachine.hideLabel();
+
+        emulatedMachineWithInfo = new EntityModelWidgetWithInfo(
+                new EnableableFormLabel(constants.emulatedMachineLabel()), emulatedMachine);
+        // Only shown where i440fx is actually deprecated (cluster level >= 4.8);
+        // in older clusters i440fx is still the supported default chipset.
+        emulatedMachineWithInfo.setExplanation(templates.italicText(constants.emulatedMachineDeprecatedInfo()));
+        emulatedMachineWithInfo.setExplanationVisible(
+                ClusterEmulatedMachines.showI440fxDeprecatedMarker(getEffectiveCompatibilityVersion()));
 
         customCpu = new ListModelTypeAheadChangeableListBoxEditor(
                 new ListModelTypeAheadChangeableListBoxEditor.NullSafeSuggestBoxRenderer() {
@@ -455,6 +475,17 @@ public class VmRunOncePopupView extends AbstractModelBoundPopupView<RunOnceModel
     public RunOnceModel flush() {
         vmInitWidget.flush();
         return driver.flush();
+    }
+
+    /**
+     * Effective compatibility version of the VM this dialog was opened for: its own custom
+     * compatibility version, else the cluster's — the same rule as
+     * {@code VM.getCompatibilityVersion()} in the model layer.
+     */
+    private Version getEffectiveCompatibilityVersion() {
+        return runOnceModel != null && runOnceModel.getVm() != null
+                ? runOnceModel.getVm().getCompatibilityVersion()
+                : null;
     }
 
     @Override

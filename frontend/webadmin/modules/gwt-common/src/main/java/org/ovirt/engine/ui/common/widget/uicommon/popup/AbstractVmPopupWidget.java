@@ -16,6 +16,7 @@ import org.gwtbootstrap3.client.ui.Alert;
 import org.gwtbootstrap3.client.ui.Row;
 import org.ovirt.engine.core.common.businessentities.BiosType;
 import org.ovirt.engine.core.common.businessentities.BootSequence;
+import org.ovirt.engine.core.common.businessentities.ChipsetType;
 import org.ovirt.engine.core.common.businessentities.Cluster;
 import org.ovirt.engine.core.common.businessentities.ConsoleDisconnectAction;
 import org.ovirt.engine.core.common.businessentities.DisplayType;
@@ -43,6 +44,7 @@ import org.ovirt.engine.core.common.businessentities.storage.RepoImage;
 import org.ovirt.engine.core.common.config.ConfigValues;
 import org.ovirt.engine.core.common.migration.MigrationPolicy;
 import org.ovirt.engine.core.common.migration.ParallelMigrationsType;
+import org.ovirt.engine.core.common.utils.ClusterEmulatedMachines;
 import org.ovirt.engine.core.compat.StringHelper;
 import org.ovirt.engine.core.compat.Version;
 import org.ovirt.engine.ui.common.CommonApplicationConstants;
@@ -310,15 +312,19 @@ public abstract class AbstractVmPopupWidget extends AbstractModeSwitchingPopupWi
 
     private BiosTypeRenderer biosTypeRenderer;
 
-    @UiField(provided = true)
     @Path(value = "biosType.selectedItem")
     @WithElementId("biosType")
-    public ListModelListBoxEditor<BiosType> biosTypeEditor;
+    public ListModelListBoxOnlyEditor<BiosType> biosTypeEditor;
 
     @UiField(provided = true)
+    public EntityModelWidgetWithInfo biosTypeWithInfo;
+
     @Path(value = "emulatedMachine.selectedItem")
     @WithElementId("emulatedMachine")
     public ListModelTypeAheadChangeableListBoxEditor emulatedMachine;
+
+    @UiField(provided = true)
+    public EntityModelWidgetWithInfo emulatedMachineWithInfo;
 
     @UiField(provided = true)
     @Path(value = "customCpu.selectedItem")
@@ -1507,12 +1513,25 @@ public abstract class AbstractVmPopupWidget extends AbstractModeSwitchingPopupWi
                         if (data == null || data.trim().isEmpty()) {
                             data = ""; //$NON-NLS
                         }
+                        if (ChipsetType.fromMachineType(data) == ChipsetType.I440FX
+                                && ClusterEmulatedMachines.showI440fxDeprecatedMarker(getEmulatedMachineCompatibilityVersion())) {
+                            data = data + " " + constants.emulatedMachineDeprecatedSuffix(); //$NON-NLS-1$
+                        }
                         return typeAheadNameTemplateNullSafe(data);
                     }
                 },
                 false,
                 new ModeSwitchingVisibilityRenderer(),
                 ""); //$NON-NLS
+        emulatedMachine.hideLabel();
+
+        emulatedMachineWithInfo = new EntityModelWidgetWithInfo(
+                new EnableableFormLabel(constants.emulatedMachineLabel()), emulatedMachine);
+        // Tooltip mirrors the renderer above: only mark i440fx deprecated at the level
+        // where it was actually deprecated, not in older clusters where it is the default chipset.
+        emulatedMachineWithInfo.setExplanation(templates.italicText(constants.emulatedMachineDeprecatedInfo()));
+        emulatedMachineWithInfo.setExplanationVisible(
+                ClusterEmulatedMachines.showI440fxDeprecatedMarker(getEmulatedMachineCompatibilityVersion()));
 
         customCpu = new ListModelTypeAheadChangeableListBoxEditor(
                 new ListModelTypeAheadChangeableListBoxEditor.NullSafeSuggestBoxRenderer() {
@@ -1677,7 +1696,20 @@ public abstract class AbstractVmPopupWidget extends AbstractModeSwitchingPopupWi
         providersEditor.setLabel(constants.providerLabel());
 
         biosTypeRenderer = new BiosTypeRenderer();
-        biosTypeEditor = new ListModelListBoxEditor<>(biosTypeRenderer, new ModeSwitchingVisibilityRenderer());
+        biosTypeEditor = new ListModelListBoxOnlyEditor<>(biosTypeRenderer, new ModeSwitchingVisibilityRenderer());
+        biosTypeWithInfo = new EntityModelWidgetWithInfo(
+                new EnableableFormLabel(constants.customBiosTypeLabel()), biosTypeEditor);
+        biosTypeWithInfo.setExplanation(templates.italicText(constants.emulatedMachineDeprecatedInfo()));
+        biosTypeWithInfo.setExplanationVisible(
+                ClusterEmulatedMachines.showI440fxDeprecatedMarker(getEmulatedMachineCompatibilityVersion()));
+    }
+
+    /**
+     * Cluster level the emulated machine list is evaluated against: the model's
+     * compatibility version (custom VM override, else the cluster's), null before edit().
+     */
+    private Version getEmulatedMachineCompatibilityVersion() {
+        return unitVmModel != null ? unitVmModel.getCompatibilityVersion() : null;
     }
 
     private String typeAheadNameDescriptionTemplateNullSafe(String name, String description) {
@@ -1699,6 +1731,7 @@ public abstract class AbstractVmPopupWidget extends AbstractModeSwitchingPopupWi
     public void edit(UnitVmModel model) {
         super.edit(model);
         unitVmModel = model;
+        biosTypeRenderer.setCompatibilityVersion(getEmulatedMachineCompatibilityVersion());
 
         super.initializeModeSwitching(generalTab);
 
@@ -2366,8 +2399,8 @@ public abstract class AbstractVmPopupWidget extends AbstractModeSwitchingPopupWi
                 logicalNetworksEditorRow,
 
                 // system tab
-                biosTypeEditor,
-                emulatedMachine,
+                biosTypeWithInfo,
+                emulatedMachineWithInfo,
                 generalLabel,
                 customCpu,
                 customCompatibilityVersionEditor,
@@ -2400,7 +2433,8 @@ public abstract class AbstractVmPopupWidget extends AbstractModeSwitchingPopupWi
         templateWithVersionEditor.setEnabled(false);
         vmTypeEditor.setEnabled(false);
         detachableInstanceTypesEditor.setEnabled(false);
-        emulatedMachine.setEnabled(false);
+        emulatedMachineWithInfo.setEnabled(false);
+        biosTypeWithInfo.setEnabled(false);
         customCpu.setEnabled(false);
     }
 

@@ -128,6 +128,9 @@ public class ClusterGeneralModelForm extends AbstractModelBoundFormWidget<Cluste
     @Override
     protected void doEdit(ClusterGeneralModel model) {
         biosTypeRenderer.setArchitectureType(getModel().getArchitecture());
+        biosTypeRenderer.setCompatibilityVersion(getModel().getEntity() != null
+                ? getModel().getEntity().getCompatibilityVersion()
+                : null);
         getModel().getPropertyChangedEvent().addListener((ev, sender, args) -> {
             if (args instanceof PropertyChangedEventArgs) {
                 String key = ((PropertyChangedEventArgs) args).propertyName;

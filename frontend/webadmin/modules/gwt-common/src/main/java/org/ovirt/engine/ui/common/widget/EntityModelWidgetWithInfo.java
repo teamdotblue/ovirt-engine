@@ -81,6 +81,14 @@ public class EntityModelWidgetWithInfo extends Composite implements HasValidatio
         infoIcon.setText(text);
     }
 
+    /**
+     * Shows or hides the info icon. Hiding is not the same as clearing the explanation:
+     * an empty tooltip would still render a clickable (i) icon.
+     */
+    public void setExplanationVisible(boolean visible) {
+        infoIcon.setVisible(visible);
+    }
+
     public void setUsePatternFly(boolean usePatternFly) {
         this.usePatternfly = usePatternFly;
     }

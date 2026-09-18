@@ -170,6 +170,7 @@ public class TemplateGeneralModelForm extends AbstractModelBoundFormWidget<Templ
         }
 
         biosTypeRenderer.setArchitectureType(getModel().getArchitecture());
+        biosTypeRenderer.setCompatibilityVersion(getModel().getEntity().getCompatibilityVersion());
         widgetWithIcon.setIconVisible(
                 getModel().getEntity().getBiosType() != getModel().getEntity().getClusterBiosType());
         widgetWithIcon.setIconTooltipText(messages.biosTypeWarning(
