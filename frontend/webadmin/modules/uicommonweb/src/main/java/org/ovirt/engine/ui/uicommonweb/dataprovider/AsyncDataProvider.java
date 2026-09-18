@@ -14,6 +14,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import org.ovirt.engine.core.aaa.ProfileEntry;
@@ -173,6 +174,7 @@ import org.ovirt.engine.core.common.queries.gluster.GlusterVolumeGeoRepEligibili
 import org.ovirt.engine.core.common.queries.gluster.GlusterVolumeProfileParameters;
 import org.ovirt.engine.core.common.queries.gluster.GlusterVolumeQueriesParameters;
 import org.ovirt.engine.core.common.scheduling.AffinityGroup;
+import org.ovirt.engine.core.common.utils.ClusterEmulatedMachines;
 import org.ovirt.engine.core.common.utils.Pair;
 import org.ovirt.engine.core.common.utils.PairQueryable;
 import org.ovirt.engine.core.common.utils.SimpleDependencyInjector;
@@ -2942,9 +2944,23 @@ public class AsyncDataProvider {
     }
 
     public void getEmulatedMachinesByClusterID(AsyncQuery<Set<String>> aQuery, Guid clusterId) {
+        getEmulatedMachinesByClusterID(aQuery, clusterId, null);
+    }
+
+    /**
+     * Same as {@link #getEmulatedMachinesByClusterID(AsyncQuery, Guid)}, but hands the raw
+     * per-host list to {@code hostsConsumer} (invoked when the query returns, before the
+     * async callback) so one round trip can serve both the union for the combobox and a
+     * client-side intersection over the same hosts.
+     */
+    public void getEmulatedMachinesByClusterID(AsyncQuery<Set<String>> aQuery, Guid clusterId,
+            Consumer<List<VDS>> hostsConsumer) {
         aQuery.converterCallback = source -> {
             if (source != null) {
                 List<VDS> vdsList = (List<VDS>) source;
+                if (hostsConsumer != null) {
+                    hostsConsumer.accept(vdsList);
+                }
                 Set<String> emulatedMachineList = new HashSet<>();
                 for (VDS host : vdsList) {
                     String hostSupportedMachines = host.getSupportedEmulatedMachines();
@@ -2959,6 +2975,16 @@ public class AsyncDataProvider {
         };
 
         Frontend.getInstance().runQuery(QueryType.GetHostsByClusterId, new IdQueryParameters(clusterId), aQuery);
+    }
+
+    /**
+     * Converts a per-host host list into the i440fx machine types supported by every
+     * listed host (intersection) — the client-side counterpart of
+     * {@code ClusterEmulatedMachines.pickCommonI440fxMachines}. Used as the converter of
+     * a GetHostsByClusterId query so the dialog needs no extra round trip.
+     */
+    public static List<String> pickCommonI440fxMachines(List<VDS> hosts) {
+        return ClusterEmulatedMachines.pickCommonI440fxMachines(hosts);
     }
 
     public void getSupportedCpuList(AsyncQuery<List<ServerCpu>> aQuery, String cpuName, Version version) {
