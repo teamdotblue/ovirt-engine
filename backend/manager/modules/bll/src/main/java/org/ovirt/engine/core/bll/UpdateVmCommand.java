@@ -107,6 +107,8 @@ import org.ovirt.engine.core.common.utils.customprop.VmPropertiesUtils;
 import org.ovirt.engine.core.common.validation.group.UpdateVm;
 import org.ovirt.engine.core.common.vdscommands.LeaseVDSParameters;
 import org.ovirt.engine.core.common.vdscommands.VDSCommandType;
+import org.ovirt.engine.core.common.vdscommands.VDSReturnValue;
+import org.ovirt.engine.core.common.vdscommands.VdsIdVDSCommandParametersBase;
 import org.ovirt.engine.core.compat.DateTime;
 import org.ovirt.engine.core.compat.Guid;
 import org.ovirt.engine.core.compat.Version;
@@ -128,7 +130,10 @@ import org.ovirt.engine.core.dao.network.VmNicDao;
 import org.ovirt.engine.core.dao.provider.ProviderDao;
 import org.ovirt.engine.core.dao.scheduling.AffinityGroupDao;
 import org.ovirt.engine.core.utils.ReplacementUtils;
+import org.ovirt.engine.core.utils.transaction.TransactionRollbackListener;
+import org.ovirt.engine.core.vdsbroker.HotUnplugMemoryVDSCommand;
 import org.ovirt.engine.core.vdsbroker.ResourceManager;
+import org.ovirt.engine.core.vdsbroker.SetNumberOfCpusVDSCommand;
 import org.ovirt.engine.core.vdsbroker.vdsbroker.CloudInitHandler;
 
 public class UpdateVmCommand<T extends VmManagementParametersBase> extends VmManagementCommandBase<T>
@@ -561,6 +566,13 @@ public class UpdateVmCommand<T extends VmManagementParametersBase> extends VmMan
             if (!getVm().isHostedEngine()) {
                 newVmStatic.setNumOfSockets(setNumberOfCpusResult.getSucceeded() ? newNumOfSockets : currentSockets);
             }
+            if (setNumberOfCpusResult.getSucceeded()) {
+                final Guid vmId = getVmId();
+                final int numOfCpus = getVm().getNumOfCpus();
+                final VDSCommandType commandType = VDSCommandType.SetNumberOfCpus;
+                final SetNumberOfCpusVDSCommand.Params hotPlugParams = new SetNumberOfCpusVDSCommand.Params(null, vmId, numOfCpus);
+                registerRollbackHandler((TransactionRollbackListener) () -> revertAction(commandType, hotPlugParams));
+            }
             logHotSetActionEvent(setNumberOfCpusResult, AuditLogType.FAILED_HOT_SET_NUMBER_OF_CPUS);
         }
     }
@@ -747,7 +759,7 @@ public class UpdateVmCommand<T extends VmManagementParametersBase> extends VmMan
         HotSetAmountOfMemoryParameters params =
                 new HotSetAmountOfMemoryParameters(
                         newVmStatic,
-                        memHotplugSize > 0 ? PlugAction.PLUG : PlugAction.UNPLUG,
+                        PlugAction.PLUG,
                         // We always use node 0, auto-numa should handle the allocation
                         0,
                         memHotplugSize);
@@ -759,6 +771,13 @@ public class UpdateVmCommand<T extends VmManagementParametersBase> extends VmMan
 
         if (setAmountOfMemoryResult.getSucceeded()) {
             newVmStatic.setMemSizeMb(newVmStatic.getMemSizeMb() + memHotplugSize);
+
+            final VmDevice hotPluggedMemoryDevice = setAmountOfMemoryResult.getActionReturnValue();
+            final int minAllocatedMem = getVm().getMinAllocatedMem();
+            final VDSCommandType commandType = VDSCommandType.HotUnplugMemory;
+            final HotUnplugMemoryVDSCommand.Params hotPlugParams = new HotUnplugMemoryVDSCommand.Params(null, hotPluggedMemoryDevice, minAllocatedMem);
+            registerRollbackHandler((TransactionRollbackListener) () ->
+                    revertAction(commandType, hotPlugParams));
         }
         logHotSetActionEvent(setAmountOfMemoryResult, AuditLogType.FAILED_HOT_SET_MEMORY);
 
@@ -1778,5 +1797,18 @@ public class UpdateVmCommand<T extends VmManagementParametersBase> extends VmMan
     @Override
     public CommandCallback getCallback() {
         return getVm().getVmPoolId() != null ? callbackProvider.get() : null;
+    }
+
+    private void revertAction(VDSCommandType commandType, VdsIdVDSCommandParametersBase params) {
+        try {
+            params.setVdsId(getVm().getRunOnVds());
+            VDSReturnValue vdsReturnValue = runVdsCommand(commandType, params);
+            if (!vdsReturnValue.getSucceeded()) {
+                log.error("Failed to revert action '{}' with params '{}': {}", commandType, params, vdsReturnValue.getExceptionString());
+            }
+        } catch (RuntimeException e) {
+            log.error("Failed to revert action '{}' with params '{}': {}", commandType, params, e.getMessage());
+            log.debug("Exception", e);
+        }
     }
 }

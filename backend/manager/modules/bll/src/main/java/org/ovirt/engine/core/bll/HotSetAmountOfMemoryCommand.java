@@ -97,15 +97,17 @@ public class HotSetAmountOfMemoryCommand<T extends HotSetAmountOfMemoryParameter
 
     @Override
     protected void executeCommand() {
+        VmDevice memoryDevice = createMemoryDevice();
         VDSReturnValue vdsReturnValue = runVdsCommand(VDSCommandType.SetAmountOfMemory,
                 new SetAmountOfMemoryVDSCommand.Params(
                         getVm().getRunOnVds(),
                         getVm().getId(),
-                        createMemoryDevice(),
+                        memoryDevice,
                         getParameters().getVmStaticData().getMinAllocatedMem()));
 
         if (vdsReturnValue.getSucceeded()) {
             setSucceeded(true);
+            setActionReturnValue(memoryDevice);
         } else {
             EngineFault fault = new EngineFault();
             fault.setError(vdsReturnValue.getVdsError().getCode());

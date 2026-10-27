@@ -1180,6 +1180,12 @@ public abstract class CommandBase<T extends ActionParametersBase>
                     e.getMessage());
             log.debug("Exception", e);
             processExceptionToClient(new EngineFault(e, e.getVdsError().getCode()));
+        } catch (DataAccessException e) {
+            log.error("Command '{}' failed: {}",
+                    getClass().getName(),
+                    e.getMessage());
+            log.debug("Exception", e);
+            processExceptionToClient(new EngineFault(e, EngineError.DB));
         } catch (OpenStackResponseException e) {
             // Adding a message to executeFailedMessages is needed only when the list is empty
             if (returnValue.getExecuteFailedMessages().isEmpty()) {
